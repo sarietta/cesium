@@ -2,7 +2,7 @@ MAKEFILE 	= Makefile
 CC_FLAGS  	= -O3 -Wall
 LD_FLAGS	=
 
-MODULES 	= util
+MODULES 	= util drawing
 
 green = '\e[0;32m' $(1) '\e[1;32m'
 
