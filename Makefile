@@ -1,8 +1,6 @@
 MAKEFILE 	= Makefile
-CC_FLAGS  	= -O3 -Wall
-LD_FLAGS	=
 
-MODULES 	= util drawing
+MODULES 	= util drawing string image gl
 
 green = '\e[0;32m' $(1) '\e[1;32m'
 
@@ -10,9 +8,12 @@ all: $(MODULES)
 
 $(MODULES):
 	@echo "Building "$@
-	@cd code/$@ && make CC_FLAGS="$(CC_FLAGS)" LD_FLAGS="$(LD_FLAGS)"
+	@cd code/$@ && make
 	@mv code/$@/*.a ./lib/
 clean:
 	@echo "Cleaning"
-	cd code/util && make clean
+	@for i in $(MODULES);\
+	do \
+		cd code/$$i && make clean && cd ../../; \
+	done
 	@rm -rf lib/*
