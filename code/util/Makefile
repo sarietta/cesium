@@ -1,5 +1,6 @@
 CC 		= g++
 CC_FLAGS 	= -O3 -Wall
+#CC_FLAGS 	= -ggdb -Wall
 LD_FLAGS 	= 
 LIBS 		= 
 
