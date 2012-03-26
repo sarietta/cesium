@@ -12,6 +12,18 @@ namespace slib {
     const double GoogleMaps::_pixelsPerLonDegree = _tileSize / 360.0;
     const double GoogleMaps::_pixelsPerLonRadian = _tileSize / (2.0 * M_PI);
 
+    
+    LatLonBounds GoogleMaps::GetMapBounds(const LatLon& southwest, const LatLon& northeast, const int32& zoom) {
+      Point2D southwest_tile = GoogleMaps::ConvertFromLatLonToTile(southwest, zoom);
+      Point2D northeast_tile = GoogleMaps::ConvertFromLatLonToTile(northeast, zoom);
+      
+      LatLon southwest_tile_latlon = GoogleMaps::ConvertFromTileToLatLon(southwest_tile, zoom);
+      LatLon northeast_tile_latlon = GoogleMaps::ConvertFromTileToLatLon(northeast_tile, zoom);
+      
+      return LatLonBounds(southwest_tile_latlon, northeast_tile_latlon);
+    }
+
+
     Point2D GoogleMaps::ConvertFromLatLonToPoint(const LatLon& latlon) {
       Point2D point(0, 0);     
       point.x = _pixelOrigin.x + latlon.lon * _pixelsPerLonDegree;

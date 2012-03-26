@@ -1,6 +1,6 @@
 MAKEFILE 	= Makefile
 
-MODULES 	= util drawing string image gl
+MODULES 	= util drawing string image gl matrix interpolation city
 
 green = '\e[0;32m' $(1) '\e[1;32m'
 

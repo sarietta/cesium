@@ -14,6 +14,8 @@ namespace slib {
       static Point2D ConvertFromLatLonToTile(const LatLon& latlon, const int32& zoom);
       static LatLon ConvertFromTileToLatLon(const Point2D& tileCoordinate, const int32& zoom);
 
+      static LatLonBounds GetMapBounds(const LatLon& southwest, const LatLon& northeast, const int32& zoom);
+
       static inline double GetTileSize() {
 	return GoogleMaps::_tileSize;
       }

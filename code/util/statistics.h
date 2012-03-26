@@ -5,7 +5,43 @@
 
 namespace slib {
   namespace util {
-    
+
+    template <class T>
+    T Max(const T* data, const int32& N) {
+      T max = data[0];
+      
+      for (int i = 0; i < N; i++) {
+        if (data[i] > max) {
+	  max = data[i];
+	}
+      }
+      return max;
+    }
+
+    template <class T>
+    T Min(const T* data, const int32& N) {
+      T min = data[0];
+      
+      for (int i = 0; i < N; i++) {
+        if (data[i] < min) {
+	  min = data[i];
+	}
+      }
+      return min;
+    }
+
+
+    template <class T>
+    T Mean(const T* data, const int32& N) {
+      T mean = 0;
+      
+      for (int i = 0; i < N; i++) {
+        mean += data[i];
+      }
+      mean /= static_cast<T>(N);
+      return mean;
+    }
+
     template <class T>
     T Variance(const T* data, const int32& N) {
       int32 n = 0;
