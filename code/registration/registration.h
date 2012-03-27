@@ -10,6 +10,7 @@
   private:								\
   public:								\
   inline static CATEGORY* CreateByName(const std::string& name) {	\
+    printf("Creating: %s\n", name.c_str());				\
     std::map<std::string, Pointer>* registry				\
       = slib::Registration::GetRegistry();				\
     std::map<std::string, Pointer>::iterator iter			\

@@ -11,6 +11,13 @@ using std::string;
 namespace slib {
   namespace city {
 
+    REGISTER_CATEGORY(Attribute);
+
+    Attribute::Attribute(const LatLon& location, const double& weight) {
+      _location = location;
+      _weight = weight;
+    }
+
     Attributes::Attributes(const string& filename, const string& type) {
       ifstream filestr(filename.c_str());
       if (!filestr.good()) {
@@ -24,10 +31,9 @@ namespace slib {
 	if (attribute) {
 	  attribute->InitializeFromLine(line);
 	  _attributes.push_back(attribute);
-	}
+	} 
       }
       filestr.close();
     }
-
   }  // namespace city
 }  // namespace slib

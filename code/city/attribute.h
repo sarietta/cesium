@@ -11,6 +11,8 @@ namespace slib {
 
     class Attribute {
     public:
+      Attribute() {}
+      Attribute(const LatLon& location, const double& weight);
       virtual bool InitializeFromLine(const std::string& line) = 0;
 
       inline LatLon GetLocation() {
@@ -24,8 +26,6 @@ namespace slib {
       LatLon _location;
       double _weight;
     };
-
-    REGISTER_CATEGORY(Attribute);
 
     class Attributes {
     public:

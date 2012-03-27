@@ -1,10 +1,8 @@
 #include "rbf.h"
 
-#include "../matrix/simplematrix.h"
 #include "../util/assert.h"
 #include <Eigen/Dense>
 #include <glog/logging.h>
-#include <mkl_cblas.h>
 #include <string>
 
 using namespace Eigen;
@@ -56,17 +54,9 @@ namespace slib {
       for (int32 i = 0; i < _N; i++) {
 	float value;
 	if (_dimensions == 2) {
-#if 1
 	  const float d0 = _points(i,0) - point(0);
 	  const float d1 = _points(i,1) - point(1);
 	  value = (*_rbf)(sqrt(d0*d0 + d1*d1));
-#else
-	  float* X = new float[2];
-	  X[0] = _points(i,0) - point(0);
-	  X[1] = _points(i,1) - point(1);
-	  value = (*_rbf)(cblas_snrm2(2, X, 1));
-	  delete X;
-#endif
 	} else {
 	  const VectorXf row = _points.row(i);
 	  const VectorXf difference = point - row;	

@@ -14,8 +14,13 @@ namespace slib {
 namespace slib {
   namespace city {
     class Crime : public Attribute {
+    public:
+      Crime() {}
       Crime(const LatLon& location, const double& weight);
-      static bool LoadFromFile(const std::string& filename, std::vector<Attribute*>* attributes);
+
+      virtual bool InitializeFromLine(const std::string& line);
+
+      static std::vector<Crime> LoadCrimesFromFile(const std::string& file);
     };
   }  // namespace city
 }  // namespace slib

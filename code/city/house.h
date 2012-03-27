@@ -2,7 +2,7 @@
 #define __SLIB_CITY_HOUSE_H__
 
 #include "../common/types.h"
-#include "../common/registration/registration.h"
+#include "../registration/registration.h"
 #include <string>
 #include <vector>
 
@@ -15,11 +15,15 @@ namespace slib {
 namespace slib {
   namespace city {
     class House : public Attribute {
+    public:
+      House() {}
       House(const LatLon& location, const double& weight);
-      static bool LoadFromFile(const std::string& filename, std::vector<Attribute*>* attributes);
 
-      REGISTER_TYPE(House, Attribute);
+      virtual bool InitializeFromLine(const std::string& line);
+
+      static std::vector<House> LoadHousesFromFile(const std::string& file);
     };
+
   }  // namespace city
 }  // namespace slib
 
