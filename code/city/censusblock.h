@@ -10,8 +10,9 @@ namespace slib {
 
     class CensusBlock : public CensusAttribute {
     public:
+      DEFINE_CENSUS_ATTRIBUTE(CensusBlock);
+
       CensusBlock() {}
-      CensusBlock(const LatLon& location, const double& weight);
       CensusBlock(const std::string& blockId, const slib::ShapefilePolygon& polygon);
       virtual ~CensusBlock() {}
       
@@ -21,6 +22,7 @@ namespace slib {
       }
 
       virtual bool Initialize(const sql::ResultSet& record);
+      virtual bool InitializeWithBlock(const sql::ResultSet& record);
 
       void AddAttribute(const CensusAttribute& attribute);
       

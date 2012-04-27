@@ -2,7 +2,7 @@
 #include "../string/stringutils.h"
 #include "attribute.h"
 #include "censusblock.h"
-#include "population.h"
+#include "dwellings.h"
 #include "../registration/registration.h"
 #include <cppconn/exception.h>
 #include <fstream>
@@ -22,21 +22,21 @@ using std::vector;
 namespace slib {
   namespace city {
 
-    bool CensusBlockPopulation::Initialize(const sql::ResultSet& record) {
+    bool CensusBlockDwellings::Initialize(const sql::ResultSet& record) {
       _block = NULL;
       try {
 	if (FLAGS_slib_city_table_field != "") {
-	  const int total_population = record.getInt("total_count");
-	  if (FLAGS_slib_city_table_field == "total_count") {
-	    _value = total_population;
-	  } else if (total_population == 0) {
+	  const int total_dwellings = record.getInt("dwellings");
+	  if (FLAGS_slib_city_table_field == "dwellings") {
+	    _value = total_dwellings;
+	  } else if (total_dwellings == 0) {
 	    _value = 0;
 	  } else {
 	    _value = ((double) record.getInt(FLAGS_slib_city_table_field)) 
-	      / ((double) total_population);
+	      / ((double) total_dwellings);
 	  }
 	} else {
-	  _value = (double) record.getInt("total_count");
+	  _value = (double) record.getInt("dwellings");
 	}
       } catch (sql::SQLException e) {
 	return false;
@@ -45,7 +45,7 @@ namespace slib {
       return true;
     }
 
-    void CensusBlockPopulation::Filter(vector<CensusBlockPopulation*>* populations) {}
+    void CensusBlockDwellings::Filter(vector<CensusBlockDwellings*>* populations) {}
 
   }  // namespace city
 }  // namespace slib

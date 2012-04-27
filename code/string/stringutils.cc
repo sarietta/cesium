@@ -11,7 +11,7 @@ namespace slib {
   string StringUtils::Replace(const string& needle, const string& haystack, const string& replace) {
     size_t uPos = 0; 
     size_t uFindLen = needle.length(); 
-    size_t uReplaceLen = replace.length();
+    size_t uReplaceLen = replace.length() == 0 ? 1 : replace.length();
     string result = haystack;
     
     if( uFindLen != 0 ) {    
@@ -53,5 +53,15 @@ namespace slib {
     return arr;
   }
 
+  void StringUtils::Replace(const string& needle, vector<string>* strings, const string& replace) {
+    if (!strings) {
+      return;
+    }
+    for (int i = 0; i < (int) strings->size(); i++) {
+      string replaced = StringUtils::Replace(needle, (*strings)[i], replace); 
+      (*strings)[i].clear();
+      (*strings)[i].append(replaced);
+    }
+  }
 
 }  // namespace slib

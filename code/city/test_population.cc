@@ -7,6 +7,7 @@
 #include "../util/assert.h"
 #include <vector>
 
+using slib::city::CensusAttribute;
 using slib::city::CensusAttributes;
 using slib::city::CensusBlockPopulation;
 using std::string;
@@ -17,9 +18,11 @@ DEFINE_string(shapefile, "", "Test shape file.");
 int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
+
+  REGISTER_CENSUS_ATTRIBUTE(CensusBlockPopulation);
   
-  vector<CensusBlockPopulation*> population 
-    = CensusAttributes<CensusBlockPopulation>(FLAGS_shapefile).GetAttributes();
+  vector<CensusAttribute*> population 
+    = CensusAttributes("population", "CensusBlockPopulation", true).GetAttributes();
   if (population.size() > 0) {
     LOG(INFO) << "Polygon: " << population[0]->GetBlockGeometry();
     LOG(INFO) << "Population: " << population[0]->GetWeight();

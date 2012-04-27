@@ -11,6 +11,7 @@ namespace slib {
   class StringUtils {
   public:
     static string Replace(const string& needle, const string& haystack, const string& replace);
+    static void Replace(const string& needle, vector<string>* strings, const string& replace);
     static vector<string> Explode(const string& delimeter, const string& str);
   };
 }  // namespace slib

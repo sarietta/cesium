@@ -1,10 +1,10 @@
 CC 		= g++
-CC_FLAGS 	= -O3 -Wall -I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
-#	 	  -ggdb -pg 
+CC_FLAGS 	= -Wall -I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
+	 	  -ggdb -pg 
 
 LD_FLAGS 	= -L/usr/X11R6/lib
 LIBS 		= -lglog -lX11
-TLIBS		= ../../lib/libstring.a ../../lib/libutil.a
+TLIBS		= ../../lib/libstring.a ../../lib/libutil.a ../../lib/libregistration.a -lmysqlcppconn
 
 DIR	= `pwd | xargs -I @ basename @`
 LIBNAME	= lib$(DIR).a

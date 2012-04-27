@@ -5,32 +5,29 @@
 #include <string>
 
 #define REGISTER_CATEGORY(CATEGORY)					\
-									\
+  									\
   class CATEGORY ## Registry {						\
   private:								\
+  static std::map<std::string, Allocator<CATEGORY>* > registry;		\
   public:								\
+  									\
   inline static CATEGORY* CreateByName(const std::string& name) {	\
-    printf("Creating: %s\n", name.c_str());				\
-    std::map<std::string, Pointer>* registry				\
-      = slib::Registration::GetRegistry();				\
-    std::map<std::string, Pointer>::iterator iter			\
-      = registry->find(#CATEGORY "_" + name);				\
-    if (iter == registry->end()) {					\
+    std::map<std::string, Allocator<CATEGORY>* >::iterator iter		\
+      = registry.find(name);						\
+    if (iter == registry.end()) {					\
       return NULL;							\
     } else {								\
-      return (*iter).second.Get<CATEGORY>();				\
+      return (*iter).second->Allocate();				\
     }									\
   }									\
 									\
+  template <class T>							\
   inline static bool Register(const std::string& name,			\
-			      CATEGORY* obj) {				\
-    std::map<std::string, slib::Pointer>* registry			\
-      = slib::Registration::GetRegistry();				\
-    if (registry->find(#CATEGORY "_" + name) == registry->end()) {	\
-      slib::Pointer pointer(reinterpret_cast<void*>(obj));		\
-      std::pair<std::string, slib::Pointer> entry(#CATEGORY "_" + name,	\
-						  pointer);		\
-      registry->insert(entry);						\
+			      Allocator<T>* allocator) {		\
+    if (registry.find(name) == registry.end()) {			\
+      std::pair<std::string, Allocator<T>* > entry(name,		\
+						   allocator);		\
+      registry.insert(entry);						\
       return true;							\
     } else {								\
       return false;							\
@@ -38,50 +35,18 @@
   }									\
   };
 
-#define REGISTER_TYPE(TYPE, CATEGORY)					\
-  bool ignore_##TYPE##_##CATEGORY					\
-  = CATEGORY##Registry::Register(#TYPE, slib::Allocator<TYPE>::Allocate());
+#define REGISTER_TYPE(TYPE, CATEGORY)				\
+  bool ignore_##__FILE__ = CATEGORY##Registry::Register(#TYPE, new Allocator<TYPE>());
 
-namespace slib {
-  template <class T>
-  class Allocator {
-  public:
-    static T* Allocate() {
-      return new T;
-    }
-  };
+template<class T>
+class Allocator {
+public:
+  Allocator() {}
   
-  class Pointer {
-  private:
-    void* _ptr;
-  public:
-    Pointer(void* ptr) {
-      _ptr = ptr;
-    }
-    
-    template <class T>
-    inline T* Get() {
-      return reinterpret_cast<T*>(_ptr);
-    }
-  };
-      
-  class Registration {
-  private:
-    class Registry {
-    private:
-      std::map<std::string, Pointer> _map;
-      
-    public:
-      inline std::map<std::string, Pointer>* Get() {
-	return &_map;
-      }
-    };
-
-    static Registry* _registry;
-
-  public:
-    static std::map<std::string, Pointer>* GetRegistry();
-  };
-}  // namespace slib
+  T* Allocate() {
+    //return new T();
+    return NULL;
+  }
+};
 
 #endif

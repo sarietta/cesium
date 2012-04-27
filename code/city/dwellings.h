@@ -1,5 +1,5 @@
-#ifndef __SLIB_CITY_POPULATION_H__
-#define __SLIB_CITY_POPULATION_H__
+#ifndef __SLIB_CITY_DWELLINGS_H__
+#define __SLIB_CITY_DWELLINGS_H__
 
 #include "../common/types.h"
 #include "attribute.h"
@@ -10,14 +10,14 @@
 
 namespace slib {
   namespace city {
-    class CensusBlockPopulation : public CensusAttribute {
+    class CensusBlockDwellings : public CensusAttribute {
     public:
-      DEFINE_CENSUS_ATTRIBUTE(CensusBlockPopulation);
+      DEFINE_CENSUS_ATTRIBUTE(CensusBlockDwellings);
 
-      CensusBlockPopulation() {}
+      CensusBlockDwellings() {}
       virtual bool Initialize(const sql::ResultSet& record);
 
-      static void Filter(std::vector<CensusBlockPopulation*>* populations);
+      static void Filter(std::vector<CensusBlockDwellings*>* populations);
     private:
     };
 

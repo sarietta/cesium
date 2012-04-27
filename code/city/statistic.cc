@@ -2,7 +2,7 @@
 #include "../string/stringutils.h"
 #include "attribute.h"
 #include "censusblock.h"
-#include "population.h"
+#include "statistic.h"
 #include "../registration/registration.h"
 #include <cppconn/exception.h>
 #include <fstream>
@@ -22,21 +22,11 @@ using std::vector;
 namespace slib {
   namespace city {
 
-    bool CensusBlockPopulation::Initialize(const sql::ResultSet& record) {
+    bool CensusBlockStatistic::Initialize(const sql::ResultSet& record) {
       _block = NULL;
       try {
 	if (FLAGS_slib_city_table_field != "") {
-	  const int total_population = record.getInt("total_count");
-	  if (FLAGS_slib_city_table_field == "total_count") {
-	    _value = total_population;
-	  } else if (total_population == 0) {
-	    _value = 0;
-	  } else {
-	    _value = ((double) record.getInt(FLAGS_slib_city_table_field)) 
-	      / ((double) total_population);
-	  }
-	} else {
-	  _value = (double) record.getInt("total_count");
+	  _value = ((double) record.getInt(FLAGS_slib_city_table_field)) ;
 	}
       } catch (sql::SQLException e) {
 	return false;
@@ -45,7 +35,7 @@ namespace slib {
       return true;
     }
 
-    void CensusBlockPopulation::Filter(vector<CensusBlockPopulation*>* populations) {}
+    void CensusBlockStatistic::Filter(vector<CensusBlockStatistic*>* populations) {}
 
   }  // namespace city
 }  // namespace slib

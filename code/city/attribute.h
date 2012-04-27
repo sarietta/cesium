@@ -5,10 +5,23 @@
 #include "../registration/registration.h"
 #include "../string/stringutils.h"
 #include "../util/census.h"
+#include <cppconn/connection.h>
+#include <cppconn/exception.h>
+#include <cppconn/resultset.h>
+#include <cppconn/statement.h>
+#include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <fstream>
+#include <map>
+#include <mysql_connection.h>
+#include <mysql_driver.h>
 #include <string>
 #include <vector>
+
+DECLARE_string(hostname);
+DECLARE_string(database);
+DECLARE_string(database_user);
+DECLARE_string(database_password);
 
 namespace slib {
   namespace city {
@@ -42,21 +55,39 @@ namespace slib {
       double _weight;
     };
 
-    class CensusAttribute : public Attribute {
+    class CensusAttribute {
     public:
       CensusAttribute() {}
-      CensusAttribute(const LatLon& location, const double& weight);
-      virtual bool InitializeFromLine(const std::string& line) {
-	LOG(ERROR) << "Census data does not operate on ascii files directly";
-	return false;
+      CensusAttribute(const CensusAttribute& original) {
+	_value = original.GetValue();
+	_block = original.GetBlock();
       }
 
-      virtual bool Initialize(const slib::ShapefilePolygon& polygon, 
-			      const std::string& record) = 0;
+      virtual bool Initialize(const sql::ResultSet& record) = 0;
+      virtual bool InitializeWithBlock(const sql::ResultSet& record);
 
       const slib::ShapefilePolygon GetBlockGeometry() const;
+      virtual CensusAttribute* clone() = 0;
+
+      CensusBlock* GetBlock() const;
+
+      // For backwards compatibility.
+      inline double GetWeight() const {
+	return _value;
+      }
+
+      inline double GetValue() const {
+	return _value;
+      }
+
+      static CensusAttribute* CreateByName(const std::string& name);
+      static CensusAttribute* Register(const std::string& name, CensusAttribute* attribute);
+
     protected:
       CensusBlock* _block;
+      double _value;
+
+      static std::map<std::string, CensusAttribute*> _registry;
     };
 
     template <class T>
@@ -105,38 +136,70 @@ namespace slib {
       std::vector<T*> _attributes;
     };
 
-    template<class T>
-    class CensusAttributes : public Attributes<T> {
+    class CensusAttributes {
     public:
       CensusAttributes() {}
-      CensusAttributes(const std::string& filename) {
-	this->ReadAttributesFromFile(filename);
+      CensusAttributes(const std::string& table, const std::string& type, 
+		       const bool& load_blocks = false) {
+	ReadAttributesFromDatabase(table, type, load_blocks);
       }
+
+      inline const std::vector<CensusAttribute*> GetAttributes() const {
+	return _attributes;
+      }
+
+      inline const CensusAttribute* GetAttribute(const int32& index) const {
+	return _attributes[index];
+      }
+
     protected:
-      void ReadAttributesFromFile(const std::string& shapefile) {
-	const string dbf_file = slib::StringUtils::Replace("shp", shapefile, "dbf");
-	slib::util::ShapefileReader reader(shapefile);
-	slib::util::DBFReader dbf_reader(dbf_file);
+      std::vector<CensusAttribute*> _attributes;
 
-	while (reader.HasNextRecord()) {
-	  if (!dbf_reader.HasNextRecord()) {
-	    LOG(ERROR) << "Shapefile and DBF file are out of sync";
+      void ReadAttributesFromDatabase(const std::string& table, const std::string& type,
+				      const bool& load_blocks) {
+	try {
+	  sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
+	  LOG(INFO) << "Connecting to database (" << FLAGS_database << ") at " << FLAGS_hostname;
+	  sql::Connection* con = driver->connect("tcp://" + FLAGS_hostname, 
+						 FLAGS_database_user, 
+						 FLAGS_database_password);
+	  if (!con) {
+	    LOG(ERROR) << "Could not connect to database (" << FLAGS_database << ") at " << FLAGS_hostname;
 	  }
-
-	  ShapefilePolygon polygon;
-	  std::string record;
-	  if (reader.NextRecord(&polygon)) {
-	    if (dbf_reader.NextRecord(&record)) {
-	      T* attribute = new T;
-	      if (attribute && attribute->Initialize(polygon, record)) {
+	  sql::Statement* stmt = con->createStatement();
+	  stmt->execute("USE " + FLAGS_database);
+	  sql::ResultSet* records = NULL;
+	  if (load_blocks && table != "CensusBlock") {
+	    records = stmt->executeQuery("SELECT * FROM " + table + " "
+					 "JOIN blocks ON blocks.blockid = " + table + ".blockid "
+					 "WHERE 1");
+	  } else {
+	    records = stmt->executeQuery("SELECT * FROM " + table + " WHERE 1");
+	  }
+	  if (!records) {
+	    return;
+	  }
+	  while (records->next()) {
+	    CensusAttribute* attribute = CensusAttribute::CreateByName(type);
+	    if (attribute) {
+	      if (load_blocks && attribute->InitializeWithBlock(*records)) {
+		this->_attributes.push_back(attribute);
+	      } else if (attribute->Initialize(*records)) {
 		this->_attributes.push_back(attribute);
 	      }
 	    }
 	  }
+	} catch (sql::SQLException e) {
+	  LOG(ERROR) << "Error loading attributes: " << e.getErrorCode();
 	}
       }
     };
 
+#define DEFINE_CENSUS_ATTRIBUTE(TYPE)			\
+    virtual CensusAttribute* clone() { return new TYPE(); }
+#define REGISTER_CENSUS_ATTRIBUTE(TYPE)					\
+    CensusAttribute* TYPE##_dummy = CensusAttribute::Register(#TYPE, new TYPE()); \
+    TYPE##_dummy = NULL;
 
   }  // namespace city
 }  // namespace slib
