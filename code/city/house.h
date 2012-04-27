@@ -3,14 +3,9 @@
 
 #include "../common/types.h"
 #include "../registration/registration.h"
+#include "attribute.h"
 #include <string>
 #include <vector>
-
-namespace slib {
-  namespace city {
-    class Attribute;
-  }
-}
 
 namespace slib {
   namespace city {
@@ -21,7 +16,7 @@ namespace slib {
 
       virtual bool InitializeFromLine(const std::string& line);
 
-      static std::vector<House> LoadHousesFromFile(const std::string& file);
+      static void Filter(std::vector<House*>* houses);
     };
 
   }  // namespace city

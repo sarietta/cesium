@@ -54,7 +54,6 @@ namespace slib {
         mean += (delta / static_cast<T>(n));
         M2 += delta * (data[i] - mean); // This expression uses the new value of mean
       }
-      T variance_n = M2 / static_cast<T>(n);
       T variance = M2 / static_cast<T>(n - 1);
       return variance;
     }

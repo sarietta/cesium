@@ -2,14 +2,9 @@
 #define __SLIB_CITY_CRIME_H__
 
 #include "../common/types.h"
+#include "attribute.h"
 #include <string>
 #include <vector>
-
-namespace slib {
-  namespace city {
-    class Attribute;
-  }
-}
 
 namespace slib {
   namespace city {
@@ -20,7 +15,7 @@ namespace slib {
 
       virtual bool InitializeFromLine(const std::string& line);
 
-      static std::vector<Crime> LoadCrimesFromFile(const std::string& file);
+      static void Filter(std::vector<Crime*>* crimes);
     };
   }  // namespace city
 }  // namespace slib

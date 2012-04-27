@@ -1,6 +1,8 @@
 #ifndef __SLIB_COMMON_TYPES_H__
 #define __SLIB_COMMON_TYPES_H__
 
+#include <iostream>
+
 // No namespace.
 
 typedef signed char int8;
@@ -44,9 +46,31 @@ namespace slib {
     double x;
     double y;
 
+    Point2D() {
+      x = 0;
+      y = 0;
+    }
+
     Point2D(double x_, double y_) {
       x = x_;
       y = y_;
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, const Point2D& point) {
+      out << "(" << point.x << ", " << point.y << ")";
+      return out;
+    }
+
+    friend std::ostream& operator<<=(std::ostream& out, const Point2D& point) {
+      out.write((char*) &point.x, sizeof(double));
+      out.write((char*) &point.y, sizeof(double));
+      return out;
+    }
+
+    friend std::istream& operator>>=(std::istream& in, Point2D& point) {
+      in.read((char*) &point.x, sizeof(double));
+      in.read((char*) &point.y, sizeof(double));
+      return in;
     }
   };
   
@@ -62,6 +86,7 @@ namespace slib {
       northeast.lon = northeast_.lon;
     }
   };  
+
 }  // namespace slib
 
 #endif
