@@ -26,6 +26,7 @@ DECLARE_string(database_password);
 namespace slib {
   namespace city {
     class CensusBlock;
+    class CensusTract;
   }
 }
 
@@ -61,15 +62,18 @@ namespace slib {
       CensusAttribute(const CensusAttribute& original) {
 	_value = original.GetValue();
 	_block = original.GetBlock();
+	_tract = original.GetTract();
       }
 
       virtual bool Initialize(const sql::ResultSet& record) = 0;
       virtual bool InitializeWithBlock(const sql::ResultSet& record);
+      virtual bool InitializeWithTract(const sql::ResultSet& record);
 
-      const slib::ShapefilePolygon GetBlockGeometry() const;
+      virtual const slib::ShapefilePolygon GetGeometry() const;
       virtual CensusAttribute* clone() = 0;
 
       CensusBlock* GetBlock() const;
+      CensusTract* GetTract() const;
 
       // For backwards compatibility.
       inline double GetWeight() const {
@@ -85,6 +89,7 @@ namespace slib {
 
     protected:
       CensusBlock* _block;
+      CensusTract* _tract;
       double _value;
 
       static std::map<std::string, CensusAttribute*> _registry;
@@ -139,9 +144,11 @@ namespace slib {
     class CensusAttributes {
     public:
       CensusAttributes() {}
-      CensusAttributes(const std::string& table, const std::string& type, 
-		       const bool& load_blocks = false) {
-	ReadAttributesFromDatabase(table, type, load_blocks);
+      CensusAttributes(const std::string& table, 
+		       const std::string& type,
+		       const std::string& table_index = "",
+		       const std::string& geometry_table = "") {
+	ReadAttributesFromDatabase(table, type, table_index, geometry_table);
       }
 
       inline const std::vector<CensusAttribute*> GetAttributes() const {
@@ -155,8 +162,10 @@ namespace slib {
     protected:
       std::vector<CensusAttribute*> _attributes;
 
-      void ReadAttributesFromDatabase(const std::string& table, const std::string& type,
-				      const bool& load_blocks) {
+      void ReadAttributesFromDatabase(const std::string& table, 
+				      const std::string& type,
+				      const std::string& table_index,
+				      const std::string& geometry_table) {
 	try {
 	  sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
 	  LOG(INFO) << "Connecting to database (" << FLAGS_database << ") at " << FLAGS_hostname;
@@ -165,14 +174,19 @@ namespace slib {
 						 FLAGS_database_password);
 	  if (!con) {
 	    LOG(ERROR) << "Could not connect to database (" << FLAGS_database << ") at " << FLAGS_hostname;
+	    return;
 	  }
 	  sql::Statement* stmt = con->createStatement();
+	  if (!stmt) {
+	    return;
+	  }
 	  stmt->execute("USE " + FLAGS_database);
 	  sql::ResultSet* records = NULL;
-	  if (load_blocks && table != "CensusBlock") {
-	    records = stmt->executeQuery("SELECT * FROM " + table + " "
-					 "JOIN blocks ON blocks.blockid = " + table + ".blockid "
-					 "WHERE 1");
+	  if (table_index != "" && geometry_table != "") {
+	    records = stmt->executeQuery(" SELECT * FROM " + table +
+					 " JOIN " + geometry_table + " ON " + 
+					 geometry_table + "." + table_index + "=" + table + "." + table_index +
+					 " WHERE 1");
 	  } else {
 	    records = stmt->executeQuery("SELECT * FROM " + table + " WHERE 1");
 	  }
@@ -182,13 +196,19 @@ namespace slib {
 	  while (records->next()) {
 	    CensusAttribute* attribute = CensusAttribute::CreateByName(type);
 	    if (attribute) {
-	      if (load_blocks && attribute->InitializeWithBlock(*records)) {
+	      if (geometry_table == "blocks" && attribute->InitializeWithBlock(*records)) {
+		this->_attributes.push_back(attribute);
+	      } else if (geometry_table == "tracts" && attribute->InitializeWithTract(*records)) {
 		this->_attributes.push_back(attribute);
 	      } else if (attribute->Initialize(*records)) {
 		this->_attributes.push_back(attribute);
 	      }
 	    }
 	  }
+	  
+	  delete con;
+	  delete stmt;
+	  delete records;
 	} catch (sql::SQLException e) {
 	  LOG(ERROR) << "Error loading attributes: " << e.getErrorCode();
 	}
@@ -198,8 +218,7 @@ namespace slib {
 #define DEFINE_CENSUS_ATTRIBUTE(TYPE)			\
     virtual CensusAttribute* clone() { return new TYPE(); }
 #define REGISTER_CENSUS_ATTRIBUTE(TYPE)					\
-    CensusAttribute* TYPE##_dummy = CensusAttribute::Register(#TYPE, new TYPE()); \
-    TYPE##_dummy = NULL;
+    CensusAttribute* TYPE##_dummy = CensusAttribute::Register(#TYPE, new TYPE());
 
   }  // namespace city
 }  // namespace slib

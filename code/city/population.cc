@@ -24,6 +24,7 @@ namespace slib {
 
     bool CensusBlockPopulation::Initialize(const sql::ResultSet& record) {
       _block = NULL;
+      _tract = NULL;
       try {
 	if (FLAGS_slib_city_table_field != "") {
 	  const int total_population = record.getInt("total_count");

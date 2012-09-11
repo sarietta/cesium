@@ -4,16 +4,14 @@
 #include <string>
 #include <vector>
 
-using std::string;
-using std::vector;
-
 namespace slib {
 namespace util {
   class Directory {
   private:
   public:
-    static vector<string> GetDirectoryContents(const string directory, 
-					       const string filter = "");
+    static std::vector<std::string> 
+    GetDirectoryContents(const std::string directory, 
+			 const std::string filter = "");
   };
 }  // namespace util
 }  // namespace slib

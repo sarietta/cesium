@@ -2,6 +2,8 @@
 #define __SLIB_UTIL_STATISTICS_H__
 
 #include <common/types.h>
+#undef Success
+#include <Eigen/Dense>
 
 namespace slib {
   namespace util {
@@ -56,6 +58,26 @@ namespace slib {
       }
       T variance = M2 / static_cast<T>(n - 1);
       return variance;
+    }
+
+    // x and y should be column vectors.
+    template <class T>
+    T Covariance(const Eigen::Matrix<T, Eigen::Dynamic, 1>& x, const Eigen::Matrix<T, Eigen::Dynamic, 1>& y) {
+      const Eigen::Matrix<T, Eigen::Dynamic, 1> xy = x.array() * y.array();
+
+      const T xmean = Mean<T>(x.data(), x.rows());
+      const T ymean = Mean<T>(y.data(), y.rows());
+      const T xymean = Mean<T>(xy.data(), xy.rows());
+
+      return (xymean - xmean * ymean);
+    }
+
+    template <class T>
+    T Correlation(const Eigen::Matrix<T, Eigen::Dynamic, 1>& x, const Eigen::Matrix<T, Eigen::Dynamic, 1>& y) {
+      const T covariance = Covariance<T>(x, y);
+      const T sigma_x = sqrt(Variance<T>(x.data(), x.rows()));
+      const T sigma_y = sqrt(Variance<T>(y.data(), y.rows()));
+      return (covariance / (sigma_x * sigma_y));
     }
   }  // namespace util
 }  // namespace slib

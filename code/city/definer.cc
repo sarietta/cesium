@@ -3,6 +3,7 @@
 #include "definer.h"
 #include "dwellings.h"
 #include "censusblock.h"
+#include "censustract.h"
 #include "population.h"
 #include "statistic.h"
 #include "whitepopulation.h"
@@ -12,6 +13,7 @@ namespace slib {
     
     void AttributeDefiner::Define() {
       REGISTER_CENSUS_ATTRIBUTE(CensusBlock);
+      REGISTER_CENSUS_ATTRIBUTE(CensusTract);
       REGISTER_CENSUS_ATTRIBUTE(CensusBlockPopulation);
       REGISTER_CENSUS_ATTRIBUTE(CensusBlockDwellings);
       REGISTER_CENSUS_ATTRIBUTE(CensusBlockStatistic);
