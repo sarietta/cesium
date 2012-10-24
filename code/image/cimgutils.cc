@@ -54,4 +54,34 @@ namespace slib {
     return data;
   }
 
+  void CImgUtils::PrettyPrintFloatImage(const FloatImage& image) {
+    if (image.size() > 100) {
+      fprintf(stderr, "Not outputting images larger than 100 values total.\n");
+      return;
+    }
+    cimg_forC(image, c) {
+      printf("image(:,:,%d) = \n", c);
+      cimg_forY(image, y) {
+	printf("\n\t");
+	cimg_forX(image, x) {
+	  printf("%4.4f\t", image(x,y,c));
+	}
+      }
+      printf("\n\n");
+    }
+    printf("\n\n");
+  }
+
+  void CImgUtils::DisplayEigenMatrix(const FloatMatrix& matrix) {
+    UInt8Image image(matrix.cols(), matrix.rows(), 1, 1);
+    for (int row = 0; row < matrix.rows(); row++) {
+      for (int col = 0; col < matrix.cols(); col++) {
+	image(col, row) = (char) (matrix(row, col) * 255.0f);
+      }
+    }
+
+    image.map(CImg<unsigned char>::jet_LUT256());
+    image.display();
+  }
+
 }  // namespace slib

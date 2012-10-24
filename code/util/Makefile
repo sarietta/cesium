@@ -1,9 +1,11 @@
-CC 		= g++
-CC_FLAGS 	= -O3 -Wall -I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
-	 	  -ggdb -pg
+CC 		= 	g++
+#OPT		= 	-O3
+OPT 		= 	-ggdb -pg
+CC_FLAGS 	= 	$(OPT) -Wall -I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
+			-I/usr/local/MATLAB/R2011b/extern/include
 
-LD_FLAGS 	= -L/usr/X11R6/lib
-LIBS 		= -lglog -lX11
+LD_FLAGS 	= 	-L/usr/X11R6/lib -L/usr/local/MATLAB/R2011b/bin/glnxa64
+LIBS 		= 	-lgflags -lglog -lX11 -lmat -lmx
 
 DIR	= `pwd | xargs -I @ basename @`
 LIBNAME	= lib$(DIR).a
@@ -20,7 +22,7 @@ all: $(OBJS) lib
 tests: $(TESTS)
 
 $(TESTS): $(OBJS) $(TOBJS)
-	$(CC) $(LD_FLAGS) $(LIBS) $(OBJS) $(filter $@.o, $(TOBJS)) -o $@
+	$(CC) $(LD_FLAGS) $(OBJS) $(filter $@.o, $(TOBJS)) $(LIBS) -o $@
 
 lib: $(filter-out test%, $(OBJS))
 	@ar rcs $(LIBNAME) $?

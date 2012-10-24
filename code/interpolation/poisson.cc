@@ -27,6 +27,7 @@ namespace slib {
     }
     
     bool PoissonInterpolation::Interpolate(const MatrixXf* interpolated) const {
+#if 0
       DynamicSparseMatrix<float> Aproxy(_N, _N);
       //Aproxy.reserve(num_non_zero);
       for (int32 i = 0; i < _N-1; i++) {
@@ -38,6 +39,7 @@ namespace slib {
       SparseMatrix<float> A(Aproxy);
 
       VectorXf b = VectorXf::Zero(_N);
+#endif
 #if 0
       SparseLU<SparseMatrix<float> > lu;
       lu.compute(A);

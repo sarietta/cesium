@@ -1,5 +1,6 @@
 CC 		= g++
-CC_FLAGS 	= -O3 -Wall -I../ `pkg-config --cflags opencv`
+CC_FLAGS 	= -O3 -Wall -I../ `pkg-config --cflags opencv` -I/usr/local/include/eigen3
+#CC_FLAGS 	= -ggdb -Wall -I../ `pkg-config --cflags opencv` -I/usr/local/include/eigen3
 LD_FLAGS 	= 
 LIBS 		= `pkg-config --libs opencv`
 

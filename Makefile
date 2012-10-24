@@ -1,12 +1,14 @@
 MAKEFILE 	= Makefile
 
-MODULES 	= util drawing string image gl interpolation city registration
-
-green = '\e[0;32m' $(1) '\e[1;32m'
+MODULES 	= util drawing string image gl interpolation city registration svm
 
 all: $(MODULES)
 
 $(MODULES):
+	@if [ ! -d ./lib ];\
+	then \
+		mkdir -p ./lib; \
+	fi
 	@echo "Building "$@
 	@cd code/$@ && make
 	@mv code/$@/*.a ./lib/

@@ -1,6 +1,8 @@
 #ifndef __SLIB_DRAWING_CANVAS_H__
 #define __SLIB_DRAWING_CANVAS_H__
 
+#define SLIB_NO_DEFINE_64BIT
+
 #include <CImg.h>
 #include <common/types.h>
 

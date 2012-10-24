@@ -2,24 +2,81 @@
 #define __SLIB_COMMON_TYPES_H__
 
 #include <iostream>
+#include <stdint.h>
 
 // No namespace.
 
-typedef signed char int8;
-typedef unsigned char uint8;
-typedef signed int int16;
-typedef unsigned int uint16;
-typedef signed long int int32;
-typedef unsigned long int uint32;
+typedef int8_t int8;
+typedef uint8_t uint8;
+typedef int16_t int16;
+typedef uint16_t uint16;
+typedef int32_t int32;
+typedef uint32_t uint32;
 #ifndef SLIB_NO_DEFINE_64BIT
-typedef signed long long int int64;
-typedef unsigned long long int uint64;
+typedef int64_t int64;
+typedef uint64_t uint64;
 #endif
 
 #ifdef cimg_version
 typedef cimg_library::CImg<float> FloatImage;
+typedef cimg_library::CImg<double> DoubleImage;
 typedef cimg_library::CImg<uint8> UInt8Image;
 #endif
+
+#define FloatMatrix Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+
+template <typename T>
+struct Pair {
+  T x;
+  T y;
+  
+  Pair() {}  
+  Pair(T x_, T y_) { x = x_; y = y_;  }
+  
+  T& first() { return x; }
+  
+  T& second() { return y; }
+
+  const T& first() const { return x; }
+  
+  const T& second() const { return y; }
+  
+  Pair<T>& operator=(const Pair<T>& pair) {
+    x = pair.x;
+    y = pair.y;
+    return *this;
+  }
+};
+
+template <typename T>
+struct Triplet {
+  T x;
+  T y;
+  T z;
+  
+  Triplet() {}
+  
+  Triplet(T x_, T y_, T z_) { x = x_; y = y_; z = z_; }
+  
+  T& first() { return x; }
+  
+  T& second() { return y; }
+
+  T& third() { return z; }
+
+  const T& first() const { return x; }
+  
+  const T& second() const { return y; }
+  
+  const T& third() const { return z; }
+  
+  Triplet<T>& operator=(const Triplet<T>& triplet) {
+    x = triplet.x;
+    y = triplet.y;
+    z = triplet.z;
+    return *this;
+  }
+};
 
 namespace slib {
   struct LatLon {
@@ -42,6 +99,7 @@ namespace slib {
     }
   };
   
+  // Should be a specialization of Pair.
   struct Point2D {
     double x;
     double y;

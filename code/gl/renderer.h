@@ -71,7 +71,7 @@ namespace slib {
       bool doubleBuffered_;
       bool fullscreenMode_;
       XF86VidModeModeInfo videoMode_;
-      uint16 width_, height_, depth_;
+      uint32 width_, height_, depth_;
     };
 
   }  // namespace gl

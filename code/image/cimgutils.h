@@ -4,8 +4,10 @@
 #define SLIB_NO_DEFINE_64BIT
 
 #include <CImg.h>
-#include <common/types.h>
 #include <cv.h>
+#undef Success
+#include <Eigen/Dense>
+#include <common/types.h>
 #include <highgui.h>
 
 using namespace cimg_library;
@@ -17,6 +19,10 @@ namespace slib {
     static UInt8Image GetCImg(const IplImage& image);
 
     static unsigned char* GetRowMajorByteArray(const UInt8Image& image);
+
+    static void PrettyPrintFloatImage(const FloatImage& image);
+
+    static void DisplayEigenMatrix(const FloatMatrix& matrix);
   };
 }  // namespace slib
 #endif

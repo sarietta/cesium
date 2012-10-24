@@ -1,7 +1,7 @@
 CC 		= g++
-CC_FLAGS 	= -O3 -Wall
+CC_FLAGS 	= -O3 -Wall -I../ `pkg-config --cflags opencv`
 LD_FLAGS 	= 
-LIBS 		= 
+LIBS 		= `pkg-config --libs opencv`
 
 SRCS	= $(wildcard *.cc)
 OBJS	= $(SRCS:.cc=.o)
