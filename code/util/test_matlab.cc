@@ -6,10 +6,12 @@
 #include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 
 DEFINE_int32(iterations, 1, "Iterations to test memory usage");
 
 using slib::util::MatlabMatrix;
+using std::string;
 
 int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -52,6 +54,11 @@ int main(int argc, char** argv) {
     matrix.SetStructField("field1", field1);
     
     matrix.SaveToFile("./test_c.mat");
+    
+    string serialized = matrix.Serialize();
+    MatlabMatrix deserialized_matrix;
+    deserialized_matrix.Deserialize(serialized);
+    deserialized_matrix.SaveToFile("./test_c_serialized.mat");
   }
   
   return 0;

@@ -1,6 +1,6 @@
 MAKEFILE 	= Makefile
 
-MODULES 	= util drawing string image gl interpolation city registration svm
+MODULES 	= util drawing string image gl interpolation city registration svm mpi
 
 all: $(MODULES)
 
