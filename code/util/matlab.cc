@@ -98,6 +98,15 @@ namespace slib {
       return (*this);
     }
 
+    MatlabMatrix& MatlabMatrix::Merge(const MatlabMatrix& other) {
+      if (_type != other._type) {
+	return *this;
+      }
+      if (GetDimensions() != other.GetDimensions) {
+	return *this;
+      }
+    }
+
     MatlabMatrixType MatlabMatrix::GetType(const mxArray* data) const {
       if (data == NULL) {
 	return MATLAB_NO_TYPE;

@@ -62,6 +62,12 @@ namespace slib {
       // Very important for STL compatibility.
       const MatlabMatrix& operator=(const MatlabMatrix& right);
 
+      // This is a merge, but it is rather strict. It requires both
+      // matrices to be the same type and the same size. In the event
+      // that both matrices define the same index, the "this" matrix
+      // will be given precident.
+      MatlabMatrix& Merge(const MatlabMatrix& other);
+
       static MatlabMatrix LoadFromFile(const std::string& filename);
       bool SaveToFile(const std::string& filename, const std::string& variable_name = "data") const;
 

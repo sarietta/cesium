@@ -46,6 +46,14 @@ struct Pair {
     y = pair.y;
     return *this;
   }
+
+  bool operator==(const Pair<T>& other) const {
+    return (x == pair.x && y == pair.y);
+  }
+
+  bool operator!=(const Pair<T>& other) const {
+    return !(*this == other);
+  }
 };
 
 template <typename T>
