@@ -8,6 +8,7 @@
 
 #define MPI_ROOT_NODE 0
 #define MPI_COMPLETION_TAG 1025
+#define MPI_STRING_MESSAGE_TAG 1026
 
 namespace slib {
   namespace util {
@@ -55,6 +56,8 @@ namespace slib {
       CompletionHandler _completion_handler;
       std::map<int, MPI_Request> _request_handlers;
       int _completion_status;
+
+      void SendCompletionResponse(const int& node);
     };
 
     class JobNode {
@@ -69,6 +72,7 @@ namespace slib {
       static void SendStringToNode(const std::string& message, const int& node);
 
       static void SendCompletionMessage(const int& node);
+      static void WaitForCompletionResponse(const int& node);
     };
   }  // namespace util
 }  // namespace slib

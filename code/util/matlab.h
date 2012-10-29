@@ -55,6 +55,8 @@ namespace slib {
       virtual ~MatlabMatrix();
       explicit MatlabMatrix(const std::string& filename);
 
+      explicit MatlabMatrix(const float& data);
+      MatlabMatrix(const float* conents, const int& rows, const int& cols);
       explicit MatlabMatrix(const FloatMatrix& contents);
 
       // Very important for STL compatibility.

@@ -34,15 +34,32 @@ namespace slib {
       _completion_handler = handler;
     }
 
+    void JobController::SendCompletionResponse(const int& node) {
+      int message = 1;
+      MPI_Send(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD);
+    }
+
+    void JobNode::WaitForCompletionResponse(const int& node) {
+      int message;
+      MPI_Recv(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+
     void JobController::CheckForCompletion() {
       for (RequestIterator iter = _request_handlers.begin(); iter != _request_handlers.end(); iter++) {
 	int flag;
 	MPI_Status status;
-	MPI_Test(&(iter->second), &flag, &status);
+	MPI_Request* request = &(iter->second);
+	if (*request == MPI_REQUEST_NULL) {
+	  continue;
+	}
+	MPI_Test(request, &flag, &status);
+
+	_request_handlers[iter->first] = *request;
 
 	if (flag == true) {
 	  const int node = iter->first;
 	  VLOG(1) << "Received a completion response from node: " << node;
+	  SendCompletionResponse(node);
 
 	  JobOutput output = JobNode::WaitForJobData(node);
 	  (*_completion_handler)(output, node);
@@ -76,18 +93,22 @@ namespace slib {
     }
 
     void JobNode::SendStringToNode(const string& message, const int& node) {
+      VLOG(3) << "Sending string: " << message << " (receiver node: " << node << ")";
       int length = message.length() + 1;
       scoped_ptr<char> message_c(new char[length]);
       memcpy(message_c.get(), message.c_str(), sizeof(char) * length);
-      MPI_Send(&length, 1, MPI_INT, node, 0, MPI_COMM_WORLD);
-      MPI_Send(message_c.get(), length, MPI_CHAR, node, 0, MPI_COMM_WORLD);
+      MPI_Send(&length, 1, MPI_INT, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD);
+      MPI_Send(message_c.get(), length, MPI_CHAR, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD);
     }
 
     string JobNode::WaitForString(const int& node) {
+      VLOG(3) << "Waiting for string from node: " << node;
       int length;
-      MPI_Recv(&length, 1, MPI_INT, node, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&length, 1, MPI_INT, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       scoped_ptr<char> message_c(new char[length]);
-      MPI_Recv(message_c.get(), length, MPI_CHAR, node, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(message_c.get(), length, MPI_CHAR, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+      VLOG(3) << "Recieved string: " << message_c.get() << " (sending node: " << node << ")";
 
       return string(message_c.get());
     }
@@ -167,7 +188,7 @@ namespace slib {
       JobData data;
 
       // Receive the command.
-      data.command = WaitForString();
+      data.command = WaitForString(node);
 
       // Receive the number of indices and then the actual indices.
       int num_indices;
@@ -188,7 +209,7 @@ namespace slib {
       int total_bytes = 0;
       MPI_Recv(&num_variables, 1, MPI_INT, node, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       for (int i = 0; i < num_variables; i++) {
-	input_names.push_back(WaitForString());
+	input_names.push_back(WaitForString(node));
 	int byte_length;
 	MPI_Recv(&byte_length, 1, MPI_INT, node, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 

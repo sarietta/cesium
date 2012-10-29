@@ -46,8 +46,10 @@ namespace slib {
     MatlabMatrix::MatlabMatrix(const mxArray* data)
       : _matrix(NULL)
       , _type(MATLAB_NO_TYPE) {
-      _type = GetType(data);
-      _matrix = mxDuplicateArray(data);
+      if (data != NULL) {
+	_type = GetType(data);
+	_matrix = mxDuplicateArray(data);
+      }
     }
 
     MatlabMatrix::MatlabMatrix(const MatlabMatrix& matrix) 
@@ -64,6 +66,22 @@ namespace slib {
       LoadMatrixFromFile(filename);
     }
     
+    MatlabMatrix::MatlabMatrix(const float& value)
+      : _matrix(NULL)
+      , _type(MATLAB_MATRIX) {
+      FloatMatrix contents(1,1);
+      contents(0,0) = value;
+      SetContents(contents);
+    }
+    
+    MatlabMatrix::MatlabMatrix(const float* contents, const int& rows, const int& cols) 
+      : _matrix(NULL)
+      , _type(MATLAB_MATRIX) {
+      FloatMatrix matrix(rows, cols);
+      memcpy(matrix.data(), contents, sizeof(float) * rows * cols);
+      SetContents(matrix);
+    }
+
     MatlabMatrix::MatlabMatrix(const FloatMatrix& contents) 
       : _matrix(NULL)
       , _type(MATLAB_MATRIX) {
@@ -81,6 +99,9 @@ namespace slib {
     }
 
     MatlabMatrixType MatlabMatrix::GetType(const mxArray* data) const {
+      if (data == NULL) {
+	return MATLAB_NO_TYPE;
+      }
       if (mxIsNumeric(data)) {
 	return MATLAB_MATRIX;
       } else if (mxIsStruct(data)) {
@@ -88,7 +109,6 @@ namespace slib {
       } else if (mxIsCell(data)) {
 	return MATLAB_CELL_ARRAY;
       } else {
-	LOG(WARNING) << "Unknown Matlab matrix type";
 	return MATLAB_NO_TYPE;
       }
     }
@@ -211,6 +231,12 @@ namespace slib {
 	  mxAddField(_matrix, field.c_str());
 	}
 
+	if (contents._matrix == NULL) {
+	  LOG(WARNING) << "Attempted to insert empty metrix into struct field: " << field 
+		       << " (index: " << index << ")";
+	  return;
+	}
+
 	// Deep copy.
 	mxArray* data = mxDuplicateArray(contents._matrix);
 	mxSetField(_matrix, index, field.c_str(), data);
@@ -232,6 +258,11 @@ namespace slib {
 	  // If it exists, we have to destroy it.
 	  mxArray* data = mxGetCell(_matrix, index);
 	  mxDestroyArray(data);
+	}
+
+	if (contents._matrix == NULL) {
+	  LOG(WARNING) << "Attempted to insert empty metrix into cell: " << index;
+	  return;
 	}
 
 	// Deep copy.
@@ -369,7 +400,7 @@ namespace slib {
 	break;
       }
       default:
-	LOG(ERROR) << "Unknown matrix type";
+	break;
       }
       ss.flush();
       return ss.str();
@@ -494,7 +525,20 @@ namespace slib {
     }
 
     MatlabMatrix MatlabConverter::ConvertModelToMatrix(const Model& model) {
-      return MatlabMatrix(MATLAB_NO_TYPE);
+      MatlabMatrix matrix(MATLAB_STRUCT, Pair<int>(1, 1));
+
+      matrix.SetStructField("rho", MatlabMatrix(model.rho));
+      matrix.SetStructField("w", MatlabMatrix(model.weights.get(), 1, model.num_weights));
+      matrix.SetStructField("firstLabel", MatlabMatrix(model.first_label));
+      
+      MatlabMatrix info(MATLAB_STRUCT, Pair<int>(1, 1));
+      info.SetStructField("numPositives", MatlabMatrix((float) model.num_positives));
+      info.SetStructField("numNegatives", MatlabMatrix((float) model.num_negatives));
+      matrix.SetStructField("info", info);
+
+      matrix.SetStructField("threshold", MatlabMatrix(model.threshold));
+
+      return matrix;
     }
   }  // namespace util
 }  // namespace slib
