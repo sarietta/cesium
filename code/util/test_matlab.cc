@@ -1,4 +1,6 @@
 #include <common/types.h>
+#undef Success
+#include <Eigen/Dense>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "matlab.h"
@@ -10,6 +12,7 @@
 
 DEFINE_int32(iterations, 1, "Iterations to test memory usage");
 
+using Eigen::MatrixXf;
 using slib::util::MatlabMatrix;
 using std::string;
 
@@ -59,6 +62,50 @@ int main(int argc, char** argv) {
     MatlabMatrix deserialized_matrix;
     deserialized_matrix.Deserialize(serialized);
     deserialized_matrix.SaveToFile("./test_c_serialized.mat");
+
+    FloatMatrix R1 = MatrixXf::Random(3, 3);
+    FloatMatrix R2 = MatrixXf::Random(3, 3);
+    FloatMatrix R3 = MatrixXf::Random(3, 3);
+
+    MatlabMatrix cell1(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 1));
+    MatlabMatrix cell2(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 2));
+    MatlabMatrix cell3(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 3));
+
+    cell1.SetCell(0, MatlabMatrix(R1));
+    cell2.SetCell(1, MatlabMatrix(R2));
+    cell3.SetCell(2, MatlabMatrix(R3));
+
+    MatlabMatrix cells(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 1));
+    cells.Merge(cell1).Merge(cell2).Merge(cell3);
+
+    if (FLAGS_iterations == 1) {
+      LOG(INFO) << "\nCell 1:\n" << cell1.GetCell(0).GetContents();
+      LOG(INFO) << "\nCell 2:\n" << cell2.GetCell(1).GetContents();
+      LOG(INFO) << "\nCell 3:\n" << cell3.GetCell(2).GetContents();
+      LOG(INFO) << "\nCell 1:\n" << cells.GetCell(0).GetContents();
+      LOG(INFO) << "\nCell 2:\n" << cells.GetCell(1).GetContents();
+      LOG(INFO) << "\nCell 3:\n" << cells.GetCell(2).GetContents();
+    }
+
+    MatlabMatrix cells1(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 3));
+    cells1.SetCell(0, MatlabMatrix(R1));
+    cells1.SetCell(2, MatlabMatrix(R2));
+
+    const string serialized_cells1 = cells1.Serialize();
+    MatlabMatrix deserialized_cells1;
+    deserialized_cells1.Deserialize(serialized_cells1);
+    
+    if (FLAGS_iterations == 1) {
+      LOG(INFO) << "====================================";
+      LOG(INFO) << "\nCell 1:\n" << cells1.GetCell(0).GetContents();
+      LOG(INFO) << "\nCell 2:\n" << cells1.GetCell(1).GetContents();
+      LOG(INFO) << "\nCell 3:\n" << cells1.GetCell(2).GetContents();
+
+      LOG(INFO) << "\nCell 1:\n" << deserialized_cells1.GetCell(0).GetContents();
+      LOG(INFO) << "\nCell 2:\n" << deserialized_cells1.GetCell(1).GetContents();
+      LOG(INFO) << "\nCell 3:\n" << deserialized_cells1.GetCell(2).GetContents();
+    }
+
   }
   
   return 0;

@@ -171,7 +171,7 @@ namespace slib {
   namespace svm {
 
     void CopyLibSVMModel(const svm_model* libmodel, const int& feature_dimensions, Model* model) {
-      if (libmodel->nr_class != 1) {
+      if (libmodel->nr_class > 2) {
 	LOG(WARNING) << "There were more than 2 classes in the SVM model";
       }
 

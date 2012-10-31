@@ -48,7 +48,7 @@ struct Pair {
   }
 
   bool operator==(const Pair<T>& other) const {
-    return (x == pair.x && y == pair.y);
+    return (x == other.x && y == other.y);
   }
 
   bool operator!=(const Pair<T>& other) const {

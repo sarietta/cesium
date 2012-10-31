@@ -64,8 +64,8 @@ namespace slib {
 
       // This is a merge, but it is rather strict. It requires both
       // matrices to be the same type and the same size. In the event
-      // that both matrices define the same index, the "this" matrix
-      // will be given precident.
+      // that both matrices define the same index / field, the "this"
+      // matrix will be given priority.
       MatlabMatrix& Merge(const MatlabMatrix& other);
 
       static MatlabMatrix LoadFromFile(const std::string& filename);
@@ -94,13 +94,15 @@ namespace slib {
       Pair<int> GetDimensions() const;
       std::vector<std::string> GetStructFieldNames() const;
 
-      inline MatlabMatrixType GetMatrixType() {
+      inline MatlabMatrixType GetMatrixType() const {
 	return _type;
       }
 
     private:
       mxArray* _matrix;
       MatlabMatrixType _type;
+
+      void Initialize(const MatlabMatrixType& type, const Pair<int>& dimensions);
 
       MatlabMatrix(const mxArray* data);
 

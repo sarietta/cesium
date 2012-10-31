@@ -27,6 +27,11 @@ namespace slib {
     MatlabMatrix::MatlabMatrix(const MatlabMatrixType& type, const Pair<int>& dimensions) 
       : _matrix(NULL)
       , _type(type) {
+      Initialize(type, dimensions);
+    }
+
+    void MatlabMatrix::Initialize(const MatlabMatrixType& type, const Pair<int>& dimensions) {
+      _type = type;
       if (_type == MATLAB_STRUCT) {
 	_matrix = mxCreateStructMatrix(dimensions.x, dimensions.y, 0, NULL);
       } else if (_type == MATLAB_CELL_ARRAY) {
@@ -99,12 +104,62 @@ namespace slib {
     }
 
     MatlabMatrix& MatlabMatrix::Merge(const MatlabMatrix& other) {
+      if (_type == MATLAB_NO_TYPE && _matrix == NULL) {
+	Initialize(other._type, other.GetDimensions());
+      }
+
       if (_type != other._type) {
 	return *this;
-      }
-      if (GetDimensions() != other.GetDimensions) {
+      }      
+
+      // Resize if necessary
+      Pair<int> dimensions = GetDimensions();
+      const Pair<int> other_dimensions = other.GetDimensions();
+      if (dimensions.x < other_dimensions.x || dimensions.y < other_dimensions.y) {
+	const int rows = dimensions.x > other_dimensions.x ? dimensions.x : other_dimensions.x;
+	const int cols = dimensions.y > other_dimensions.y ? dimensions.y : other_dimensions.y;
+
+	MatlabMatrix copy(*this);
+	mxDestroyArray(_matrix);
+	Initialize(other._type, Pair<int>(rows, cols));
+	Merge(copy);
+	Merge(other);
 	return *this;
       }
+
+      const int num_elements = other_dimensions.x * other_dimensions.y;
+
+      switch(_type) {
+      case MATLAB_STRUCT: {
+	vector<string> other_fields = other.GetStructFieldNames();
+
+	for (int i = 0; i < num_elements;  i++) {
+	  for (uint32 j = 0; j < other_fields.size(); j++) {
+	    const MatlabMatrix this_field = GetStructField(other_fields[j], i);
+	    if (this_field.GetMatrixType() == MATLAB_NO_TYPE) {
+	      SetStructField(other_fields[j], i, other.GetStructField(other_fields[j], i));
+	    }
+	  }
+	}
+
+	break;
+      } 
+      case MATLAB_CELL_ARRAY:
+	for (int i = 0; i < num_elements; i++) {
+	  const MatlabMatrix this_cell = GetCell(i);
+	  if (this_cell.GetMatrixType() == MATLAB_NO_TYPE) {	
+	    SetCell(i, other.GetCell(i));
+	  }
+	}
+	break;
+      case MATLAB_MATRIX:
+	LOG(WARNING) << "Cannot merge matrices... must be struct or cell array";
+	break;
+      default:
+	break;
+      }
+
+      return *this;
     }
 
     MatlabMatrixType MatlabMatrix::GetType(const mxArray* data) const {
@@ -241,7 +296,7 @@ namespace slib {
 	}
 
 	if (contents._matrix == NULL) {
-	  LOG(WARNING) << "Attempted to insert empty metrix into struct field: " << field 
+	  LOG(WARNING) << "Attempted to insert empty matrix into struct field: " << field 
 		       << " (index: " << index << ")";
 	  return;
 	}
@@ -270,7 +325,7 @@ namespace slib {
 	}
 
 	if (contents._matrix == NULL) {
-	  LOG(WARNING) << "Attempted to insert empty metrix into cell: " << index;
+	  VLOG(1) << "Attempted to insert empty matrix into cell: " << index;
 	  return;
 	}
 
@@ -278,7 +333,7 @@ namespace slib {
 	mxArray* data = mxDuplicateArray(contents._matrix);
 	mxSetCell(_matrix, index, data);
       } else {
-	LOG(WARNING) << "Attempted to access non-cell array (" << index << ")";
+	VLOG(1) << "Attempted to access non-cell array (" << index << ")";
       }
     }
 
@@ -409,6 +464,8 @@ namespace slib {
 	break;
       }
       default:
+	// In this case, we assume an empty matrix, and indicate that.
+	ss.put('E');
 	break;
       }
       ss.flush();
@@ -523,6 +580,11 @@ namespace slib {
 	ss.read(reinterpret_cast<char*>(contents.data()), sizeof(float) * rows * cols);
 	offset += sizeof(float) * rows * cols;
 	SetContents(contents);
+	break;
+      }
+      case 'E': {  // No type
+	VLOG(1) << "Found empty matrix at offset: " << offset;
+	_type = MATLAB_NO_TYPE;
 	break;
       }
       default:
