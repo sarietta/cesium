@@ -44,7 +44,7 @@ namespace slib {
 #if THRESHOLD_VIA_GRADIENT
 						      const float& gradient_mean_threshold) {
 #else
-                                                      vector<float>* gradient_sums) {
+                                                      vector<float>* gradient_sums) const {
 #endif
       const int32 rLim = _levels[index].height() - patch_size.x + 1;
       const int32 cLim = _levels[index].width() - patch_size.y + 1;
@@ -69,7 +69,7 @@ namespace slib {
 #if THRESHOLD_VIA_GRADIENT
 					       const float& gradient_mean_threshold) {
 #else
-                                               vector<float>* gradient_sums) {
+                                               vector<float>* gradient_sums) const {
 #endif
       const FloatImage& level = _levels[index];
       const int32 rLim = level.height() - patch_size.x + 1;
@@ -122,7 +122,7 @@ namespace slib {
 #if THRESHOLD_VIA_GRADIENT
 							  const float& gradient_mean_threshold) {
 #else
-                                                          vector<float>* gradient_sums) {
+                                                          vector<float>* gradient_sums) const {
 #endif
       int32 total_features = 0;
       for (int i = 0; i < GetNumLevels(); i++) {

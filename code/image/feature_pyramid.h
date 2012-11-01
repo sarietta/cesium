@@ -34,7 +34,7 @@ namespace slib {
 					const float& gradient_mean_threshold = FLT_MAX
 #else
                                         std::vector<float>* gradient_sums = NULL
-					);
+					) const;
 #endif
       // Does the same thing as above, but stores the results in the
       // features pointer.
@@ -48,7 +48,7 @@ namespace slib {
 				 const float& gradient_mean_threshold = FLT_MAX
 #else
                                  std::vector<float>* gradient_sums = NULL
-				 );
+				 ) const;
 #endif
       // A relatively fast way to get all of the features in one
       // matrix. There are cols = feature_dimensions and rows = total
@@ -61,7 +61,7 @@ namespace slib {
 					    const float& gradient_mean_threshold = FLT_MAX
 #else
                                             std::vector<float>* gradient_sums = NULL
-					    );
+					    ) const;
 #endif
 
       void AddLevel(const int& index, const FloatImage& level);

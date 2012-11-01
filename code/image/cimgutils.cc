@@ -2,8 +2,10 @@
 
 #include <CImg.h>
 #include <common/types.h>
+#ifndef SKIP_OPENCV
 #include <cv.h>
 #include <highgui.h>
+#endif
 
 #include "cimgutils.h"
 
@@ -11,6 +13,7 @@ using namespace cimg_library;
 
 namespace slib {
 
+#ifndef SKIP_OPENCV
   IplImage* CImgUtils::GetIplImage(const UInt8Image& image) {
     const int32 width = image.width();
     const int32 height = image.height();
@@ -53,6 +56,7 @@ namespace slib {
 
     return data;
   }
+#endif
 
   void CImgUtils::PrettyPrintFloatImage(const FloatImage& image) {
     if (image.size() > 100) {
