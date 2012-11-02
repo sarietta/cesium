@@ -1,11 +1,15 @@
 #include "random.h"
 
 #include <common/types.h>
+#undef Success
+#include <Eigen/Dense>
+#include <limits>
 #include <map>
 #include <math.h>
 #include <stdlib.h>
 #include <vector>
 
+using Eigen::VectorXf;
 using std::map;
 using std::vector;
 
@@ -14,7 +18,7 @@ namespace slib {
 
     char* Random::rngState = new char[256];
 
-    void Random::initRandom() {
+    void Random::Initialize() {
       initstate(4, rngState, 256);
     }
 
@@ -49,9 +53,9 @@ namespace slib {
       // distribution.
       float x1, x2;
       do{
-	x1 = genUniformRandom(0.0, 1.0);
+	x1 = Uniform(0.0, 1.0);
       } while (x1 == 0); // cannot take log of 0.
-      x2 = genUniformRandom(0.0, 1.0);
+      x2 = Uniform(0.0, 1.0);
       float z;
       z = sqrtf(-2.0 * logf(x1)) * cosf(2.0 * M_PI * x2);
       return z;
@@ -59,20 +63,58 @@ namespace slib {
 
     float Random::Cauchy() {
       float x, y;
-      x = genGaussianRandom();
-      y = genGaussianRandom();
+      x = Gaussian();
+      y = Gaussian();
       if (fabs(y) < 0.0000001) {
 	y = 0.0000001;
       }
       return x / y;
     }
 
-    vector<int> Random::PerumtationIndices(const int& start, const int& end) {
+    VectorXf Random::SampleArbitraryDistribution(const VectorXf& distribution, const int& num_samples) {
+      VectorXf cumulative(distribution.size());
+      cumulative(0) = distribution(0);
+      for (int i = 1; i < distribution.size();  i++) {
+	cumulative(i) = cumulative(i - 1) + distribution(i);
+      }
+      
+      vector<float> steps(distribution.size());
+      for (int i = 0; i < (int) steps.size(); i++) {
+	steps[i] = ((float) i) / ((float) distribution.size() - 1);
+      }
+      steps[steps.size()-1] = 1.0f;
+      
+      VectorXf cumulative_inverse(cumulative.size());
+      int index = 0;
+      for (int i = 0; i < (int) steps.size(); i++) {
+	if (steps[i] < cumulative(index)) {
+	  cumulative_inverse(i) = (float) index;
+	} else {
+	  while (index < (int) steps.size() 
+		 && steps[i] > cumulative(index) + std::numeric_limits<float>::epsilon()) {
+	    index++;
+	  }
+	  cumulative_inverse(i) = (float) index;
+	}
+      }
+      
+      VectorXf samples(num_samples);
+      for (int i = 0; i < samples.size(); i++) {
+	const float random = Random::Uniform(0.0f, 1.0f);
+	const float number = random * ((float) distribution.size() - 1.0f);
+	const int index = (int) floor(number + 0.5f);
+	samples(i) = cumulative_inverse(index);
+      }
+      
+      return samples;
+    }
+
+    vector<int> Random::PermutationIndices(const int& start, const int& end) {
       const int num = end - start + 1;
       // Ensures that we have unique indices.
       map<int, bool> unique_indices;
       vector<int> indices;
-      while (unique_indices.size() < num) {
+      while ((int) unique_indices.size() < num) {
 	const int index = RandomInteger(start, end);
 	if (unique_indices.find(index) == unique_indices.end()) {
 	  unique_indices[index] = true;

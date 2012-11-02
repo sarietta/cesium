@@ -1,8 +1,10 @@
 CC 		= g++
-CC_FLAGS 	= -O3 -Wall -I../ `pkg-config --cflags opencv` -I/usr/local/include/eigen3
-#CC_FLAGS 	= -ggdb -Wall -I../ `pkg-config --cflags opencv` -I/usr/local/include/eigen3
+OPT		= -O3
+#OPT		= -ggdb
+CC_FLAGS 	= ${OPT} -Wall -I../ `pkg-config --cflags opencv` `pkg-config --cflags fftw3` \
+		  -I/usr/local/include/eigen3
 LD_FLAGS 	= 
-LIBS 		= `pkg-config --libs opencv`
+LIBS 		= `pkg-config --libs opencv` `pkg-config --libs fftw3` 
 
 SRCS	= $(wildcard *.cc)
 OBJS	= $(SRCS:.cc=.o)
