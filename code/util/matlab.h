@@ -1,6 +1,7 @@
 #ifndef __SLIB_UTIL_MATLAB_H__
 #define __SLIB_UTIL_MATLAB_H__
 
+#include <CImg.h>
 #include <common/scoped_ptr.h>
 #include <common/types.h>
 #undef Success
@@ -10,13 +11,14 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <svm/detector.h>
 #include <svm/model.h>
 
 namespace slib {
   namespace util {
 
     enum MatlabMatrixType {
-      MATLAB_STRUCT, MATLAB_CELL_ARRAY, MATLAB_MATRIX, MATLAB_NO_TYPE
+      MATLAB_STRUCT, MATLAB_CELL_ARRAY, MATLAB_MATRIX, MATLAB_STRING, MATLAB_NO_TYPE
     };
 
     /**
@@ -53,7 +55,7 @@ namespace slib {
       explicit MatlabMatrix(const MatlabMatrixType& type);
       MatlabMatrix(const MatlabMatrixType& type, const Pair<int>& dimensions);
       virtual ~MatlabMatrix();
-      explicit MatlabMatrix(const std::string& filename);
+      explicit MatlabMatrix(const std::string& contents);
 
       explicit MatlabMatrix(const float& data);
       MatlabMatrix(const float* conents, const int& rows, const int& cols);
@@ -75,12 +77,14 @@ namespace slib {
       MatlabMatrix GetCell(const int& row, const int& col) const;
       MatlabMatrix GetCell(const int& index) const;
       FloatMatrix GetContents() const;
+      std::string GetStringContents() const;
 
       void SetStructField(const std::string& field, const MatlabMatrix& contents);
       void SetStructField(const std::string& field, const int& index, const MatlabMatrix& contents);
       void SetCell(const int& row, const int& col, const MatlabMatrix& contents);
       void SetCell(const int& index, const MatlabMatrix& contents);
       void SetContents(const FloatMatrix& contents);
+      void SetStringContents(const std::string& contents);
 
       // Although the return type is a "string", the contents of that
       // string will be fwrite-style bytes.
@@ -113,6 +117,7 @@ namespace slib {
     class MatlabConverter {
     public:
       static MatlabMatrix ConvertModelToMatrix(const slib::svm::Model& model);
+      static MatlabMatrix ConvertMetadataToMatrix(const std::vector<slib::svm::DetectionMetadata>& metadata);
     };
 
   }  // namespace util

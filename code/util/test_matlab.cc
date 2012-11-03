@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   
   for (int i = 0; i < FLAGS_iterations; i++) {
-    MatlabMatrix matrix("./test.mat");
+    MatlabMatrix matrix = MatlabMatrix::LoadFromFile("./test.mat");
     MatlabMatrix field1 = matrix.GetStructField("field1");
     MatlabMatrix field2 = matrix.GetStructField("field2");
     MatlabMatrix field3 = matrix.GetStructField("field3");
@@ -87,9 +87,10 @@ int main(int argc, char** argv) {
       LOG(INFO) << "\nCell 3:\n" << cells.GetCell(2).GetContents();
     }
 
-    MatlabMatrix cells1(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 3));
+    MatlabMatrix cells1(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 4));
     cells1.SetCell(0, MatlabMatrix(R1));
     cells1.SetCell(2, MatlabMatrix(R2));
+    cells1.SetCell(3, MatlabMatrix("hello from #4"));
 
     const string serialized_cells1 = cells1.Serialize();
     MatlabMatrix deserialized_cells1;
@@ -100,10 +101,12 @@ int main(int argc, char** argv) {
       LOG(INFO) << "\nCell 1:\n" << cells1.GetCell(0).GetContents();
       LOG(INFO) << "\nCell 2:\n" << cells1.GetCell(1).GetContents();
       LOG(INFO) << "\nCell 3:\n" << cells1.GetCell(2).GetContents();
-
+      LOG(INFO) << "\nCell 4:\n" << cells1.GetCell(3).GetStringContents();
+      
       LOG(INFO) << "\nCell 1:\n" << deserialized_cells1.GetCell(0).GetContents();
       LOG(INFO) << "\nCell 2:\n" << deserialized_cells1.GetCell(1).GetContents();
       LOG(INFO) << "\nCell 3:\n" << deserialized_cells1.GetCell(2).GetContents();
+      LOG(INFO) << "\nCell 4:\n" << deserialized_cells1.GetCell(3).GetStringContents();
     }
 
   }

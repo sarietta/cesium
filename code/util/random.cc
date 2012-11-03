@@ -6,6 +6,7 @@
 #include <limits>
 #include <map>
 #include <math.h>
+#include <util/matlab.h>
 #include <stdlib.h>
 #include <vector>
 
@@ -72,29 +73,38 @@ namespace slib {
     }
 
     VectorXf Random::SampleArbitraryDistribution(const VectorXf& distribution, const int& num_samples) {
-      VectorXf cumulative(distribution.size());
+      const int size = distribution.size();
+
+      VectorXf cumulative(size);
       cumulative(0) = distribution(0);
-      for (int i = 1; i < distribution.size();  i++) {
+      for (int i = 1; i < size;  i++) {
 	cumulative(i) = cumulative(i - 1) + distribution(i);
       }
-      
-      vector<float> steps(distribution.size());
-      for (int i = 0; i < (int) steps.size(); i++) {
-	steps[i] = ((float) i) / ((float) distribution.size() - 1);
+
+      vector<float> steps(size);
+      for (int i = 0; i < size; i++) {
+	steps[i] = ((float) i) / ((float) size - 1);
       }
-      steps[steps.size()-1] = 1.0f;
+      steps[size-1] = 1.0f;
       
-      VectorXf cumulative_inverse(cumulative.size());
+      VectorXf cumulative_inverse(size);
       int index = 0;
-      for (int i = 0; i < (int) steps.size(); i++) {
+      for (int i = 0; i < size; i++) {
 	if (steps[i] < cumulative(index)) {
 	  cumulative_inverse(i) = (float) index;
 	} else {
-	  while (index < (int) steps.size() 
+	  while (index < size - 1
 		 && steps[i] > cumulative(index) + std::numeric_limits<float>::epsilon()) {
 	    index++;
 	  }
 	  cumulative_inverse(i) = (float) index;
+	}
+	// Have to stop early in some cases.
+	if (index >= size) {
+	  for (int j = i+1; j < size; j++) {
+	    cumulative_inverse(j) = (float) size - 1;
+	  }
+	  break;
 	}
       }
       

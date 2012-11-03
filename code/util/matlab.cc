@@ -1,13 +1,16 @@
 #include "matlab.h"
 
+#include <CImg.h>
 #include <common/types.h>
 #include <glog/logging.h>
 #include <iostream>
 #include <mat.h>
 #include <string>
 #include <sstream>
+#include <svm/detector.h>
 #include <vector>
 
+using slib::svm::DetectionMetadata;
 using slib::svm::Model;
 using std::string;
 using std::stringstream;
@@ -38,6 +41,10 @@ namespace slib {
 	_matrix = mxCreateCellMatrix(dimensions.x, dimensions.y);
       } else if (_type == MATLAB_MATRIX) {
 	_matrix = mxCreateNumericMatrix(dimensions.x, dimensions.y, mxSINGLE_CLASS, mxREAL);
+      } else if (_type == MATLAB_STRING) {
+	const int length = dimensions.x > dimensions.y ? dimensions.x : dimensions.y;
+	const string str(length, '\0');
+	_matrix = mxCreateString(str.c_str());
       }
     }
 
@@ -65,10 +72,10 @@ namespace slib {
       }
     }
 
-    MatlabMatrix::MatlabMatrix(const string& filename) 
+    MatlabMatrix::MatlabMatrix(const string& contents) 
       : _matrix(NULL)
-      , _type(MATLAB_NO_TYPE) {
-      LoadMatrixFromFile(filename);
+      , _type(MATLAB_STRING) {
+      SetStringContents(contents);
     }
     
     MatlabMatrix::MatlabMatrix(const float& value)
@@ -153,9 +160,9 @@ namespace slib {
 	}
 	break;
       case MATLAB_MATRIX:
-	LOG(WARNING) << "Cannot merge matrices... must be struct or cell array";
-	break;
+      case MATLAB_STRING:
       default:
+	LOG(WARNING) << "Cannot merge matrices... must be struct or cell array";
 	break;
       }
 
@@ -172,6 +179,8 @@ namespace slib {
 	return MATLAB_STRUCT;
       } else if (mxIsCell(data)) {
 	return MATLAB_CELL_ARRAY;
+      } else if (mxIsChar(data)) {
+	return MATLAB_STRING;
       } else {
 	return MATLAB_NO_TYPE;
       }
@@ -205,7 +214,8 @@ namespace slib {
     }
     
     MatlabMatrix MatlabMatrix::LoadFromFile(const string& filename) {
-      MatlabMatrix matrix(filename);
+      MatlabMatrix matrix;
+      matrix.LoadMatrixFromFile(filename);
       return matrix;
     }
     
@@ -276,6 +286,26 @@ namespace slib {
       }
 
       return matrix;
+    }
+
+    string MatlabMatrix::GetStringContents() const {
+      string contents;
+      if (_matrix != NULL && _type == MATLAB_STRING) {
+	const int rows = mxGetM(_matrix);
+	const int cols = mxGetN(_matrix);
+	const int length = rows > cols ? rows : cols;
+
+	scoped_ptr<char> characters(new char[length+1]);
+	if (mxGetString(_matrix, characters.get(), length+1) == 0) {
+	  contents.assign(characters.get());
+	} else {
+	  LOG(WARNING) << "Couldn't find string";
+	}
+      } else {
+	LOG(WARNING) << "Attempted to access non-string matrix";
+      }
+
+      return contents;
     }
     
     void MatlabMatrix::SetStructField(const string& field, const MatlabMatrix& contents) {
@@ -353,6 +383,19 @@ namespace slib {
 	}
       } else {
 	LOG(WARNING) << "Attempted to access non-matrix";
+      }
+    }
+
+    void MatlabMatrix::SetStringContents(const string& contents) {
+      if (_type == MATLAB_STRING) {
+	// Overwrite the already existing data if necessary.
+	if (_matrix != NULL) {
+	  mxDestroyArray(_matrix);
+	}
+
+	_matrix = mxCreateString(contents.c_str());
+      } else {
+	LOG(WARNING) << "Attempted to access non-string matrix";
       }
     }
         
@@ -461,6 +504,17 @@ namespace slib {
 	const FloatMatrix contents = GetContents();
 	const int length = contents.rows() * contents.cols();
 	ss.write(reinterpret_cast<const char*>(contents.data()), sizeof(float) * length);
+	break;
+      }
+      case MATLAB_STRING: {
+	// Indicate we have a string.
+	ss.put('Z');
+	const Pair<int> dimensions = GetDimensions();
+	ss.write(reinterpret_cast<const char*>(&dimensions.x), sizeof(int));
+	ss.write(reinterpret_cast<const char*>(&dimensions.y), sizeof(int));
+	// Write out the actual data.
+	const string contents = GetStringContents();
+	ss.write(contents.c_str(), sizeof(char) * (contents.length() + 1));
 	break;
       }
       default:
@@ -582,6 +636,28 @@ namespace slib {
 	SetContents(contents);
 	break;
       }
+      case 'Z': {  // String
+	VLOG(1) << "Found string at offset: " << offset;
+	_type = MATLAB_STRING;
+
+	// Size of the matrix.
+	Pair<int> dimensions;
+	ss.read(reinterpret_cast<char*>(&dimensions.x), sizeof(int));
+	ss.read(reinterpret_cast<char*>(&dimensions.y), sizeof(int));
+	offset += sizeof(int) * 2;
+	// No initialization necessary as the SetContents method takes care of it.
+	// And now the actual data.
+	const int rows = dimensions.x;
+	const int cols = dimensions.y;
+	const int length = rows > cols ? rows : cols;
+	VLOG(2) << "String length: " << length;
+
+	scoped_ptr<char> characters(new char[length+1]);
+	ss.read(characters.get(), sizeof(char) * (length + 1));
+	offset += sizeof(char) * (length + 1);
+	SetStringContents(string(characters.get()));
+	break;
+      }
       case 'E': {  // No type
 	VLOG(1) << "Found empty matrix at offset: " << offset;
 	_type = MATLAB_NO_TYPE;
@@ -611,6 +687,40 @@ namespace slib {
 
       return matrix;
     }
+
+    static MatlabMatrix ConvertMetadataToMatrix(const vector<DetectionMetadata>& metadata) {
+      MatlabMatrix matrix(MATLAB_STRUCT, Pair<int>(1, metadata.size()));
+
+      for (int i = 0; i < (int) metadata.size(); i++) {
+	const DetectionMetadata entry = metadata[i];
+	matrix.SetStructField("im", i, MatlabMatrix(entry.image_path));
+	matrix.SetStructField("x1", i, MatlabMatrix((float) entry.x1));
+	matrix.SetStructField("x2", i, MatlabMatrix((float) entry.x2));
+	matrix.SetStructField("y1", i, MatlabMatrix((float) entry.y1));
+	matrix.SetStructField("y2", i, MatlabMatrix((float) entry.y2));
+
+	matrix.SetStructField("flip", i, MatlabMatrix(0.0f));
+	matrix.SetStructField("trunc", i, MatlabMatrix(0.0f));
+
+	MatlabMatrix size(MATLAB_STRUCT, Pair<int>(1, 1));
+	size.SetStructField("ncols", MatlabMatrix(entry.image_size.x));
+	size.SetStructField("nrows", MatlabMatrix(entry.image_size.y));
+	matrix.SetStructField("size", i, size);
+
+	matrix.SetStructField("imidx", i, MatlabMatrix((float) entry.image_index));
+	matrix.SetStructField("setidx", i, MatlabMatrix((float) entry.image_set_index));
+
+	FloatMatrix pyramid_offset(1, 3);
+	pyramid_offset << 
+	  (float) entry.pyramid_offset.x 
+	  , (float) entry.pyramid_offset.y 
+	  , (float) entry.pyramid_offset.z;
+	matrix.SetStructField("pyramid", i, MatlabMatrix(pyramid_offset));
+      }
+
+      return matrix;
+    }
+
   }  // namespace util
 }  // namespace slib
   

@@ -27,6 +27,15 @@ namespace slib {
 	return iter->second;
       }
     }
+
+    bool JobData::HasInput(const string& name) const {
+      map<string, MatlabMatrix>::const_iterator iter = variables.find(name);
+      if (iter == variables.end()) {
+	return false;
+      } else {
+	return true;
+      }
+    }
     
     JobController::JobController() : _completion_handler(NULL) {}
 

@@ -1,6 +1,7 @@
 #ifndef __SLIB_UTIL_RANDOM_H__
 #define __SLIB_UTIL_RANDOM_H__
 
+#include <CImg.h>
 #include <common/types.h>
 #undef Success
 #include <Eigen/Dense>
