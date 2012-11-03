@@ -355,7 +355,7 @@ namespace slib {
 	}
 
 	if (contents._matrix == NULL) {
-	  VLOG(1) << "Attempted to insert empty matrix into cell: " << index;
+	  VLOG(3) << "Attempted to insert empty matrix into cell: " << index;
 	  return;
 	}
 
@@ -687,8 +687,8 @@ namespace slib {
 
       return matrix;
     }
-
-    static MatlabMatrix ConvertMetadataToMatrix(const vector<DetectionMetadata>& metadata) {
+    
+    MatlabMatrix MatlabConverter::ConvertMetadataToMatrix(const vector<DetectionMetadata>& metadata) {
       MatlabMatrix matrix(MATLAB_STRUCT, Pair<int>(1, metadata.size()));
 
       for (int i = 0; i < (int) metadata.size(); i++) {
