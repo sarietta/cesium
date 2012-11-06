@@ -485,9 +485,10 @@ namespace slib {
       return metadata;
     }
     
-    vector<int32> SelectViaNonMaxSuppression(const vector<DetectionMetadata>& metadata, 
-					     const vector<int32>& selected_indices,
-					     const VectorXf& scores, const float& overlap_threshold) {
+    vector<int32> Detector::SelectViaNonMaxSuppression(const vector<DetectionMetadata>& metadata, 
+						       const vector<int32>& selected_indices,
+						       const VectorXf& scores, 
+						       const float& overlap_threshold) {
       vector<int32> indices;
       
       FloatMatrix boxes(metadata.size(), 4);

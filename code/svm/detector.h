@@ -110,9 +110,11 @@ namespace slib {
       
       // This should be move the class FeaturePyramid and the parameters
       // should be modified accordinggly.
-      static slib::image::FeaturePyramid ComputeFeaturePyramid(const FloatImage& image, 
-							       const DetectionParameters& parameters, 
-							       const std::vector<int32>& levels = std::vector<int32>(0));
+      static slib::image::FeaturePyramid 
+      ComputeFeaturePyramid(const FloatImage& image, 
+			    const DetectionParameters& parameters, 
+			    const std::vector<int32>& levels = std::vector<int32>(0));
+
       slib::image::FeaturePyramid ComputeFeaturePyramid(const FloatImage& image, 
 							const std::vector<int32>& levels = std::vector<int32>(0));
       
@@ -127,6 +129,13 @@ namespace slib {
       
       // Outputs one DetectionResultSet per model.
       DetectionResultSet DetectInImage(const FloatImage& image);
+
+      // A helper function that can perform the non-maximum
+      // suppression required to cull a DetectionResultSet.
+      static std::vector<int32> SelectViaNonMaxSuppression(const std::vector<DetectionMetadata>& metadata, 
+							   const std::vector<int32>& selected_indices,
+							   const Eigen::VectorXf& scores, 
+							   const float& overlap_threshold);
       
       // Helper function to perform the actual prediction for all of the
       // models. If either predicted_labels or accuracy is non-NULL, then

@@ -233,7 +233,7 @@ namespace slib {
 	const mxArray* data = mxGetField(_matrix, index, field.c_str());
 	return MatlabMatrix(data);
       } else {
-	LOG(WARNING) << "Attempted to access non-struct (field: " << field << ")";
+	VLOG(1) << "Attempted to access non-struct (field: " << field << ")";
 	return MatlabMatrix(MATLAB_NO_TYPE);
       }
     }
@@ -249,7 +249,7 @@ namespace slib {
 	const mxArray* data = mxGetCell(_matrix, index);
 	return MatlabMatrix(data);
       } else {
-	LOG(WARNING) << "Attempted to access non-cell array (" << index << ")";
+	VLOG(1) << "Attempted to access non-cell array (" << index << ")";
 	return MatlabMatrix(MATLAB_NO_TYPE);
       }
     }
@@ -270,7 +270,7 @@ namespace slib {
 
 	return ((float) mxGetScalar(_matrix));
       } else {
-	LOG(WARNING) << "Attempted to access non-matrix";
+	VLOG(1) << "Attempted to access non-matrix";
       }
       return 0.0f;
     }
@@ -306,7 +306,7 @@ namespace slib {
 	  LOG(ERROR) << "Only float and double matrices are supported";
 	}
       } else {
-	LOG(WARNING) << "Attempted to access non-matrix";
+	VLOG(1) << "Attempted to access non-matrix";
       }
 
       return matrix;
@@ -387,7 +387,7 @@ namespace slib {
 	mxArray* data = mxDuplicateArray(contents._matrix);
 	mxSetField(_matrix, index, field.c_str(), data);
       } else {
-	LOG(WARNING) << "Attempted to access non-struct (field: " << field << ")";
+	VLOG(1) << "Attempted to access non-struct (field: " << field << ")";
       }
     }
 

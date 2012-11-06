@@ -167,7 +167,6 @@ namespace slib {
 					  const std::vector<int>& image_indices = std::vector<int>(0),
 					  const std::vector<int>& assigned_clusters = std::vector<int>(0));
 
-
       static slib::svm::Detector ConvertMatrixToDetector(const MatlabMatrix& matrix);
       static MatlabMatrix ConvertDetectorToMatrix(const slib::svm::Detector& detector);
     };
