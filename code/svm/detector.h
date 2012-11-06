@@ -9,6 +9,7 @@
 #undef Success
 #include <Eigen/Dense>
 #include <image/feature_pyramid.h>
+#include <mat.h>
 #include "model.h"
 #include <string>
 #include <vector>
@@ -18,7 +19,7 @@ namespace slib {
     
     struct DetectionParameters {
       Pair<int32> basePatchSize;
-      std::string category;
+      std::vector<std::string> category;
       int32 imageCanonicalSize;
       float levelFactor;
       int32 maxClusterSize;
@@ -102,6 +103,8 @@ namespace slib {
       static int32 GetFeatureDimensions(const DetectionParameters& parameters,
 					Pair<int32>* patch_size_out = NULL);
       static DetectionParameters GetDefaultDetectionParameters();
+      // We allocate the memory via a deep copy. You are in charge of destroying the pointer.
+      void SaveParametersToMatlabMatrix(mxArray** matrix) const;
       
       // This should be move the class FeaturePyramid and the parameters
       // should be modified accordinggly.
@@ -150,16 +153,36 @@ namespace slib {
 	return _type;
       }
       
-      inline FloatMatrix GetWeightMatrix() const {
-	return *(_weight_matrix);
+      inline const FloatMatrix& GetWeightMatrix() const {
+	if (_weight_matrix == NULL) {
+	  return _empty_matrix;
+	} else {
+	  return *(_weight_matrix);
+	}
       }
       
-      inline FloatMatrix GetModelOffsets() const {
-	return *(_model_offsets);
+      inline const FloatMatrix& GetModelOffsets() const {
+	if (_model_offsets == NULL) {
+	  return _empty_matrix;
+	} else {
+	  return *(_model_offsets);
+	}
       }
       
-      inline FloatMatrix GetModelLabels() const {
-	return *(_model_labels);
+      inline const FloatMatrix& GetModelLabels() const {
+	if (_model_labels == NULL) {
+	  return _empty_matrix;
+	} else {
+	  return *(_model_labels);
+	}
+      }
+
+      inline int GetNumModels() const {
+	return _models.size();
+      }
+
+      inline const Model& GetModel(const int& index) const {
+	return _models[index];
       }
       
     private:
@@ -167,6 +190,7 @@ namespace slib {
       
       std::string _type;
       std::vector<slib::svm::Model> _models;
+      static FloatMatrix _empty_matrix;
       scoped_ptr<FloatMatrix> _weight_matrix;
       scoped_ptr<FloatMatrix> _model_offsets;
       scoped_ptr<FloatMatrix> _model_labels;
@@ -182,6 +206,7 @@ namespace slib {
       // leak. This method is not responsible for the allocated array of
       // Detectors.
       static Detector LoadFromMatlabFile(const std::string& filename);
+      static Detector InitializeFromMatlabArray(const mxArray& array);
     };
     
   }  // namespace svm

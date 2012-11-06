@@ -11,6 +11,8 @@
 #include <vector>
 
 using slib::svm::DetectionMetadata;
+using slib::svm::DetectorFactory;
+using slib::svm::Detector;
 using slib::svm::Model;
 using std::string;
 using std::stringstream;
@@ -326,8 +328,8 @@ namespace slib {
 	}
 
 	if (contents._matrix == NULL) {
-	  LOG(WARNING) << "Attempted to insert empty matrix into struct field: " << field 
-		       << " (index: " << index << ")";
+	  VLOG(3) << "Attempted to insert empty matrix into struct field: " << field 
+		  << " (index: " << index << ")";
 	  return;
 	}
 
@@ -707,16 +709,46 @@ namespace slib {
 	size.SetStructField("nrows", MatlabMatrix(entry.image_size.y));
 	matrix.SetStructField("size", i, size);
 
-	matrix.SetStructField("imidx", i, MatlabMatrix((float) entry.image_index));
-	matrix.SetStructField("setidx", i, MatlabMatrix((float) entry.image_set_index));
+	matrix.SetStructField("imidx", i, MatlabMatrix((float) entry.image_index + 1));
+	matrix.SetStructField("setidx", i, MatlabMatrix((float) entry.image_set_index + 1));
 
+	// The original order is <level, x, y>, but MATLAB expects <level, y, x>. Also have to add one.
 	FloatMatrix pyramid_offset(1, 3);
 	pyramid_offset << 
-	  (float) entry.pyramid_offset.x 
-	  , (float) entry.pyramid_offset.y 
-	  , (float) entry.pyramid_offset.z;
+	  (float) entry.pyramid_offset.x + 1
+	  , (float) entry.pyramid_offset.z + 1
+	  , (float) entry.pyramid_offset.y + 1;
 	matrix.SetStructField("pyramid", i, MatlabMatrix(pyramid_offset));
       }
+
+      return matrix;
+    }
+
+    Detector MatlabConverter::ConvertMatrixToDetector(const MatlabMatrix& matrix) {
+      return DetectorFactory::InitializeFromMatlabArray(matrix.GetMatlabArray());
+    }
+
+    MatlabMatrix MatlabConverter::ConvertDetectorToMatrix(const Detector& detector) {
+      MatlabMatrix matrix(MATLAB_STRUCT);
+
+      MatlabMatrix firstLevModels(MATLAB_STRUCT);
+      firstLevModels.SetStructField("w", MatlabMatrix(detector.GetWeightMatrix().transpose()));
+      firstLevModels.SetStructField("rho", MatlabMatrix(detector.GetModelOffsets().transpose()));
+      firstLevModels.SetStructField("firstLabel", MatlabMatrix(detector.GetModelLabels().transpose()));
+
+      vector<float> thresholds(detector.GetNumModels());
+      for (int i = 0; i < (int) thresholds.size(); i++) {
+	thresholds[i] = detector.GetModel(i).threshold;
+      }
+      firstLevModels.SetStructField("threshold", MatlabMatrix(thresholds));
+      firstLevModels.SetStructField("type", MatlabMatrix("composite"));
+
+      matrix.SetStructField("firstLevModels", firstLevModels);
+
+      mxArray* params;
+      detector.SaveParametersToMatlabMatrix(&params);
+      matrix.SetStructField("params", MatlabMatrix(params));
+      mxDestroyArray(params);
 
       return matrix;
     }

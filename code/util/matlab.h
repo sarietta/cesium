@@ -55,10 +55,24 @@ namespace slib {
       explicit MatlabMatrix(const MatlabMatrixType& type);
       MatlabMatrix(const MatlabMatrixType& type, const Pair<int>& dimensions);
       virtual ~MatlabMatrix();
+      // Creates a character array with the contents.
       explicit MatlabMatrix(const std::string& contents);
 
+      // STL vector compatible contructor. Usually the compiler can infer the type automatically.
+      template <typename T>
+      explicit MatlabMatrix(const std::vector<T>& values) : _matrix(NULL), _type(MATLAB_MATRIX) {
+	FloatMatrix matrix(values.size(), 1);
+	for (int i = 0; i < (int) values.size(); i++) {
+	  matrix(i, 0) = static_cast<float>(values[i]);
+	}
+	SetContents(matrix);
+      }
+
+      // For scalar values.
       explicit MatlabMatrix(const float& data);
-      MatlabMatrix(const float* conents, const int& rows, const int& cols);
+      // Pointers to data.
+      MatlabMatrix(const float* contents, const int& rows, const int& cols);
+      // Compatibility with Eigen.
       explicit MatlabMatrix(const FloatMatrix& contents);
 
       // Very important for STL compatibility.
@@ -102,6 +116,11 @@ namespace slib {
 	return _type;
       }
 
+      // Only use this if you know what you're doing. Seriously.
+      inline const mxArray& GetMatlabArray() const {
+	return (*_matrix);
+      }
+
     private:
       mxArray* _matrix;
       MatlabMatrixType _type;
@@ -112,12 +131,17 @@ namespace slib {
 
       void LoadMatrixFromFile(const std::string& filename);
       MatlabMatrixType GetType(const mxArray* data) const;
+
+      friend class MatlabConverter;
     };
 
     class MatlabConverter {
     public:
       static MatlabMatrix ConvertModelToMatrix(const slib::svm::Model& model);
       static MatlabMatrix ConvertMetadataToMatrix(const std::vector<slib::svm::DetectionMetadata>& metadata);
+
+      static slib::svm::Detector ConvertMatrixToDetector(const MatlabMatrix& matrix);
+      static MatlabMatrix ConvertDetectorToMatrix(const slib::svm::Detector& detector);
     };
 
   }  // namespace util

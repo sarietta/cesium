@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <stdint.h>
+#include <vector>
 
 // No namespace.
 
@@ -53,6 +54,24 @@ struct Pair {
 
   bool operator!=(const Pair<T>& other) const {
     return !(*this == other);
+  }
+
+  /** 
+      Casting operations.
+   */
+  // To templated Pair.
+  template <typename U>
+  operator Pair<U>() const {
+    return Pair<U>(static_cast<U>(x), static_cast<U>(y));
+  }
+
+  // To templated vector.
+  template <typename U>
+  operator std::vector<U>() const {
+    std::vector<U> values(2);
+    values[0] = static_cast<U>(x);
+    values[1] = static_cast<U>(y);
+    return values;
   }
 };
 

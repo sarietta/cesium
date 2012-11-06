@@ -2,7 +2,6 @@
 #define __SLIB_IMAGE_FEATURE_PYRAMID_H__
 
 #define SLIB_NO_DEFINE_64BIT
-#define THRESHOLD_VIA_GRADIENT 0
 
 #include <CImg.h>
 #include "../common/scoped_ptr.h"
@@ -22,6 +21,15 @@ namespace slib {
       FeaturePyramid(const int& num_levels);
       FeaturePyramid(const FeaturePyramid& pyramid);
 
+      // Throws away features (and corresponding indices and level
+      // information) whose gradient sums are less than the specified
+      // threshold.
+      static FloatMatrix ThresholdFeatures(const FloatMatrix& all_features,
+					   const std::vector<float>& gradient_sums,
+					   const float& threshold,					   
+					   std::vector<int32>* levels,
+					   std::vector<Pair<int32> >* indices);
+
       // Gets the actual feature vector for the specified level. The
       // output of this method is a matrix of size (# of features) x
       // (feature_dimensions) That is, there are rows = the number of
@@ -30,12 +38,7 @@ namespace slib {
 					const int32& feature_dimensions,
 					std::vector<int32>* levels = NULL,
 					std::vector<Pair<int32> >* indices = NULL,
-#if THRESHOLD_VIA_GRADIENT
-					const float& gradient_mean_threshold = FLT_MAX
-#else
-                                        std::vector<float>* gradient_sums = NULL
-					) const;
-#endif
+                                        std::vector<float>* gradient_sums = NULL) const;
       // Does the same thing as above, but stores the results in the
       // features pointer.
       void GetLevelFeatureVector(const int& index, 
@@ -44,12 +47,8 @@ namespace slib {
 				 float* features,
 				 std::vector<int32>* levels = NULL,
 				 std::vector<Pair<int32> >* indices = NULL,
-#if THRESHOLD_VIA_GRADIENT
-				 const float& gradient_mean_threshold = FLT_MAX
-#else
-                                 std::vector<float>* gradient_sums = NULL
-				 ) const;
-#endif
+                                 std::vector<float>* gradient_sums = NULL) const;
+
       // A relatively fast way to get all of the features in one
       // matrix. There are cols = feature_dimensions and rows = total
       // # of features.
@@ -57,12 +56,7 @@ namespace slib {
 					    const int32& feature_dimensions,
 					    std::vector<int32>* levels = NULL,
 					    std::vector<Pair<int32> >* indices = NULL,
-#if THRESHOLD_VIA_GRADIENT
-					    const float& gradient_mean_threshold = FLT_MAX
-#else
-                                            std::vector<float>* gradient_sums = NULL
-					    ) const;
-#endif
+                                            std::vector<float>* gradient_sums = NULL) const;
 
       void AddLevel(const int& index, const FloatImage& level);
       void AddGradientLevel(const int& index, const FloatImage& gradient);

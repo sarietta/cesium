@@ -1,6 +1,6 @@
 CC 		= g++
-OPT		= -O3
-#OPT 		= -ggdb -pg
+#OPT		= -O3
+OPT 		= -ggdb -pg
 
 ifeq ($(shell uname), Darwin)
 	ARCH=maci64

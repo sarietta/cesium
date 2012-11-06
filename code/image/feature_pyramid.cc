@@ -36,27 +36,47 @@ namespace slib {
       _gradient_levels.reset(new FloatImage[_num_levels]);
     }
 
+    FloatMatrix FeaturePyramid::ThresholdFeatures(const FloatMatrix& all_features,
+						  const vector<float>& gradient_sums,
+						  const float& threshold,					   
+						  vector<int32>* levels,
+						  vector<Pair<int32> >* indices) {
+      vector<int32> invalid;
+      for (uint32 i = 0; i < gradient_sums.size(); i++) {
+	if (gradient_sums[i] < threshold) {
+	  invalid.push_back(i);
+	}
+      }
+      LOG(INFO) << "Found " << invalid.size() << " invalid patches";
+	
+      FloatMatrix features(all_features.rows() - invalid.size(), all_features.cols());
+      
+      int invalid_index = 0;
+      for (int i = 0; i < all_features.rows(); i++) {
+	if (i == invalid[invalid_index]) {  // Because they are pre-sorted.
+	  levels->erase(levels->begin() + i - invalid_index);
+	  indices->erase(indices->begin() + i - invalid_index);
+	  invalid_index++;
+	} else {
+	  features.row(i - invalid_index) = all_features.row(i);
+	}
+      }
+
+      return features;
+    }
+
     FloatMatrix FeaturePyramid::GetLevelFeatureVector(const int& index, 
 						      const Pair<int32>& patch_size, 
 						      const int32& feature_dimensions,
 						      vector<int32>* levels,
 						      vector<Pair<int32> >* indices,
-#if THRESHOLD_VIA_GRADIENT
-						      const float& gradient_mean_threshold) {
-#else
                                                       vector<float>* gradient_sums) const {
-#endif
       const int32 rLim = _levels[index].height() - patch_size.x + 1;
       const int32 cLim = _levels[index].width() - patch_size.y + 1;
 
       FloatMatrix features(rLim * cLim, feature_dimensions);
-#if THRESHOLD_VIA_GRADIENT
-      GetLevelFeatureVector(index, patch_size, feature_dimensions, &features(0), 
-			    levels, indices, gradient_mean_threshold);
-#else
       GetLevelFeatureVector(index, patch_size, feature_dimensions, &features(0), 
 			    levels, indices, gradient_sums);
-#endif
       return features;
     }
 
@@ -66,11 +86,7 @@ namespace slib {
 					       float* features,
 					       vector<int32>* levels,
 					       vector<Pair<int32> >* indices,
-#if THRESHOLD_VIA_GRADIENT
-					       const float& gradient_mean_threshold) {
-#else
                                                vector<float>* gradient_sums) const {
-#endif
       const FloatImage& level = _levels[index];
       const int32 rLim = level.height() - patch_size.x + 1;
       const int32 cLim = level.width() - patch_size.y + 1;
@@ -78,25 +94,13 @@ namespace slib {
       int num_features = 0;
       for (int j = 0; j < cLim; j++) {
 	for (int i = 0; i < rLim; i++) {
-#if THRESHOLD_VIA_GRADIENT
-	  if (gradient_mean_threshold != FLT_MAX) {
-#else
-	    if (gradient_sums) {
-#endif
-	      // Unrolled patch of gradient values.
-	      const FloatImage& gradient 
-		= _gradient_levels[index].get_crop(j, i, j + patch_size.y - 1, i + patch_size.x - 1);
-	      const float* gradient_data = gradient.data();
-#if !THRESHOLD_VIA_GRADIENT
-	      gradient_sums->push_back(slib::util::Mean<float>(gradient_data, patch_size.x * patch_size.y));
-	    }
-#else
-	    const float mean = slib::util::Mean<float>(gradient_data, patch_size.x * patch_size.y);
-	    if (mean < gradient_mean_threshold) {
-	      continue;
-	    }
+	  if (gradient_sums) {
+	    // Unrolled patch of gradient values.
+	    const FloatImage& gradient 
+	      = _gradient_levels[index].get_crop(j, i, j + patch_size.y - 1, i + patch_size.x - 1);
+	    const float* gradient_data = gradient.data();
+	    gradient_sums->push_back(slib::util::Mean<float>(gradient_data, patch_size.x * patch_size.y));
 	  }
-#endif
 	  // Unrolled patch of "features" values (HOG, color, etc).
 	  const FloatImage feature = level
 	    .get_crop(j, i, j + patch_size.y - 1, i + patch_size.x - 1).transpose().unroll('x');
@@ -119,11 +123,7 @@ namespace slib {
 							  const int32& feature_dimensions,
 							  vector<int32>* levels,
 							  vector<Pair<int32> >* indices,
-#if THRESHOLD_VIA_GRADIENT
-							  const float& gradient_mean_threshold) {
-#else
                                                           vector<float>* gradient_sums) const {
-#endif
       int32 total_features = 0;
       for (int i = 0; i < GetNumLevels(); i++) {
 	const int32 rLim = _levels[i].height() - patch_size.x + 1;
@@ -134,14 +134,8 @@ namespace slib {
       FloatMatrix features(total_features, feature_dimensions);
       float* features_data = features.data();
       for (int i = 0; i < GetNumLevels(); i++) {
-#if THRESHOLD_VIA_GRADIENT
-	GetLevelFeatureVector(i, patch_size, feature_dimensions, features_data,
-			      levels, indices, gradient_mean_threshold);
-#else
 	GetLevelFeatureVector(i, patch_size, feature_dimensions, features_data,
 			      levels, indices, gradient_sums);
-#endif
-
 	const int32 rLim = _levels[i].height() - patch_size.x + 1;
 	const int32 cLim = _levels[i].width() - patch_size.y + 1;
 	features_data += (rLim * cLim * feature_dimensions);

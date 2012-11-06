@@ -14,8 +14,9 @@
 #include <queue>
 #include <string>
 #include <svm/model.h>
-#include <util/timer.h>
 #include <util/assert.h>
+#include <util/matlab.h>
+#include <util/timer.h>
 #include <vector>
 
 using cimg_library::CImgList;
@@ -26,6 +27,7 @@ using Eigen::VectorXi;
 using slib::image::FeatureComputer;
 using slib::image::FeaturePyramid;
 using slib::svm::Model;
+using slib::util::MatlabMatrix;
 using slib::util::Timer;
 using std::min;
 using std::priority_queue;
@@ -34,6 +36,8 @@ using std::vector;
 
 namespace slib {
   namespace svm {
+
+    FloatMatrix Detector::_empty_matrix(0,0);
     
     Detector::Detector() 
       : _parameters(Detector::GetDefaultDetectionParameters())
@@ -65,7 +69,15 @@ namespace slib {
 	parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
       }
       if ((field = mxGetField(params, 0, "category"))) {
-	parameters.category = string(mxArrayToString((field)));
+	if (mxIsCell(field)) {
+	  const int num_cells = mxGetN(field) * mxGetM(field);
+	  for (int i = 0; i < num_cells; i++) {
+	    mxArray* cell = mxGetCell(mxGetCell(field, i), 0);
+	    parameters.category.push_back(string(mxArrayToString((cell))));
+	  }
+	} else {
+	  parameters.category.push_back(string(mxArrayToString((field))));
+	}
       }
       if ((field = mxGetField(params, 0, "imageCanonicalSize"))) {
 	parameters.imageCanonicalSize = (int32) mxGetScalar(field);
@@ -132,21 +144,74 @@ namespace slib {
       
       return parameters;
     }
+
+    void Detector::SaveParametersToMatlabMatrix(mxArray** matrix) const {
+      MatlabMatrix params;
+
+      MatlabMatrix category(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, _parameters.category.size()));
+      for (int i = 0; i < (int) _parameters.category.size(); i++) {
+	category.SetCell(i, MatlabMatrix(_parameters.category[i]));
+      }
+
+      params.SetStructField("basePatchSize", 
+			    MatlabMatrix(static_cast<vector<float> >(_parameters.basePatchSize)));
+      params.SetStructField("category", category);
+      params.SetStructField("imageCanonicalSize", 
+			    MatlabMatrix(static_cast<float>(_parameters.imageCanonicalSize)));
+      params.SetStructField("levelFactor", MatlabMatrix(static_cast<float>(_parameters.levelFactor)));
+      params.SetStructField("maxClusterSize", MatlabMatrix(static_cast<float>(_parameters.maxClusterSize)));
+      params.SetStructField("maxLevels", MatlabMatrix(static_cast<float>(_parameters.maxLevels)));
+      params.SetStructField("minClusterSize", MatlabMatrix(static_cast<float>(_parameters.minClusterSize)));
+      params.SetStructField("nThNeg", MatlabMatrix(static_cast<float>(_parameters.nThNeg)));
+      params.SetStructField("numPatchClusters", MatlabMatrix(static_cast<float>(_parameters.numPatchClusters)));
+      params.SetStructField("overlapThreshold", MatlabMatrix(static_cast<float>(_parameters.overlapThreshold)));
+      params.SetStructField("patchCanonicalSize", 
+			    MatlabMatrix(static_cast<vector<float> >(_parameters.patchCanonicalSize)));
+      params.SetStructField("patchOverlapThreshold", 
+			    MatlabMatrix(static_cast<float>(_parameters.patchOverlapThreshold)));
+      params.SetStructField("patchScaleIntervals", 
+			    MatlabMatrix(static_cast<float>(_parameters.patchScaleIntervals)));
+      params.SetStructField("patchSize", MatlabMatrix(static_cast<vector<float> >(_parameters.patchSize)));
+      params.SetStructField("sBins", MatlabMatrix(static_cast<float>(_parameters.sBins)));
+      params.SetStructField("scaleIntervals", MatlabMatrix(static_cast<float>(_parameters.scaleIntervals)));
+      params.SetStructField("svmflags", MatlabMatrix(_parameters.svmflags));
+      params.SetStructField("topNOverlapThresh", 
+			    MatlabMatrix(static_cast<float>(_parameters.topNOverlapThresh)));
+      params.SetStructField("useColor", MatlabMatrix(static_cast<float>(_parameters.useColor)));
+      params.SetStructField("useColorHists", MatlabMatrix(static_cast<float>(_parameters.useColorHists)));
+      params.SetStructField("patchOnly", MatlabMatrix(static_cast<float>(_parameters.patchOnly)));
+      params.SetStructField("selectTopN", MatlabMatrix(static_cast<float>(_parameters.selectTopN)));
+      params.SetStructField("numToSelect", MatlabMatrix(static_cast<float>(_parameters.numToSelect)));
+      params.SetStructField("useDecisionThresh", MatlabMatrix(static_cast<float>(_parameters.useDecisionThresh)));
+      params.SetStructField("overlap", MatlabMatrix(static_cast<float>(_parameters.overlap)));
+      params.SetStructField("fixedDecisionThresh", 
+			    MatlabMatrix(static_cast<float>(_parameters.fixedDecisionThresh)));
+      params.SetStructField("removeFeatures", MatlabMatrix(static_cast<float>(_parameters.removeFeatures)));
+
+      (*matrix) = mxDuplicateArray(&params.GetMatlabArray());
+    }
     
     Detector DetectorFactory::LoadFromMatlabFile(const string& filename) {  
-      Detector detector;
-      
       /* open mat file and read it's content */
       MATFile* pmat = matOpen(filename.c_str(), "r");
       if (pmat == NULL) {
 	LOG(ERROR) << "Error Opening MAT File: " << filename;
-	return detector;
+	return Detector();
       }
       
       // Should only have one entry.
       const char* name = NULL;
       mxArray* pa = matGetNextVariable(pmat, &name);
-      
+
+      Detector detector(InitializeFromMatlabArray(*pa));
+      mxDestroyArray(pa);
+      matClose(pmat);
+
+      return detector;
+    }
+
+    Detector DetectorFactory::InitializeFromMatlabArray(const mxArray& array) {
+      Detector detector;
       // WARNING: This method assumes that you have a struct containing
       // the relevant fields. The normal output of the pipeline originally
       // was a MATLAB object of typed VisualEntityDetector. There is a
@@ -156,11 +221,9 @@ namespace slib {
       // broken.
       
       // Get the "level" data.
-      mxArray* levels = mxGetField(pa, 0, "firstLevModels");
+      mxArray* levels = mxGetField(&array, 0, "firstLevModels");
       if (!levels) {
-	LOG(ERROR) << "No field \"firstLevModels\" in file: " << filename;
-	mxDestroyArray(pa);
-	matClose(pmat);
+	LOG(ERROR) << "No field \"firstLevModels\" in matrix";
 	return detector;
       }
       // Unroll and store in the detector's fields. Assuming these fields
@@ -183,8 +246,6 @@ namespace slib {
       mxArray* type_mat = mxGetField(levels, 0, "type");
       if (string(mxArrayToString(type_mat)) != "composite") {
 	LOG(ERROR) << "Detector type was not composite: " << mxArrayToString(type_mat);
-	mxDestroyArray(pa);
-	matClose(pmat);
 	return detector;
       }
       
@@ -206,14 +267,11 @@ namespace slib {
       }
       
       // Get the parameters of execution.
-      mxArray* parameters = mxGetField(pa, 0, "params");
+      mxArray* parameters = mxGetField(&array, 0, "params");
       if (parameters) {
 	detector.SetParameters(LoadParametersFromMatlabMatrix(parameters));
       }
       
-      // Destroy allocated matrix
-      mxDestroyArray(pa);
-      matClose(pmat);
       return detector;
     }
     
@@ -447,7 +505,6 @@ namespace slib {
       FloatMatrix features;
       vector<int32> levels;
       vector<Pair<int32> > indices;
-      vector<int32> invalid;
       // Compute the features for the input image.
       Timer::Start();
       // Compute the feature pyramid for the image
@@ -457,32 +514,10 @@ namespace slib {
 	vector<float> gradient_sums;
 	Pair<int32> patch_size;
 	const int32 feature_dimensions = Detector::GetFeatureDimensions(_parameters, &patch_size);
-#if THRESHOLD_VIA_GRADIENT
-	features = pyramid.GetAllLevelFeatureVectors(patch_size, feature_dimensions, 
-						     &levels, &indices, _parameters.gradientSumThreshold);
-#else
 	FloatMatrix allfeatures = pyramid.GetAllLevelFeatureVectors(patch_size, feature_dimensions, 
 								    &levels, &indices, &gradient_sums);
-	for (uint32 i = 0; i < gradient_sums.size(); i++) {
-	  if (gradient_sums[i] < _parameters.gradientSumThreshold) {
-	    invalid.push_back(i);
-	  }
-	}
-	LOG(INFO) << "Found " << invalid.size() << " invalid patches";
-	
-	features.resize(allfeatures.rows() - invalid.size(), allfeatures.cols());
-	
-	int invalid_index = 0;
-	for (int i = 0; i < allfeatures.rows(); i++) {
-	  if (i == invalid[invalid_index]) {  // Because they are pre-sorted.
-	    levels.erase(levels.begin() + i - invalid_index);
-	    indices.erase(indices.begin() + i - invalid_index);
-	    invalid_index++;
-	  } else {
-	    features.row(i - invalid_index) = allfeatures.row(i);
-	  }
-	}
-#endif
+	features = FeaturePyramid::ThresholdFeatures(allfeatures, gradient_sums, _parameters.gradientSumThreshold, 
+						     &levels, &indices);
       }
       // Run the models against the features.
       if (_type != "composite") {
@@ -643,7 +678,7 @@ namespace slib {
       DetectionParameters parameters;
       
       parameters.basePatchSize = Pair<int32>(80, 80);
-      parameters.category = string("");
+      parameters.category.push_back("");
       parameters.imageCanonicalSize = 400;
       parameters.levelFactor = 2.0f;
       parameters.maxClusterSize = 10;
