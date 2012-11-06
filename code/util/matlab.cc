@@ -11,6 +11,7 @@
 #include <vector>
 
 using slib::svm::DetectionMetadata;
+using slib::svm::DetectionResultSet;
 using slib::svm::DetectorFactory;
 using slib::svm::Detector;
 using slib::svm::Model;
@@ -253,6 +254,27 @@ namespace slib {
       }
     }
 
+    float MatlabMatrix::GetScalar() const {
+      if (_matrix != NULL && _type == MATLAB_MATRIX) {
+	const int dimensions = mxGetNumberOfDimensions(_matrix);
+	if (dimensions > 2) {
+	  LOG(ERROR) << "Only 2D matrices are supported";
+	  return 0.0f;
+	}
+	const int rows = mxGetM(_matrix);
+	const int cols = mxGetN(_matrix);
+	if (rows != 1 || cols != 1) {
+	  LOG(ERROR) << "Attempted to access non-scalar matrix";
+	  return 0.0f;
+	}
+
+	return ((float) mxGetScalar(_matrix));
+      } else {
+	LOG(WARNING) << "Attempted to access non-matrix";
+      }
+      return 0.0f;
+    }
+
     FloatMatrix MatlabMatrix::GetContents() const {
       FloatMatrix matrix;
       if (_matrix != NULL && _type == MATLAB_MATRIX) {
@@ -310,6 +332,34 @@ namespace slib {
       return contents;
     }
     
+    MatlabMatrix MatlabMatrix::GetStructEntry(const int& index) const {
+      MatlabMatrix entry(MATLAB_STRUCT, Pair<int>(1,1));
+      // Get a list of all of the fields in the contents.
+      const vector<string> fields = GetStructFieldNames();
+      for (int i = 0; i < (int) fields.size(); i++) {
+	const string field = fields[i];
+	entry.SetStructField(field, GetStructField(field, index));
+      }
+
+      return entry;
+    }
+
+    void MatlabMatrix::SetStructEntry(const int& index, const MatlabMatrix& contents) {
+      if (contents.GetMatrixType() != MATLAB_STRUCT) {
+	LOG(ERROR) << "Attempted to access non-struct matrix";
+	return;
+      }
+      if (contents.GetNumberOfElements() != 1) {
+	LOG(WARNING) << "There should only be one entry in the inserted struct";
+      }
+      // Get a list of all of the fields in the contents.
+      const vector<string> fields = contents.GetStructFieldNames();
+      for (int i = 0; i < (int) fields.size(); i++) {
+	const string field = fields[i];
+	SetStructField(field, index, contents.GetStructField(field));
+      }
+    }
+
     void MatlabMatrix::SetStructField(const string& field, const MatlabMatrix& contents) {
       SetStructField(field, 0, contents);
     }
@@ -724,17 +774,71 @@ namespace slib {
       return matrix;
     }
 
+    MatlabMatrix MatlabConverter::ConvertDetectionsToMatrixSimplified(const DetectionResultSet& detections,
+								      const vector<int>& image_indices,
+								      const vector<int>& assigned_clusters) {
+      int total_entries = 0;
+      for (int i = 0; i < (int) detections.model_detections.size(); i++) {
+	for (int j = 0; j < (int) detections.model_detections[i].detections.size(); j++) {
+	  total_entries++;
+	}
+      }
+      MatlabMatrix matrix(MATLAB_STRUCT, Pair<int>(total_entries, 1));
+
+      int current_index = 0;
+      for (int i = 0; i < (int) detections.model_detections.size(); i++) {
+	for (int j = 0; j < (int) detections.model_detections[i].detections.size(); j++) {
+	  const DetectionMetadata metadata = detections.model_detections[i].detections[j].metadata;
+	  MatlabMatrix position(MATLAB_STRUCT, Pair<int>(1,1));
+	  position.SetStructField("x1", MatlabMatrix((float) metadata.x1));
+	  position.SetStructField("x2", MatlabMatrix((float) metadata.x2));
+	  position.SetStructField("y1", MatlabMatrix((float) metadata.y1));
+	  position.SetStructField("y2", MatlabMatrix((float) metadata.y2));
+
+	  int current_image_index = 0;
+	  if (image_indices.size() == 0) {
+	    current_image_index = metadata.image_index;
+	  } else {
+	    if (image_indices.size() == 1) {
+	      current_image_index = image_indices[0];
+	    } else {
+	      current_image_index = image_indices[current_index];
+	    }
+	  }
+
+	  int detector = i;
+	  if (assigned_clusters.size() != 0) {
+	    detector = assigned_clusters[current_image_index];
+	  }
+
+	  matrix.SetStructField("decision", current_index, 
+				MatlabMatrix(detections.model_detections[i].detections[j].score));
+	  matrix.SetStructField("pos", current_index, position);
+	  matrix.SetStructField("imidx", current_index, MatlabMatrix((float) (current_image_index + 1)));
+	  matrix.SetStructField("detector", current_index, MatlabMatrix((float) (detector + 1)));
+
+	  if (detections.model_detections[i].features.rows() > 0 
+	      && detections.model_detections[i].features.cols()) {
+	    matrix.SetStructField("features", current_index, 
+				  MatlabMatrix(detections.model_detections[i].features.row(j)));
+	  }
+	  current_index++;
+	}
+      }
+      return matrix;
+    }
+
     Detector MatlabConverter::ConvertMatrixToDetector(const MatlabMatrix& matrix) {
       return DetectorFactory::InitializeFromMatlabArray(matrix.GetMatlabArray());
     }
 
     MatlabMatrix MatlabConverter::ConvertDetectorToMatrix(const Detector& detector) {
-      MatlabMatrix matrix(MATLAB_STRUCT);
+      MatlabMatrix matrix(MATLAB_STRUCT, Pair<int>(1,1));
 
-      MatlabMatrix firstLevModels(MATLAB_STRUCT);
-      firstLevModels.SetStructField("w", MatlabMatrix(detector.GetWeightMatrix().transpose()));
-      firstLevModels.SetStructField("rho", MatlabMatrix(detector.GetModelOffsets().transpose()));
-      firstLevModels.SetStructField("firstLabel", MatlabMatrix(detector.GetModelLabels().transpose()));
+      MatlabMatrix firstLevModels(MATLAB_STRUCT, Pair<int>(1,1));
+      firstLevModels.SetStructField("w", MatlabMatrix(detector.ComputeWeightMatrix().transpose()));
+      firstLevModels.SetStructField("rho", MatlabMatrix(detector.ComputeOffsetsMatrix().transpose()));
+      firstLevModels.SetStructField("firstLabel", MatlabMatrix(detector.ComputeLabelsMatrix().transpose()));
 
       vector<float> thresholds(detector.GetNumModels());
       for (int i = 0; i < (int) thresholds.size(); i++) {

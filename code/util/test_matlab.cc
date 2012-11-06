@@ -1,3 +1,4 @@
+#include <CImg.h>
 #include <common/types.h>
 #undef Success
 #include <Eigen/Dense>
@@ -109,6 +110,14 @@ int main(int argc, char** argv) {
       LOG(INFO) << "\nCell 4:\n" << deserialized_cells1.GetCell(3).GetStringContents();
     }
 
+    MatlabMatrix struct1(slib::util::MATLAB_STRUCT, Pair<int>(1,2));
+    MatlabMatrix struct2(slib::util::MATLAB_STRUCT, Pair<int>(1,1));
+
+    struct1.SetStructField("field1", 0, MatlabMatrix(1.0f));
+    struct2.SetStructField("field2", 0, MatlabMatrix(2.0f));
+
+    struct1.SetStructEntry(1, struct2.GetStructEntry(0));
+    struct1.SaveToFile("test_struct.mat");
   }
   
   return 0;

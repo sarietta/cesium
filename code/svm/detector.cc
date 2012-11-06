@@ -48,10 +48,29 @@ namespace slib {
     
     Detector::Detector(const Detector& detector) 
       : _parameters(detector.GetParameters())
-      , _type(detector.GetType())
-      , _weight_matrix(new FloatMatrix(detector.GetWeightMatrix()))
-      , _model_offsets(new FloatMatrix(detector.GetModelOffsets()))
-      , _model_labels(new FloatMatrix(detector.GetModelLabels())) {}
+      , _type(detector.GetType()) {
+      _models.clear();
+      for (int i = 0; i < (int) detector._models.size(); i++) {
+	AddModel(detector._models[i]);
+      }
+      _weight_matrix.reset(new FloatMatrix(detector.GetWeightMatrix()));
+      _model_offsets.reset(new FloatMatrix(detector.GetModelOffsets()));
+      _model_labels.reset(new FloatMatrix(detector.GetModelLabels()));
+    }
+
+    Detector& Detector::operator=(const Detector& detector) {
+      _parameters = detector.GetParameters();
+      _type = detector.GetType();
+      _models.clear();
+      for (int i = 0; i < (int) detector._models.size(); i++) {
+	AddModel(detector._models[i]);
+      }
+      _weight_matrix.reset(new FloatMatrix(detector.GetWeightMatrix()));
+      _model_offsets.reset(new FloatMatrix(detector.GetModelOffsets()));
+      _model_labels.reset(new FloatMatrix(detector.GetModelLabels()));
+
+      return (*this);
+    }
     
     Detector::Detector(const DetectionParameters& parameters) 
       : _parameters(parameters)
@@ -65,8 +84,15 @@ namespace slib {
       DetectionParameters parameters = Detector::GetDefaultDetectionParameters();
       mxArray* field = NULL;
       if ((field = mxGetField(params, 0, "basePatchSize"))) {
-	double* vals = mxGetPr(field);
-	parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	if (mxIsDouble(field)) {
+	  double* vals = mxGetPr(field);
+	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else if (mxIsSingle(field)) {
+	  float* vals = (float*) mxGetData(field);
+	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else {
+	  LOG(WARNING) << "Unknown data type for field: basePatchSize";
+	}
       }
       if ((field = mxGetField(params, 0, "category"))) {
 	if (mxIsCell(field)) {
@@ -104,8 +130,15 @@ namespace slib {
 	parameters.overlapThreshold = (float) mxGetScalar(field);
       }
       if ((field = mxGetField(params, 0, "patchCanonicalSize"))) {
-	double* vals = mxGetPr(field);
-	parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	if (mxIsDouble(field)) {
+	  double* vals = mxGetPr(field);
+	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else if (mxIsSingle(field)) {
+	  float* vals = (float*) mxGetData(field);
+	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else {
+	  LOG(WARNING) << "Unknown data type for field: patchCanonicalSize";
+	}
       }
       if ((field = mxGetField(params, 0, "patchOverlapThreshold"))) {
 	parameters.patchOverlapThreshold = (float) mxGetScalar(field);
@@ -114,8 +147,15 @@ namespace slib {
 	parameters.patchScaleIntervals = (int32) mxGetScalar(field);
       }
       if ((field = mxGetField(params, 0, "patchSize"))) {
-	double* vals = mxGetPr(field);
-	parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	if (mxIsDouble(field)) {
+	  double* vals = mxGetPr(field);
+	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else if (mxIsSingle(field)) {
+	  float* vals = (float*) mxGetData(field);
+	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else {
+	  LOG(WARNING) << "Unknown data type for field: patchSize";
+	}
       }
       if ((field = mxGetField(params, 0, "sBins"))) {
 	parameters.sBins = (int32) mxGetScalar(field);
@@ -146,15 +186,17 @@ namespace slib {
     }
 
     void Detector::SaveParametersToMatlabMatrix(mxArray** matrix) const {
-      MatlabMatrix params;
+      MatlabMatrix params(slib::util::MATLAB_STRUCT, Pair<int>(1,1));
 
       MatlabMatrix category(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, _parameters.category.size()));
       for (int i = 0; i < (int) _parameters.category.size(); i++) {
-	category.SetCell(i, MatlabMatrix(_parameters.category[i]));
+	MatlabMatrix cell(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1,1));
+	cell.SetCell(0, MatlabMatrix(_parameters.category[i]));
+	category.SetCell(i, cell);
       }
 
       params.SetStructField("basePatchSize", 
-			    MatlabMatrix(static_cast<vector<float> >(_parameters.basePatchSize)));
+			    MatlabMatrix(static_cast<vector<float> >(_parameters.basePatchSize), false));
       params.SetStructField("category", category);
       params.SetStructField("imageCanonicalSize", 
 			    MatlabMatrix(static_cast<float>(_parameters.imageCanonicalSize)));
@@ -166,12 +208,13 @@ namespace slib {
       params.SetStructField("numPatchClusters", MatlabMatrix(static_cast<float>(_parameters.numPatchClusters)));
       params.SetStructField("overlapThreshold", MatlabMatrix(static_cast<float>(_parameters.overlapThreshold)));
       params.SetStructField("patchCanonicalSize", 
-			    MatlabMatrix(static_cast<vector<float> >(_parameters.patchCanonicalSize)));
+			    MatlabMatrix(static_cast<vector<float> >(_parameters.patchCanonicalSize), false));
       params.SetStructField("patchOverlapThreshold", 
 			    MatlabMatrix(static_cast<float>(_parameters.patchOverlapThreshold)));
       params.SetStructField("patchScaleIntervals", 
 			    MatlabMatrix(static_cast<float>(_parameters.patchScaleIntervals)));
-      params.SetStructField("patchSize", MatlabMatrix(static_cast<vector<float> >(_parameters.patchSize)));
+      params.SetStructField("patchSize", 
+			    MatlabMatrix(static_cast<vector<float> >(_parameters.patchSize), false));
       params.SetStructField("sBins", MatlabMatrix(static_cast<float>(_parameters.sBins)));
       params.SetStructField("scaleIntervals", MatlabMatrix(static_cast<float>(_parameters.scaleIntervals)));
       params.SetStructField("svmflags", MatlabMatrix(_parameters.svmflags));
@@ -203,7 +246,7 @@ namespace slib {
       const char* name = NULL;
       mxArray* pa = matGetNextVariable(pmat, &name);
 
-      Detector detector(InitializeFromMatlabArray(*pa));
+      Detector detector = InitializeFromMatlabArray(*pa);
       mxDestroyArray(pa);
       matClose(pmat);
 
@@ -229,19 +272,13 @@ namespace slib {
       // Unroll and store in the detector's fields. Assuming these fields
       // are in there and foregoing error checking.
       mxArray* weights_mat = mxGetField(levels, 0, "w");
-      double* weights_pr = mxGetPr(weights_mat);
-      
       mxArray* offsets_mat = mxGetField(levels, 0, "rho");
-      double* offsets_pr = mxGetPr(offsets_mat);
-      
       mxArray* labels_mat = mxGetField(levels, 0, "firstLabel");
-      double* labels_pr = mxGetPr(labels_mat);
       
       //mxArray* infos_mat = mxGetField(levels, 0, "info");
       LOG(WARNING) << "Leaving out information about # of positives/negatives";
       
       mxArray* thresholds_mat = mxGetField(levels, 0, "threshold");
-      double* thresholds_pr = mxGetPr(thresholds_mat);
       
       mxArray* type_mat = mxGetField(levels, 0, "type");
       if (string(mxArrayToString(type_mat)) != "composite") {
@@ -251,19 +288,52 @@ namespace slib {
       
       const int32 num_models = mxGetNumberOfElements(offsets_mat);
       const int32 num_weights = mxGetN(weights_mat);
-      for (int i = 0; i < num_models; i++) {
-	vector<float> weights;
-	for (int j = 0; j < num_weights; j++) {
-	  // Row-major order.
-	  weights.push_back((float) weights_pr[i + j * num_models]);
+
+      if (mxIsDouble(weights_mat) && mxIsDouble(offsets_mat) 
+	  && mxIsDouble(labels_mat) && mxIsDouble(thresholds_mat)) {
+	double* weights_pr = mxGetPr(weights_mat);
+	double* offsets_pr = mxGetPr(offsets_mat);
+	double* labels_pr = mxGetPr(labels_mat);
+	double* thresholds_pr = mxGetPr(thresholds_mat);
+	
+	for (int i = 0; i < num_models; i++) {
+	  vector<float> weights;
+	  for (int j = 0; j < num_weights; j++) {
+	    // Row-major order.
+	    weights.push_back((float) weights_pr[i + j * num_models]);
+	  }
+	  
+	  const float rho = (float) offsets_pr[i];
+	  const float first_label = (float) labels_pr[i];
+	  const float threshold = (float) thresholds_pr[i];
+	  
+	  Model model(weights, rho, first_label, threshold);
+	  detector.AddModel(model);
 	}
+      } else if (mxIsSingle(weights_mat) && mxIsSingle(offsets_mat) 
+	  && mxIsSingle(labels_mat) && mxIsSingle(thresholds_mat)) {
+	float* weights_pr = (float*) mxGetData(weights_mat);
+	float* offsets_pr = (float*) mxGetData(offsets_mat);
+	float* labels_pr = (float*) mxGetData(labels_mat);
+	float* thresholds_pr = (float*) mxGetData(thresholds_mat);
 	
-	const float rho = (float) offsets_pr[i];
-	const float first_label = (float) labels_pr[i];
-	const float threshold = (float) thresholds_pr[i];
-	
-	Model model(weights, rho, first_label, threshold);
-	detector.AddModel(model);
+	for (int i = 0; i < num_models; i++) {
+	  vector<float> weights;
+	  for (int j = 0; j < num_weights; j++) {
+	    // Row-major order.
+	    weights.push_back(weights_pr[i + j * num_models]);
+	  }
+	  
+	  const float rho = offsets_pr[i];
+	  const float first_label = labels_pr[i];
+	  const float threshold = thresholds_pr[i];
+	  
+	  Model model(weights, rho, first_label, threshold);
+	  detector.AddModel(model);
+	}
+      } else {
+	LOG(ERROR) << "All matrices must be the same type and either float or double.";
+	return detector;
       }
       
       // Get the parameters of execution.
@@ -701,9 +771,9 @@ namespace slib {
       parameters.selectTopN = false;
       parameters.numToSelect = 0;
       parameters.useDecisionThresh = true;
-      parameters.overlap = 0.5;
-      parameters.fixedDecisionThresh = -0.7;  // Might change to -0.85
-      parameters.removeFeatures = true;
+      parameters.overlap = parameters.overlapThreshold;
+      parameters.fixedDecisionThresh = -1.002;
+      parameters.removeFeatures = false;
       parameters.sampleBig = false;
       
       parameters.gradientSumThreshold = 9.0f;

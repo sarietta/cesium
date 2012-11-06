@@ -96,6 +96,8 @@ namespace slib {
       virtual ~Detector() {}
       Detector(const Detector& detector);
       Detector(const DetectionParameters& parameters);
+
+      Detector& operator=(const Detector& detector);
       
       // Computes the number of dimensions that a "feature" should
       // have. Note that this is different than the number of channels in
@@ -140,7 +142,7 @@ namespace slib {
       // invalidate the pre-computed weight and offset matrices.
       void AddModel(const slib::svm::Model& model);
       void UpdateModel(const int32& index, const slib::svm::Model& model);
-      
+
       inline void SetParameters(const DetectionParameters& parameters) {
 	_parameters = parameters;
       }
@@ -152,7 +154,39 @@ namespace slib {
       inline std::string GetType() const {
 	return _type;
       }
+
       
+      // These actually construct the associated matrices that are
+      // normally stored in this class. Useful if you need to
+      // guarantee they are up to date in a 'const' way.
+      inline FloatMatrix ComputeWeightMatrix() const {
+	const int32 feature_dimensions = Detector::GetFeatureDimensions(_parameters);
+	FloatMatrix weight_matrix(feature_dimensions, _models.size());
+	for (int j = 0; j < feature_dimensions; j++) {
+	  for (uint32 i = 0; i < _models.size(); i++) {
+	    weight_matrix(j, i) = _models[i].weights[j];
+	  }
+	}
+	return weight_matrix;
+      }
+
+      inline FloatMatrix ComputeOffsetsMatrix() const {
+	FloatMatrix model_offsets(1, _models.size());
+	for (uint32 i = 0; i < _models.size(); i++) {
+	  model_offsets(i) = _models[i].rho;
+	}
+	return model_offsets;
+      }
+
+      inline FloatMatrix ComputeLabelsMatrix() const {
+	FloatMatrix model_labels(1, _models.size());
+	for (uint32 i = 0; i < _models.size(); i++) {
+	  model_labels(i) = _models[i].first_label;
+	}
+	return model_labels;
+      }
+
+      // Simple returns.
       inline const FloatMatrix& GetWeightMatrix() const {
 	if (_weight_matrix == NULL) {
 	  return _empty_matrix;
@@ -161,15 +195,15 @@ namespace slib {
 	}
       }
       
-      inline const FloatMatrix& GetModelOffsets() const {
+      inline const FloatMatrix& GetModelOffsets(const bool& force = false) const {
 	if (_model_offsets == NULL) {
-	  return _empty_matrix;
+	  return _empty_matrix;	 
 	} else {
 	  return *(_model_offsets);
 	}
       }
       
-      inline const FloatMatrix& GetModelLabels() const {
+      inline const FloatMatrix& GetModelLabels(const bool& force = false) const {
 	if (_model_labels == NULL) {
 	  return _empty_matrix;
 	} else {

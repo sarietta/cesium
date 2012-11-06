@@ -60,12 +60,21 @@ namespace slib {
 
       // STL vector compatible contructor. Usually the compiler can infer the type automatically.
       template <typename T>
-      explicit MatlabMatrix(const std::vector<T>& values) : _matrix(NULL), _type(MATLAB_MATRIX) {
-	FloatMatrix matrix(values.size(), 1);
-	for (int i = 0; i < (int) values.size(); i++) {
-	  matrix(i, 0) = static_cast<float>(values[i]);
+      explicit MatlabMatrix(const std::vector<T>& values, const bool& col = true) 
+	: _matrix(NULL), _type(MATLAB_MATRIX) {
+	if (col) {
+	  FloatMatrix matrix(values.size(), 1);
+	  for (int i = 0; i < (int) values.size(); i++) {
+	    matrix(i, 0) = static_cast<float>(values[i]);
+	  }
+	  SetContents(matrix);
+	} else {
+	  FloatMatrix matrix(1, values.size());
+	  for (int i = 0; i < (int) values.size(); i++) {
+	    matrix(0, i) = static_cast<float>(values[i]);
+	  }
+	  SetContents(matrix);
 	}
-	SetContents(matrix);
       }
 
       // For scalar values.
@@ -88,13 +97,20 @@ namespace slib {
       bool SaveToFile(const std::string& filename, const std::string& variable_name = "data") const;
 
       MatlabMatrix GetStructField(const std::string& field, const int& index = 0) const;
+      // Gets the entire struct at the index. In MATLAB for a struct A, A(index).
+      MatlabMatrix GetStructEntry(const int& index = 0) const;
+
       MatlabMatrix GetCell(const int& row, const int& col) const;
       MatlabMatrix GetCell(const int& index) const;
       FloatMatrix GetContents() const;
+      float GetScalar() const;
       std::string GetStringContents() const;
 
       void SetStructField(const std::string& field, const MatlabMatrix& contents);
       void SetStructField(const std::string& field, const int& index, const MatlabMatrix& contents);
+      // Sets the entire struct at the specified index. 
+      void SetStructEntry(const int& index, const MatlabMatrix& contents);
+
       void SetCell(const int& row, const int& col, const MatlabMatrix& contents);
       void SetCell(const int& index, const MatlabMatrix& contents);
       void SetContents(const FloatMatrix& contents);
@@ -111,6 +127,11 @@ namespace slib {
 
       Pair<int> GetDimensions() const;
       std::vector<std::string> GetStructFieldNames() const;
+      
+      inline int GetNumberOfElements() const {
+	const Pair<int> dimensions = GetDimensions();
+	return (dimensions.x * dimensions.y);
+      }
 
       inline MatlabMatrixType GetMatrixType() const {
 	return _type;
@@ -139,6 +160,13 @@ namespace slib {
     public:
       static MatlabMatrix ConvertModelToMatrix(const slib::svm::Model& model);
       static MatlabMatrix ConvertMetadataToMatrix(const std::vector<slib::svm::DetectionMetadata>& metadata);
+
+      // Assumes the indices and clusters are specified in 0-based indexing.
+      static MatlabMatrix 
+      ConvertDetectionsToMatrixSimplified(const slib::svm::DetectionResultSet& detections,
+					  const std::vector<int>& image_indices = std::vector<int>(0),
+					  const std::vector<int>& assigned_clusters = std::vector<int>(0));
+
 
       static slib::svm::Detector ConvertMatrixToDetector(const MatlabMatrix& matrix);
       static MatlabMatrix ConvertDetectorToMatrix(const slib::svm::Detector& detector);
