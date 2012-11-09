@@ -1,8 +1,8 @@
-#ifndef __SLIB_UTIL_MATH_H__
-#define __SLIB_UTIL_MATH_H__
+#ifndef __SLIB_UTIL_MATHUTILS_H__
+#define __SLIB_UTIL_MATHUTILS_H__
 
 #include <algorithm>
-#include <math.h>  // This is kind of funny... sometimes gcc gets confused and thinks we're cmath :P
+#include <math.h>
 
 namespace slib {
   namespace util {
