@@ -2,7 +2,7 @@
 
 #include <common/types.h>
 #include <math.h>
-#include "math.h"
+#include "mathutils.h"
 
 namespace slib {
   namespace util {
