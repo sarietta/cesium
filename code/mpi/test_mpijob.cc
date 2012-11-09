@@ -1,3 +1,4 @@
+#include <CImg.h>
 #include <common/types.h>
 #undef Success
 #include <Eigen/Dense>

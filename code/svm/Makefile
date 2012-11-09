@@ -21,6 +21,7 @@ LIBNAME	= lib$(DIR).a
 SRCS	= $(wildcard *.cc)
 OBJS	= $(filter-out test%, $(SRCS:.cc=.o)) ../image/feature_computer.o
 TOBJS	= $(filter test%, $(SRCS:.cc=.o))
+EXT_OBJS= ../util/matlab.o ../util/timer.o
 TESTS	= $(subst .cc,,$(filter test%, $(SRCS)))
 
 %.o:%.cc
