@@ -19,8 +19,8 @@ namespace slib {
 
     char* Random::rngState = new char[256];
 
-    void Random::Initialize() {
-      initstate(4, rngState, 256);
+    void Random::Initialize(const int& seed) {
+      initstate(seed, rngState, 256);
     }
 
     int Random::RandomInteger(const int& rangeStart, const int& rangeEnd) {

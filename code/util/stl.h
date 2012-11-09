@@ -1,7 +1,12 @@
 #ifndef __SLIB_UTIL_STL_H__
 #define __SLIB_UTIL_STL_H__
 
+#include <sstream>;
+#include <string>
 #include <vector>
+
+using std::string;
+using std::stringstream;
 using std::vector;
 
 namespace slib {
@@ -52,6 +57,36 @@ namespace slib {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
       sort(VI.begin(), VI.end(), compare);
       return UnwrapContainer<T>(VI, V);
+    }
+
+    template <typename T>
+    string PrintVector(const vector<T>& V) {
+      stringstream s(stringstream::out);
+      s << "[";
+      if (V.size() > 0) {
+	s << V[0];
+	for (int i = 1; i < (int) V.size(); i++) {
+	  s << " " << V[i];
+	}
+      }
+      s << "]";
+      return s.str();
+    }
+
+    // Trims the input vector (V) to contain only the indices
+    // specified in the input vector of indices.
+    template <typename T>
+    void TrimVectorEntries(const vector<int>& indices, vector<T>* V) {
+      if (indices.size() == 0 || V == NULL || V->size() == 0) {
+	return;
+      }
+      int previous_index = V->size();
+  
+      for (int i = ((int) indices.size()) - 1; i >= 0; i--) {
+	V->erase(V->begin() + indices[i] + 1, V->begin() + previous_index);
+	previous_index = indices[i];
+      }
+      V->erase(V->begin(), V->begin() + previous_index);
     }
 
   }  // namespace util
