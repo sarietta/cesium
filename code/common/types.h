@@ -1,6 +1,7 @@
 #ifndef __SLIB_COMMON_TYPES_H__
 #define __SLIB_COMMON_TYPES_H__
 
+#include <assert.h>
 #include <iostream>
 #include <stdint.h>
 #include <vector>
