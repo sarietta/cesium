@@ -1,7 +1,7 @@
 CC 		= 	g++
 OPT		= 	-O3
 #OPT 		= 	-ggdb -pg
-CC_FLAGS 	= 	$(OPT) -Wall -I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
+CC_FLAGS 	= 	$(OPT) -Wall -I/usr/local/include/eigen3 -I/usr/include/eigen3 -I/opt/intel/mkl/include \
 			-I/usr/local/MATLAB/R2011b/extern/include -DSKIP_OPENCV
 
 LD_FLAGS 	= 	-L/usr/X11R6/lib -L/usr/local/MATLAB/R2011b/bin/glnxa64
