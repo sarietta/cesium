@@ -49,6 +49,10 @@ namespace slib {
       }
       LOG(INFO) << "Found " << invalid.size() << " invalid patches";
 	
+      if (invalid.size() == 0) {
+	return all_features;
+      }
+
       FloatMatrix features(all_features.rows() - invalid.size(), all_features.cols());
       
       int invalid_index = 0;
