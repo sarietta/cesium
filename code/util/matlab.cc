@@ -790,10 +790,10 @@ namespace slib {
 	for (int j = 0; j < (int) detections.model_detections[i].detections.size(); j++) {
 	  const DetectionMetadata metadata = detections.model_detections[i].detections[j].metadata;
 	  MatlabMatrix position(MATLAB_STRUCT, Pair<int>(1,1));
-	  position.SetStructField("x1", MatlabMatrix((float) metadata.x1));
-	  position.SetStructField("x2", MatlabMatrix((float) metadata.x2));
-	  position.SetStructField("y1", MatlabMatrix((float) metadata.y1));
-	  position.SetStructField("y2", MatlabMatrix((float) metadata.y2));
+	  position.SetStructField("x1", MatlabMatrix((float) metadata.x1 + 1));
+	  position.SetStructField("x2", MatlabMatrix((float) metadata.x2 + 1));
+	  position.SetStructField("y1", MatlabMatrix((float) metadata.y1 + 1));
+	  position.SetStructField("y2", MatlabMatrix((float) metadata.y2 + 1));
 
 	  int current_image_index = 0;
 	  if (image_indices.size() == 0) {
