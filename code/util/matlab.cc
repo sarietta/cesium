@@ -746,10 +746,10 @@ namespace slib {
       for (int i = 0; i < (int) metadata.size(); i++) {
 	const DetectionMetadata entry = metadata[i];
 	matrix.SetStructField("im", i, MatlabMatrix(entry.image_path));
-	matrix.SetStructField("x1", i, MatlabMatrix((float) entry.x1));
-	matrix.SetStructField("x2", i, MatlabMatrix((float) entry.x2));
-	matrix.SetStructField("y1", i, MatlabMatrix((float) entry.y1));
-	matrix.SetStructField("y2", i, MatlabMatrix((float) entry.y2));
+	matrix.SetStructField("x1", i, MatlabMatrix((float) entry.x1 + 1));
+	matrix.SetStructField("x2", i, MatlabMatrix((float) entry.x2 + 1));
+	matrix.SetStructField("y1", i, MatlabMatrix((float) entry.y1 + 1));
+	matrix.SetStructField("y2", i, MatlabMatrix((float) entry.y2 + 1));
 
 	matrix.SetStructField("flip", i, MatlabMatrix(0.0f));
 	matrix.SetStructField("trunc", i, MatlabMatrix(0.0f));
