@@ -580,12 +580,11 @@ namespace slib {
 
     int MatlabMatrix::Deserialize(const string& str, const int& position) {
       // These methods mirror the above methods.
-      stringstream ss(str, stringstream::in | stringstream::binary);
-      ss.seekg(position);
+      const char* ss = str.c_str() + position;
 
       // Read the first element, it determines the root matrix type.
       char type;
-      ss.get(type);
+      memcpy(&type, ss, sizeof(char)); ss += sizeof(char);
 
       int offset = position + sizeof(char);
       switch (type) {
@@ -595,21 +594,24 @@ namespace slib {
 
 	// Size of the struct.
 	Pair<int> dimensions;
-	ss.read(reinterpret_cast<char*>(&dimensions.x), sizeof(int));
-	ss.read(reinterpret_cast<char*>(&dimensions.y), sizeof(int));
+	memcpy(&dimensions.x, ss, sizeof(int)); ss += sizeof(int);
+	memcpy(&dimensions.y, ss, sizeof(int)); ss += sizeof(int);
 	offset += sizeof(int) * 2;
 	// List of fields.
 	int num_fields;
-	ss.read(reinterpret_cast<char*>(&num_fields), sizeof(int));
+	memcpy(&num_fields, ss, sizeof(int)); ss += sizeof(int);
 	offset += sizeof(int) * 1;
+
 	vector<string> fields;
 	for (int i = 0; i < num_fields; i++) {
 	  int field_length;
-	  ss.read(reinterpret_cast<char*>(&field_length), sizeof(int));
+	  memcpy(&field_length, ss, sizeof(int)); ss += sizeof(int);
 	  offset += sizeof(int) * 1;
+
 	  scoped_ptr<char> field_cstr(new char[field_length]);
-	  ss.read(field_cstr.get(), field_length);
+	  memcpy(field_cstr.get(), ss, sizeof(char) * field_length); ss += sizeof(char) * field_length;
 	  offset += sizeof(char) * field_length;
+
 	  fields.push_back(string(field_cstr.get(), field_length));
 	}
 	// We have to create this array for when we create the struct.
@@ -645,8 +647,8 @@ namespace slib {
 
 	// Size of the cell array.
 	Pair<int> dimensions;
-	ss.read(reinterpret_cast<char*>(&dimensions.x), sizeof(int));
-	ss.read(reinterpret_cast<char*>(&dimensions.y), sizeof(int));
+	memcpy(&dimensions.x, ss, sizeof(int)); ss += sizeof(int);
+	memcpy(&dimensions.y, ss, sizeof(int)); ss += sizeof(int);
 	offset += sizeof(int) * 2;
 	// Initialize the _matrix to be a cell array.
 	_matrix = mxCreateCellMatrix(dimensions.x, dimensions.y);
@@ -672,8 +674,8 @@ namespace slib {
 
 	// Size of the matrix.
 	Pair<int> dimensions;
-	ss.read(reinterpret_cast<char*>(&dimensions.x), sizeof(int));
-	ss.read(reinterpret_cast<char*>(&dimensions.y), sizeof(int));
+	memcpy(&dimensions.x, ss, sizeof(int)); ss += sizeof(int);
+	memcpy(&dimensions.y, ss, sizeof(int)); ss += sizeof(int);
 	offset += sizeof(int) * 2;
 	// No initialization necessary as the SetContents method takes care of it.
 	// And now the actual data.
@@ -683,7 +685,7 @@ namespace slib {
 	FloatMatrix contents(rows, cols);
 	contents.fill(0.0f);
 
-	ss.read(reinterpret_cast<char*>(contents.data()), sizeof(float) * rows * cols);
+	memcpy(contents.data(), ss, sizeof(float) * rows * cols); ss += sizeof(float) * rows * cols;
 	offset += sizeof(float) * rows * cols;
 	SetContents(contents);
 	break;
@@ -694,8 +696,8 @@ namespace slib {
 
 	// Size of the matrix.
 	Pair<int> dimensions;
-	ss.read(reinterpret_cast<char*>(&dimensions.x), sizeof(int));
-	ss.read(reinterpret_cast<char*>(&dimensions.y), sizeof(int));
+	memcpy(&dimensions.x, ss, sizeof(int)); ss += sizeof(int);
+	memcpy(&dimensions.y, ss, sizeof(int)); ss += sizeof(int);
 	offset += sizeof(int) * 2;
 	// No initialization necessary as the SetContents method takes care of it.
 	// And now the actual data.
@@ -705,7 +707,7 @@ namespace slib {
 	VLOG(2) << "String length: " << length;
 
 	scoped_ptr<char> characters(new char[length+1]);
-	ss.read(characters.get(), sizeof(char) * (length + 1));
+	memcpy(characters.get(), ss, sizeof(char) * (length + 1)); ss += sizeof(char) * (length + 1);
 	offset += sizeof(char) * (length + 1);
 	SetStringContents(string(characters.get()));
 	break;

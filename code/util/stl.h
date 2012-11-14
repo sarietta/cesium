@@ -1,7 +1,7 @@
 #ifndef __SLIB_UTIL_STL_H__
 #define __SLIB_UTIL_STL_H__
 
-#include <sstream>;
+#include <sstream>
 #include <string>
 #include <vector>
 
