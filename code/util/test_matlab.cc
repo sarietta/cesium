@@ -118,6 +118,15 @@ int main(int argc, char** argv) {
 
     struct1.SetStructEntry(1, struct2.GetStructEntry(0));
     struct1.SaveToFile("test_struct.mat");
+
+    MatlabMatrix A(slib::util::MATLAB_MATRIX, Pair<int>(2, 2));
+    LOG(INFO) << A.GetContents();
+    A.Set(0, 0, MatlabMatrix(1.0f));
+    A.Set(0, 1, MatlabMatrix(2.0f));
+    A.Set(1, 0, MatlabMatrix(3.0f));
+    A.Set(1, 1, MatlabMatrix(4.0f));
+    LOG(INFO) << A.GetContents();
+    
   }
   
   return 0;

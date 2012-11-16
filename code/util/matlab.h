@@ -99,6 +99,7 @@ namespace slib {
       MatlabMatrix GetStructField(const std::string& field, const int& index = 0) const;
       // Gets the entire struct at the index. In MATLAB for a struct A, A(index).
       MatlabMatrix GetStructEntry(const int& index = 0) const;
+      MatlabMatrix GetStructEntry(const int& row, const int& col) const;
 
       MatlabMatrix GetCell(const int& row, const int& col) const;
       MatlabMatrix GetCell(const int& index) const;
@@ -110,6 +111,7 @@ namespace slib {
       void SetStructField(const std::string& field, const int& index, const MatlabMatrix& contents);
       // Sets the entire struct at the specified index. 
       void SetStructEntry(const int& index, const MatlabMatrix& contents);
+      void SetStructEntry(const int& row, const int& col, const MatlabMatrix& contents);
 
       void SetCell(const int& row, const int& col, const MatlabMatrix& contents);
       void SetCell(const int& index, const MatlabMatrix& contents);
@@ -141,6 +143,37 @@ namespace slib {
       inline const mxArray& GetMatlabArray() const {
 	return (*_matrix);
       }
+
+      // These are nice methods that call the correct get/set
+      // functions for you. Try to avoid them when you can. Also note
+      // that they only work for cells and structs.
+      inline MatlabMatrix Get(const int& row, const int& col) const {
+	if (_type == MATLAB_CELL_ARRAY) {
+	  return GetCell(row, col);
+	} else if (_type == MATLAB_STRUCT) {
+	  return GetStructEntry(row, col);
+	} else if (_type == MATLAB_MATRIX) {
+	  return MatlabMatrix(GetContents()(row, col));
+	} else {
+	  return MatlabMatrix();
+	}
+      }
+
+      inline void Set(const int& row, const int& col, const MatlabMatrix& contents) {
+	if (_type == MATLAB_CELL_ARRAY) {
+	  SetCell(row, col, contents);
+	} else if (_type == MATLAB_STRUCT) {
+	  SetStructEntry(row, col, contents);
+	} else if (_type == MATLAB_MATRIX && contents.GetNumberOfElements() == 1) {
+	  const int rows = mxGetM(_matrix);
+	  if (mxIsDouble(_matrix)) {
+	    ((double*) mxGetData(_matrix))[row + col * rows] = (double) contents.GetScalar();
+	  } else if (mxIsSingle(_matrix)) {
+	    ((float*) mxGetData(_matrix))[row + col * rows] = (float) contents.GetScalar();
+	  }
+	}
+      }
+
 
     private:
       mxArray* _matrix;

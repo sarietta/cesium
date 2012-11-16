@@ -19,6 +19,12 @@ namespace slib {
 namespace slib {
   namespace mpi {
 
+    enum VariableType {
+      PARTIAL_VARIABLE_ROWS,  // Rows are partially sent, but all cols are sent
+      PARTIAL_VARIABLE_COLS,  // Same as above s/rows/cols
+      COMPLETE_VARIABLE  // A variable that needs all of its data sent
+    };
+
     struct JobData {
       std::string command;
       std::vector<int> indices;
@@ -50,7 +56,9 @@ namespace slib {
       // routines. This assumes that the master node is ALWAYS node #
       // 0.
       void SetCompletionHandler(CompletionHandler handler);
-      void StartJobOnNode(const JobDescription& description, const int& node);
+      void StartJobOnNode(const JobDescription& description, const int& node,
+			  const std::map<std::string, VariableType>& variable_types 
+			  = std::map<std::string, VariableType>());
       void CheckForCompletion();
 
     private:
@@ -69,7 +77,8 @@ namespace slib {
       static JobData WaitForJobData(const int& node = MPI_ROOT_NODE);   
       static std::string WaitForString(const int& node = MPI_ROOT_NODE);
 
-      static void SendJobDataToNode(const JobData& data, const int& node);
+      static void SendJobDataToNode(const JobData& data, const int& node,
+				    const std::map<std::string, VariableType>& variable_types);
       static void SendStringToNode(const std::string& message, const int& node);
 
       static void SendCompletionMessage(const int& node);

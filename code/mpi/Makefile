@@ -14,6 +14,7 @@ SRCS	= $(wildcard *.cc)
 OBJS	= $(filter-out test%, $(SRCS:.cc=.o))
 TOBJS	= $(filter test%, $(SRCS:.cc=.o))
 TESTS	= $(subst .cc,,$(filter test%, $(SRCS)))
+EXTOBJS = ../util/matlab.o ../svm/detector.o ../util/timer.o ../image/feature_pyramid.o ../image/feature_computer.o
 
 %.o:%.cc
 	$(CC) $(CC_FLAGS) -c $< 
@@ -22,8 +23,8 @@ all: $(OBJS) lib
 
 tests: $(TESTS)
 
-$(TESTS): $(OBJS) $(TOBJS) ../util/matlab.o
-	$(CC) $(LD_FLAGS) $(OBJS) ../util/matlab.o $(filter $@.o, $(TOBJS)) $(LIBS) -o $@
+$(TESTS): $(OBJS) $(TOBJS) 
+	$(CC) $(LD_FLAGS) $(OBJS) $(EXTOBJS) $(filter $@.o, $(TOBJS)) $(LIBS) -o $@
 
 lib: $(filter-out test%, $(OBJS))
 	@ar rcs $(LIBNAME) $?

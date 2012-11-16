@@ -331,6 +331,12 @@ namespace slib {
 
       return contents;
     }
+
+    MatlabMatrix MatlabMatrix::GetStructEntry(const int& row, const int& col) const {
+      	const mwIndex subscripts[2] = {row, col};
+	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+	return GetStructEntry(index);
+    }
     
     MatlabMatrix MatlabMatrix::GetStructEntry(const int& index) const {
       MatlabMatrix entry(MATLAB_STRUCT, Pair<int>(1,1));
@@ -342,6 +348,12 @@ namespace slib {
       }
 
       return entry;
+    }
+
+    void MatlabMatrix::SetStructEntry(const int& row, const int& col, const MatlabMatrix& contents) {
+      	const mwIndex subscripts[2] = {row, col};
+	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+	SetStructEntry(index, contents);
     }
 
     void MatlabMatrix::SetStructEntry(const int& index, const MatlabMatrix& contents) {

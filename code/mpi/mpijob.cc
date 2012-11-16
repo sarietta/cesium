@@ -76,9 +76,10 @@ namespace slib {
       }
     }
 
-    void JobController::StartJobOnNode(const JobDescription& description, const int& node) {
+    void JobController::StartJobOnNode(const JobDescription& description, const int& node,
+				       const map<string, VariableType>& variable_types) {
       // Send the job description over.
-      JobNode::SendJobDataToNode(description, node);
+      JobNode::SendJobDataToNode(description, node, variable_types);
 
       // Setup the handler
       if (_completion_handler != NULL) {
@@ -122,7 +123,8 @@ namespace slib {
       return string(message_c.get());
     }
 
-    void JobNode::SendJobDataToNode(const JobData& data, const int& node) {
+    void JobNode::SendJobDataToNode(const JobData& data, const int& node,
+				    const map<string, VariableType>& variable_types) {
       // Send the command.
       SendStringToNode(data.command, node);
 
@@ -153,7 +155,40 @@ namespace slib {
 	SendStringToNode(input_name, node);
 
 	const MatlabMatrix& matrix = (*it).second;
-	const string serialized = matrix.Serialize();
+	string serialized = "";
+	if ((matrix.GetMatrixType() == slib::util::MATLAB_CELL_ARRAY
+	     || matrix.GetMatrixType() == slib::util::MATLAB_STRUCT)
+	    && variable_types.find(input_name) != variable_types.end()
+	    && variable_types.find(input_name)->second != COMPLETE_VARIABLE) {
+	  VLOG(1) << "Found partial input: " << input_name;
+
+	  vector<int> indices = data.indices;
+	  sort(indices.begin(), indices.end());
+	  const int max_index = indices.back();
+
+	  const VariableType type = variable_types.find(input_name)->second;
+	  if (type == PARTIAL_VARIABLE_ROWS) {
+	    MatlabMatrix partial(matrix.GetMatrixType(), matrix.GetDimensions());
+	    for (int index = 0; index < (int) indices.size(); index++) {
+	      const int row = indices[index];
+	      for (int col = 0; col < matrix.GetDimensions().y; col++) {
+		partial.Set(row, col, matrix.Get(row, col));
+	      }
+	    }
+	    serialized = partial.Serialize();
+	  } else if (type == PARTIAL_VARIABLE_COLS) {
+	    MatlabMatrix partial(matrix.GetMatrixType(), matrix.GetDimensions());
+	    for (int index = 0; index < (int) indices.size(); index++) {
+	      const int col = indices[index];
+	      for (int row = 0; row < matrix.GetDimensions().x; row++) {
+		partial.Set(row, col, matrix.Get(row, col));
+	      }
+	    }
+	    serialized = partial.Serialize();
+	  }
+	} else {
+	  serialized = matrix.Serialize();
+	}
 	int byte_length = serialized.length();
 	MPI_Send(&byte_length, 1, MPI_INT, node, 0, MPI_COMM_WORLD);
 	
@@ -222,11 +257,11 @@ namespace slib {
 	int byte_length;
 	MPI_Recv(&byte_length, 1, MPI_INT, node, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-	VLOG(1) << "Expect Variable: " << input_names[i] << " (length: " << byte_length << ")";
+	VLOG(2) << "Expect Variable: " << input_names[i] << " (length: " << byte_length << ")";
 	input_byte_lengths.push_back(byte_length);
 	total_bytes += byte_length;
       }
-      VLOG(1) << "Expecting a total of " << total_bytes << " bytes worth of variables";
+      VLOG(2) << "Expecting a total of " << total_bytes << " bytes worth of variables";
 
       // Here is where the big data comes. We can handle the set of
       // variables async, but we wait for them all to finish to ensure

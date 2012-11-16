@@ -19,6 +19,7 @@ DEFINE_int32(matrix_size, 4, "");
 using Eigen::MatrixXf;
 using slib::mpi::JobController;
 using slib::mpi::JobDescription;
+using slib::mpi::VariableType;
 using slib::util::MatlabMatrix;
 using std::map;
 using std::string;
@@ -65,23 +66,85 @@ int main(int argc, char** argv) {
 
     JobController controller;
     controller.StartJobOnNode(job, 1);
-  } else {
-    JobDescription job = slib::mpi::JobNode::WaitForJobData();
-    LOG(INFO) << "Command: " << job.command;
-    stringstream indices;
-    for (uint32 i = 0; i < job.indices.size(); i++) {
-      indices << i << "\t";
+
+    map<string, VariableType> variable_types;
+    variable_types["input3"] = slib::mpi::PARTIAL_VARIABLE_ROWS;
+    variable_types["input4"] = slib::mpi::PARTIAL_VARIABLE_COLS;
+
+    MatlabMatrix input3(slib::util::MATLAB_CELL_ARRAY, Pair<int>(dim1, dim1));
+    MatlabMatrix input4(slib::util::MATLAB_CELL_ARRAY, Pair<int>(dim2, dim2));
+    for (int i = 0; i < dim1; i++) {
+      for (int j = 0; j < dim1; j++) {
+	input3.SetCell(i, j, MatlabMatrix(contents(i, j)));
+      }
     }
-    LOG(INFO) << "Indices: " << indices.str();
-    for (map<string, MatlabMatrix>::const_iterator it = job.variables.begin(); 
-	 it != job.variables.end(); 
-	 it++) {
-      const string name = (*it).first;
-      const MatlabMatrix matrix = (*it).second;
-      if (FLAGS_matrix_size < 10) {
-	LOG(INFO) << "Input: \n\t" << name << ":\n" << matrix.GetContents();
-      } else {
-	LOG(INFO) << "Input: \n\t" << name;
+    for (int i = 0; i < dim2; i++) {
+      for (int j = 0; j < dim2; j++) {
+	input4.SetCell(i, j, MatlabMatrix(contents2(i, j)));
+      }
+    }
+
+    job.variables["input3"] = input3;
+    job.variables["input4"] = input4;
+
+    job.indices.clear();
+    job.indices.push_back(0);
+    job.indices.push_back(2);
+
+    controller.StartJobOnNode(job, 1, variable_types);
+  } else {
+    {
+      JobDescription job = slib::mpi::JobNode::WaitForJobData();
+      LOG(INFO) << "Command: " << job.command;
+      stringstream indices;
+      for (uint32 i = 0; i < job.indices.size(); i++) {
+	indices << job.indices[i] << "\t";
+      }
+      LOG(INFO) << "Indices: " << indices.str();
+      for (map<string, MatlabMatrix>::const_iterator it = job.variables.begin(); 
+	   it != job.variables.end(); 
+	   it++) {
+	const string name = (*it).first;
+	const MatlabMatrix matrix = (*it).second;
+	if (FLAGS_matrix_size < 10) {
+	  LOG(INFO) << "Input: \n\t" << name << ":\n" << matrix.GetContents();
+	} else {
+	  LOG(INFO) << "Input: \n\t" << name;
+	}
+      }
+    }
+
+    {
+      JobDescription job = slib::mpi::JobNode::WaitForJobData();
+      LOG(INFO) << "Command: " << job.command;
+      stringstream indices;
+      for (uint32 i = 0; i < job.indices.size(); i++) {
+	indices << job.indices[i] << "\t";
+      }
+      LOG(INFO) << "Indices: " << indices.str();
+      for (map<string, MatlabMatrix>::const_iterator it = job.variables.begin(); 
+	   it != job.variables.end(); 
+	   it++) {
+	const string name = (*it).first;
+	const MatlabMatrix matrix = (*it).second;
+	if (FLAGS_matrix_size < 10) {
+	  if (matrix.GetMatrixType() == slib::util::MATLAB_MATRIX) {
+	    LOG(INFO) << "Input: \n\t" << name << ":\n" << matrix.GetContents();
+	  } else if (matrix.GetMatrixType() == slib::util::MATLAB_CELL_ARRAY) {
+	    stringstream ss(stringstream::out);
+	    ss << "Input: \n\t" << name << ":\n";
+	    const Pair<int> dims = matrix.GetDimensions();
+	    for (int row = 0; row < dims.x; row++) {
+	      for (int col = 0; col < dims.y; col++) {
+		ss << matrix.GetCell(row, col).GetContents() << " ";
+	      }
+	      ss << "\n";
+	    }
+	    LOG(INFO) << ss.str();
+	  }
+	} else {
+	  LOG(INFO) << "Input: \n\t" << name;
+	}
       }
     }
   }
