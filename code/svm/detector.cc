@@ -380,6 +380,7 @@ namespace slib {
 	_weight_matrix.reset(new FloatMatrix(feature_dimensions, _models.size()));
 	for (int j = 0; j < feature_dimensions; j++) {
 	  for (uint32 i = 0; i < _models.size(); i++) {
+	    ASSERT_EQ(_models[i].num_weights, feature_dimensions);
 	    (*_weight_matrix)(j, i) = _models[i].weights[j];
 	  }
 	}

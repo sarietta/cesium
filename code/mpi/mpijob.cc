@@ -164,7 +164,6 @@ namespace slib {
 
 	  vector<int> indices = data.indices;
 	  sort(indices.begin(), indices.end());
-	  const int max_index = indices.back();
 
 	  const VariableType type = variable_types.find(input_name)->second;
 	  if (type == PARTIAL_VARIABLE_ROWS) {
