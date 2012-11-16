@@ -78,7 +78,8 @@ namespace slib {
       static std::string WaitForString(const int& node = MPI_ROOT_NODE);
 
       static void SendJobDataToNode(const JobData& data, const int& node,
-				    const std::map<std::string, VariableType>& variable_types);
+				    const std::map<std::string, VariableType>& variable_types
+				    = std::map<std::string, VariableType>());
       static void SendStringToNode(const std::string& message, const int& node);
 
       static void SendCompletionMessage(const int& node);
