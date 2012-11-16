@@ -381,6 +381,7 @@ namespace slib {
 	for (int j = 0; j < feature_dimensions; j++) {
 	  for (uint32 i = 0; i < _models.size(); i++) {
 	    ASSERT_EQ(_models[i].num_weights, feature_dimensions);
+	    ASSERT_NOT_NULL(_models[i].weights);
 	    (*_weight_matrix)(j, i) = _models[i].weights[j];
 	  }
 	}
