@@ -152,7 +152,7 @@ namespace slib {
 	const string input_name = (*it).first;
 	SendStringToNode(input_name, node);
 
-	const MatlabMatrix matrix = (*it).second;
+	const MatlabMatrix& matrix = (*it).second;
 	const string serialized = matrix.Serialize();
 	int byte_length = serialized.length();
 	MPI_Send(&byte_length, 1, MPI_INT, node, 0, MPI_COMM_WORLD);
