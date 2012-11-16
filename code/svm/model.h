@@ -28,10 +28,8 @@ namespace slib {
 	      , threshold(0.0f), num_positives(0), num_negatives(0) {}
       
       Model& operator=(const Model& rhs) {
-	if (num_weights != rhs.num_weights) {
-	  num_weights = rhs.num_weights;
-	  weights.reset(new float[num_weights]);
-	}
+	num_weights = rhs.num_weights;
+	weights.reset(new float[num_weights]);
 	
 	for (int32 i = 0; i < num_weights; i++) {
 	  weights[i] = rhs.weights[i];
