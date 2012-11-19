@@ -41,29 +41,32 @@ namespace slib {
 						  const float& threshold,					   
 						  vector<int32>* levels,
 						  vector<Pair<int32> >* indices) {
+      vector<int32> valid;
       vector<int32> invalid;
       for (uint32 i = 0; i < gradient_sums.size(); i++) {
-	if (gradient_sums[i] < threshold) {
-	  invalid.push_back(i);
+	if (gradient_sums[i] >= threshold) {
+	  valid.push_back(i);
+	} else {
+	  invalid.push_back(i);	  
 	}
       }
+      ASSERT_EQ((int) (valid.size() + invalid.size()), all_features.rows());
+
       LOG(INFO) << "Found " << invalid.size() << " invalid patches";
 	
       if (invalid.size() == 0) {
 	return all_features;
       }
 
-      FloatMatrix features(all_features.rows() - invalid.size(), all_features.cols());
+      FloatMatrix features(valid.size(), all_features.cols());
       
-      int invalid_index = 0;
-      for (int i = 0; i < all_features.rows(); i++) {
-	if (i == invalid[invalid_index]) {  // Because they are pre-sorted.
-	  levels->erase(levels->begin() + i - invalid_index);
-	  indices->erase(indices->begin() + i - invalid_index);
-	  invalid_index++;
-	} else {
-	  features.row(i - invalid_index) = all_features.row(i);
-	}
+      for (int i = 0; i < (int) valid.size(); i++) {
+	features.row(i) = all_features.row(valid[i]);
+      }
+
+      for (int i = ((int) invalid.size()) - 1; i >= 0; i--) {
+	levels->erase(levels->begin() + invalid[i]);
+	indices->erase(indices->begin() + invalid[i]);
       }
 
       return features;

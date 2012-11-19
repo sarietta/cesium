@@ -589,11 +589,13 @@ namespace slib {
 	const int32 feature_dimensions = Detector::GetFeatureDimensions(_parameters, &patch_size);
 	FloatMatrix allfeatures = pyramid.GetAllLevelFeatureVectors(patch_size, feature_dimensions, 
 								    &levels, &indices, &gradient_sums);
+	ASSERT_EQ(allfeatures.rows(), levels.size());
+	ASSERT_EQ(allfeatures.rows(), levels.size());
 	features = FeaturePyramid::ThresholdFeatures(allfeatures, gradient_sums, _parameters.gradientSumThreshold, 
 						     &levels, &indices);
+	ASSERT_EQ(features.rows(), levels.size());
+	ASSERT_EQ(features.rows(), indices.size());
       }
-      ASSERT_EQ(features.rows(), levels.size());
-      ASSERT_EQ(features.rows(), indices.size());
 
       // Run the models against the features.
       if (_type != "composite") {
