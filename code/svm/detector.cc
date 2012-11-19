@@ -592,6 +592,9 @@ namespace slib {
 	features = FeaturePyramid::ThresholdFeatures(allfeatures, gradient_sums, _parameters.gradientSumThreshold, 
 						     &levels, &indices);
       }
+      ASSERT_EQ(features.rows(), levels.size());
+      ASSERT_EQ(features.rows(), indices.size());
+
       // Run the models against the features.
       if (_type != "composite") {
 	LOG(ERROR) << "Only composite detectors are supported.";
