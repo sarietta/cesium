@@ -3,6 +3,7 @@
 #include "../util/assert.h"
 #include <Eigen/Dense>
 #include <glog/logging.h>
+#include <stdio.h>
 #include <string>
 
 using namespace Eigen;
