@@ -233,7 +233,7 @@ namespace slib {
 	const mxArray* data = mxGetField(_matrix, index, field.c_str());
 	return MatlabMatrix(data);
       } else {
-	VLOG(1) << "Attempted to access non-struct (field: " << field << ")";
+	VLOG(2) << "Attempted to access non-struct (field: " << field << ")";
 	return MatlabMatrix(MATLAB_NO_TYPE);
       }
     }
@@ -249,7 +249,7 @@ namespace slib {
 	const mxArray* data = mxGetCell(_matrix, index);
 	return MatlabMatrix(data);
       } else {
-	VLOG(1) << "Attempted to access non-cell array (" << index << ")";
+	VLOG(2) << "Attempted to access non-cell array (" << index << ")";
 	return MatlabMatrix(MATLAB_NO_TYPE);
       }
     }
@@ -270,7 +270,7 @@ namespace slib {
 
 	return ((float) mxGetScalar(_matrix));
       } else {
-	VLOG(1) << "Attempted to access non-matrix";
+	VLOG(2) << "Attempted to access non-matrix";
       }
       return 0.0f;
     }
@@ -306,7 +306,7 @@ namespace slib {
 	  LOG(ERROR) << "Only float and double matrices are supported";
 	}
       } else {
-	VLOG(1) << "Attempted to access non-matrix";
+	VLOG(2) << "Attempted to access non-matrix";
       }
 
       return matrix;
@@ -399,7 +399,7 @@ namespace slib {
 	mxArray* data = mxDuplicateArray(contents._matrix);
 	mxSetField(_matrix, index, field.c_str(), data);
       } else {
-	VLOG(1) << "Attempted to access non-struct (field: " << field << ")";
+	VLOG(2) << "Attempted to access non-struct (field: " << field << ")";
       }
     }
 
@@ -427,7 +427,7 @@ namespace slib {
 	mxArray* data = mxDuplicateArray(contents._matrix);
 	mxSetCell(_matrix, index, data);
       } else {
-	VLOG(1) << "Attempted to access non-cell array (" << index << ")";
+	VLOG(2) << "Attempted to access non-cell array (" << index << ")";
       }
     }
 
@@ -486,7 +486,7 @@ namespace slib {
       matClose(pmat);
     }
 
-    bool MatlabMatrix::SaveToFile(const string& filename, const string& variable_name) const {
+    bool MatlabMatrix::SaveToFile(const string& filename, const bool& struct_format) const {
       MATFile* pmat = matOpen(filename.c_str(), "w");
       if (pmat == NULL) {
 	LOG(ERROR) << "Error Opening MAT File: " << filename;
@@ -494,10 +494,22 @@ namespace slib {
       }
       VLOG(1) << "Writing matrix to file: " << filename;
 
-      if (_matrix == NULL || matPutVariable(pmat, variable_name.c_str(), _matrix) != 0) {
-	LOG(ERROR) << "Error writing matrix data to file: " << filename;
-	matClose(pmat);
-	return false;
+      if (struct_format && GetMatrixType() == MATLAB_STRUCT && GetNumberOfElements() == 1) {
+	vector<string> fields = GetStructFieldNames();
+	for (int i = 0; i < (int) fields.size(); i++) {
+	  VLOG(1) << "Writing output field to variable: " << fields[i];
+	  if (_matrix == NULL || matPutVariable(pmat, fields[i].c_str(), GetStructField(fields[i])._matrix) != 0) {
+	    LOG(ERROR) << "Error writing matrix data to file: " << filename;
+	    matClose(pmat);
+	    return false;
+	  }
+	}
+      } else {
+	if (_matrix == NULL || matPutVariable(pmat, "data", _matrix) != 0) {
+	  LOG(ERROR) << "Error writing matrix data to file: " << filename;
+	  matClose(pmat);
+	  return false;
+	}
       }
 
       matClose(pmat);
@@ -601,7 +613,7 @@ namespace slib {
       int offset = position + sizeof(char);
       switch (type) {
       case 'S': {  // Struct
-	VLOG(1) << "Found struct at offset: " << offset;
+	VLOG(2) << "Found struct at offset: " << offset;
 	_type = MATLAB_STRUCT;
 
 	// Size of the struct.
@@ -637,7 +649,7 @@ namespace slib {
 	const int length = dimensions.x * dimensions.y;
 	for (uint32 i = 0; i < fields.size(); i++) {
 	  const string field = fields[i];
-	  VLOG(1) << "Reading field: " << field;
+	  VLOG(2) << "Reading field: " << field;
 	  for (int j = 0; j < length; j++) {
 	    const int index = j;
 	    // Deserialize the field and then save it.
@@ -654,7 +666,7 @@ namespace slib {
 	break;
       }
       case 'C': {  // Cell Array
-	VLOG(1) << "Found cell array at offset: " << offset;
+	VLOG(2) << "Found cell array at offset: " << offset;
 	_type = MATLAB_CELL_ARRAY;
 
 	// Size of the cell array.
@@ -681,7 +693,7 @@ namespace slib {
 	break;
       }
       case 'M': {  // Matrix
-	VLOG(1) << "Found matrix at offset: " << offset;
+	VLOG(2) << "Found matrix at offset: " << offset;
 	_type = MATLAB_MATRIX;
 
 	// Size of the matrix.
@@ -703,7 +715,7 @@ namespace slib {
 	break;
       }
       case 'Z': {  // String
-	VLOG(1) << "Found string at offset: " << offset;
+	VLOG(2) << "Found string at offset: " << offset;
 	_type = MATLAB_STRING;
 
 	// Size of the matrix.
@@ -725,7 +737,7 @@ namespace slib {
 	break;
       }
       case 'E': {  // No type
-	VLOG(1) << "Found empty matrix at offset: " << offset;
+	VLOG(2) << "Found empty matrix at offset: " << offset;
 	_type = MATLAB_NO_TYPE;
 	break;
       }

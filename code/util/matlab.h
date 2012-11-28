@@ -94,7 +94,7 @@ namespace slib {
       MatlabMatrix& Merge(const MatlabMatrix& other);
 
       static MatlabMatrix LoadFromFile(const std::string& filename);
-      bool SaveToFile(const std::string& filename, const std::string& variable_name = "data") const;
+      bool SaveToFile(const std::string& filename, const bool& struct_format = false) const;
 
       MatlabMatrix GetStructField(const std::string& field, const int& index = 0) const;
       // Gets the entire struct at the index. In MATLAB for a struct A, A(index).
