@@ -498,8 +498,12 @@ namespace slib {
 	vector<string> fields = GetStructFieldNames();
 	for (int i = 0; i < (int) fields.size(); i++) {
 	  VLOG(1) << "Writing output field to variable: " << fields[i];
-	  if (_matrix == NULL || matPutVariable(pmat, fields[i].c_str(), GetStructField(fields[i])._matrix) != 0) {
-	    LOG(ERROR) << "Error writing matrix data to file: " << filename;
+	  MatlabMatrix field = GetStructField(fields[i]);
+	  if (field.GetNumberOfElements() == 0) {
+	    continue;
+	  }
+	  if (_matrix == NULL || matPutVariable(pmat, fields[i].c_str(), field._matrix) != 0) {
+	    LOG(ERROR) << "Error writing matrix data to file: " << filename << "(" << fields[i] << ")";
 	    matClose(pmat);
 	    return false;
 	  }
