@@ -275,8 +275,7 @@ namespace slib {
       mxArray* offsets_mat = mxGetField(levels, 0, "rho");
       mxArray* labels_mat = mxGetField(levels, 0, "firstLabel");
       
-      //mxArray* infos_mat = mxGetField(levels, 0, "info");
-      LOG(WARNING) << "Leaving out information about # of positives/negatives";
+      mxArray* infos_mat = mxGetField(levels, 0, "info");
       
       mxArray* thresholds_mat = mxGetField(levels, 0, "threshold");
       
@@ -308,6 +307,26 @@ namespace slib {
 	  const float threshold = (float) thresholds_pr[i];
 	  
 	  Model model(weights, rho, first_label, threshold);
+
+	  int num_positives = 0;
+	  int num_negatives = 0;
+	  if (infos_mat != NULL && mxIsCell(infos_mat)) {
+	    mxArray* cell = mxGetCell(infos_mat, i);
+	    if (cell != NULL && mxIsStruct(cell)) {
+	      mxArray* positives_mat = mxGetField(cell, 0, "numPositives");
+	      if (positives_mat != NULL && mxIsNumeric(positives_mat)) {
+		num_positives = (int) mxGetScalar(positives_mat);
+	      }
+	      mxArray* negatives_mat = mxGetField(cell, 0, "numNegatives");
+	      if (negatives_mat != NULL && mxIsNumeric(negatives_mat)) {
+		num_negatives = (int) mxGetScalar(negatives_mat);
+	      }
+	    }
+	  }
+
+	  model.num_positives = num_positives;
+	  model.num_negatives = num_negatives;
+
 	  detector.AddModel(model);
 	}
       } else if (mxIsSingle(weights_mat) && mxIsSingle(offsets_mat) 
