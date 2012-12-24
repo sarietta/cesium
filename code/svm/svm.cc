@@ -2,8 +2,10 @@
 
 #include <common/scoped_ptr.h>
 #include <glog/logging.h>
+#include <stdio.h>
 #include "model.h"
 #include <string>
+#include <string.h>
 #include <util/assert.h>
 
 using std::string;
@@ -74,7 +76,7 @@ bool parse_command_line(const string& cmd, svm_parameter* param, int* cross_vali
   
   int argc = 1;
   char cmd_cstr[2048];
-  memcpy(cmd_cstr, cmd.c_str(), sizeof(char) * cmd.length());
+  sprintf(cmd_cstr, "%s", cmd.c_str());
   char* argv[1024];
   if((argv[argc] = strtok(cmd_cstr, " ")) != NULL) {
     while((argv[++argc] = strtok(NULL, " ")) != NULL) {
@@ -85,8 +87,8 @@ bool parse_command_line(const string& cmd, svm_parameter* param, int* cross_vali
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] != '-') break;
     if (++i >= argc) {
-      LOG(ERROR) << "Invalid parameters";
-      return false;
+      LOG(ERROR) << "Invalid parameters: " << cmd;
+      break;
     }
     switch (argv[i-1][1]) {
     case 's':
