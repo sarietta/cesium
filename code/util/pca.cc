@@ -1,5 +1,12 @@
 #include "pca.h"
 
+#include <Eigen/Dense>
+#include <glog/logging.h>
+#include <util/assert.h>
+
+using Eigen::SelfAdjointEigenSolver;
+using Eigen::VectorXf;
+
 namespace slib {
   namespace util {
 
@@ -8,6 +15,8 @@ namespace slib {
       const int num_samples = samples.rows();
       const int dimensions = samples.cols();
 
+      ASSERT_LTE(num_components, dimensions);
+      
       FloatMatrix covariance;
       {
 	// Compute the mean in each dimension.
@@ -15,13 +24,13 @@ namespace slib {
 	// Subtract mean from the samples.
 	FloatMatrix whitened = samples - mean.replicate(num_samples, 1);
 	// Compute covariance.
-	covariance = whitenend.transpose() * whitened;
+	covariance = whitened.transpose() * whitened;
 	covariance /= (float) (num_samples - 1);
       }
 
       // Compute the eigenvectors of the covariance matrix.
       SelfAdjointEigenSolver<FloatMatrix> eigensolver(covariance);
-      if (eigensolver.info() != Success) {
+      if (eigensolver.info() != Eigen::Success) {
 	LOG(ERROR) << "Could not create an eigensolver";
 	return FloatMatrix(1,1);
       }
