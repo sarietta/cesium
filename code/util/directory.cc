@@ -12,12 +12,13 @@ using std::vector;
 namespace slib {
 namespace util {
 
-vector<string> Directory::GetDirectoryContents(const string directory, 
-					       const string filter) {
+vector<string> Directory::GetDirectoryContents(const string& directory, 
+					       const string& filter,
+					       const bool& recurse) {
   vector<string> files;
 
   glob_t globs;
-  string pattern = directory + "*" + filter;
+  string pattern = directory + "/*" + filter;
   int ret = glob(pattern.c_str(), 0, NULL, &globs);
   if (ret != 0) {
     switch (ret) {
@@ -36,7 +37,12 @@ vector<string> Directory::GetDirectoryContents(const string directory,
     stat(file, &_stat);
     
     if (S_ISDIR(_stat.st_mode)) { // if directory
-      continue;
+      if (recurse) {
+	const vector<string> files_ = GetDirectoryContents(file, filter, recurse);
+	files.insert(files.begin(), files_.begin(), files_.end());
+      } else {
+	continue;
+      }
     }
     
     files.push_back(string(file));

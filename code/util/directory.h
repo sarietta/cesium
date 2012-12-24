@@ -10,8 +10,9 @@ namespace util {
   private:
   public:
     static std::vector<std::string> 
-    GetDirectoryContents(const std::string directory, 
-			 const std::string filter = "");
+    GetDirectoryContents(const std::string& directory, 
+			 const std::string& filter = "",
+			 const bool& recurse = false);
   };
 }  // namespace util
 }  // namespace slib
