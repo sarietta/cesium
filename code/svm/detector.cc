@@ -680,6 +680,7 @@ namespace slib {
 	VLOG(2) << "Time spent performing non-maximum suppression: " << Timer::Stop();
 	
 	ModelDetectionResultSet model_result_set;
+	model_result_set.model_id = i;
 	if (!_parameters.removeFeatures) {
 	  model_result_set.features.resize(final_indices.size(), features.cols());
 	}

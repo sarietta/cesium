@@ -85,6 +85,7 @@ namespace slib {
     struct ModelDetectionResultSet {
       std::vector<DetectionResult> detections;
       FloatMatrix features;
+      int model_id;
     };
     
     struct DetectionResultSet {
