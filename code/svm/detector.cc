@@ -809,6 +809,12 @@ namespace slib {
       // http://cimg.sourceforge.net/reference/structcimg__library_1_1CImg.html#a6a668c8b3f9d756264d1fb31b7a915fc
       parameters.interpolation_type = 5;  // bicubic
       
+      // Determine whether the computation of the feature pyramid
+      // involves projecting the raw features to a restricted
+      // subspace.
+      parameters.projectFeatures = false;
+      parameters.featurePCFile = "";
+
       return parameters;
     }
     

@@ -38,11 +38,12 @@ namespace slib {
       if (eigenvalues != NULL) {
 	VectorXf eigenvalues_ = eigensolver.eigenvalues();
 	for (int i = 0; i < num_components; i++) {
-	  (*eigenvalues)(i) = eigenvalues_(i);
+	  (*eigenvalues)(i) = eigenvalues_(dimensions - 1 - i);
 	} 
       }
 
-      return eigensolver.eigenvectors().leftCols(num_components);
+      // By default the eigenvectors are ordered smallesta -> largest.
+      return eigensolver.eigenvectors().rightCols(num_components).colwise().reverse();
     }
 
   }  // namespace util

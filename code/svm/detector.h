@@ -48,6 +48,9 @@ namespace slib {
       float gradientSumThreshold;
       int32 interpolation_type;
       bool sampleBig;
+
+      bool projectFeatures;
+      std::string featurePCFile;
     };
     
     struct DetectionMetadata {
