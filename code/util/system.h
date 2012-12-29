@@ -7,6 +7,7 @@ namespace slib {
   namespace util {
 
     class System {
+    public:
       // Executes the system command cmd and stores the response in the
       // result pointer. The method returns a boolean determining if the
       // command executed correctly NOT whether the result of that

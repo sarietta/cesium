@@ -13,6 +13,10 @@ namespace util {
     GetDirectoryContents(const std::string& directory, 
 			 const std::string& filter = "",
 			 const bool& recurse = false);
+
+    static std::vector<std::string> 
+    GetDirectoryFolders(const std::string& directory, 
+			const bool& recurse = false);
   };
 }  // namespace util
 }  // namespace slib
