@@ -1,17 +1,27 @@
 #include "gmaps.h"
 
+#include <CImg.h>
 #include <common/types.h>
+#include <glog/logging.h>
 #include <math.h>
 #include "mathutils.h"
+#include <string>
+#include <string/stringutils.h>
+#include <util/colormap.h>
+#include <vector>
+
+using slib::StringUtils;
+using std::string;
+using std::vector;
 
 namespace slib {
   namespace util {
-
+    
     const double GoogleMaps::_tileSize = 256;
     const Point2D GoogleMaps::_pixelOrigin(_tileSize / 2.0, _tileSize / 2.0);
     const double GoogleMaps::_pixelsPerLonDegree = _tileSize / 360.0;
     const double GoogleMaps::_pixelsPerLonRadian = _tileSize / (2.0 * M_PI);
-
+    
     
     LatLonBounds GoogleMaps::GetMapBounds(const LatLon& southwest, const LatLon& northeast, const int32& zoom) {
       Point2D southwest_tile = GoogleMaps::ConvertFromLatLonToTile(southwest, zoom);
@@ -22,8 +32,8 @@ namespace slib {
       
       return LatLonBounds(southwest_tile_latlon, northeast_tile_latlon);
     }
-
-
+    
+    
     Point2D GoogleMaps::ConvertFromLatLonToPoint(const LatLon& latlon) {
       Point2D point(0, 0);     
       point.x = _pixelOrigin.x + latlon.lon * _pixelsPerLonDegree;
@@ -53,7 +63,7 @@ namespace slib {
       
       return tileCoordinate;
     }
-
+    
     LatLon GoogleMaps::ConvertFromTileToLatLon(const Point2D& tileCoordinate, const int32& zoom) {
       const double numTiles = 1 << zoom;
       const Point2D pixelCoordinate(tileCoordinate.x * _tileSize,
@@ -64,6 +74,62 @@ namespace slib {
       
       return latlon;
     }
-
+    
+    FloatImage GoogleMaps::DrawPoints(const LatLon& southwest, const LatLon& northeast,
+				      const vector<LatLon>& locations, 
+				      const FloatImage& map_image, const int& zoom,
+				      const std::string& point_color, const int& point_size) {
+      FloatImage map(map_image);
+      
+      const LatLonBounds map_bounds 
+	= GoogleMaps::GetMapBounds(southwest, northeast, zoom);
+      
+      VLOG(2) << "Map Southwest: " 
+		<< map_bounds.southwest.lat << DEGREE_SYMBOL << " " 
+		<< map_bounds.southwest.lon << DEGREE_SYMBOL;
+      VLOG(2) << "Map Northeast: " 
+		<< map_bounds.northeast.lat << DEGREE_SYMBOL << " " 
+		<< map_bounds.northeast.lon << DEGREE_SYMBOL;
+      
+      int numTiles = 1 << zoom;
+      const Point2D min_point 
+	= GoogleMaps::ConvertFromLatLonToPoint(LatLon(map_bounds.northeast.lat,
+						      map_bounds.southwest.lon));
+      double map_min_x = min_point.x * numTiles;
+      double map_min_y = min_point.y * numTiles;     
+      
+      int sprite_size = point_size;
+      if (sprite_size < 0) {
+	sprite_size = 15 / (1 << (16 - zoom));
+      }
+      float* color = new float(3);
+      slib::util::ColorMap::HexToRGB(point_color, color);
+      
+      int numPointsRendered = 0;
+      VLOG(1) << "Found " << locations.size() << " locations";
+      
+      for (uint32 i = 0; i < locations.size(); i++) {
+	Point2D point = GoogleMaps::ConvertFromLatLonToPoint(locations[i]);
+	point.x = point.x * numTiles - map_min_x;
+	point.y = point.y * numTiles - map_min_y;
+	
+	if (point.x < 0 || point.x > map.width()) {
+	  continue;
+	}
+	if (point.y < 0 || point.y > map.height()) {
+	  continue;
+	}
+	numPointsRendered++;
+	
+	const double opacity = 0.3;
+	map.draw_circle(point.x, point.y, sprite_size, color, opacity);
+      }
+      
+      VLOG(1) << "Rendered a total of " << numPointsRendered << " points";
+      
+      return map;
+    }
+    
+    
   }  // namespace util
 }  // namespace slib

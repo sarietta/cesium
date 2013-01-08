@@ -10,9 +10,6 @@
 #include <string>
 #include <vector>
 
-DEFINE_double(shape, -1, "Shape of Generalized Gaussian");
-DEFINE_double(epsilon, 0.4, "Falloff parameter for the Generalized Gaussian");
-
 namespace slib {
   namespace util {
     
@@ -69,12 +66,14 @@ namespace slib {
 
       static float GaussianTransformation(const float& max, 
 					  const float& min, 
-					  const float& value) {
+					  const float& value,
+					  const float shape = -1,
+					  const float epsilon = 0.4) {
 	float val = 0.0f;
-	if (FLAGS_shape > 0.0) {
+	if (shape > 0.0) {
 	  const float v = (value - min) / (max - min);
 	  const float p = 1.0f - v;
-	  val = exp(-pow(p, FLAGS_shape) / (2.0 * FLAGS_epsilon));
+	  val = exp(-pow(p, shape) / (2.0 * epsilon));
 	} else {
 	  val = (value - min) / (max - min);
 	}
@@ -86,11 +85,13 @@ namespace slib {
 
       static float InverseGaussianTransformation(const float& max, 
 						 const float& min, 
-						 const float& val) {
+						 const float& val,
+						 const float shape = -1,
+						 const float epsilon = 0.4) {
 	float value = 0.0f;
-	if (FLAGS_shape > 0.0) {
+	if (shape > 0.0) {
 	  value = min + (max - min) * 
-	    (1.0f - pow(-2.0f * FLAGS_epsilon * log(val), 1/FLAGS_shape));
+	    (1.0f - pow(-2.0f * epsilon * log(val), 1/shape));
 	} else {
 	  value = min + val * (max - min);
 	}

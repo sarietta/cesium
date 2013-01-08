@@ -3,7 +3,10 @@
 
 #include <assert.h>
 #include <iostream>
+#include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+#include <string>
 #include <vector>
 
 // No namespace.
@@ -124,6 +127,11 @@ namespace slib {
     LatLon(const LatLon& latlon) {
       lat = latlon.lat;
       lon = latlon.lon;
+    }
+
+    LatLon(const std::string& latlon) {      
+      lat = atof(latlon.c_str());
+      lon = atof(strstr(latlon.c_str(), ",") + 1);
     }
   };
   

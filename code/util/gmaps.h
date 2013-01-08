@@ -1,7 +1,12 @@
 #ifndef __SLIB_UTIL_GOOGLE_MAPS_H__
 #define __SLIB_UTIL_GOOGLE_MAPS_H__
 
+#define DEGREE_SYMBOL "\u00B0"
+
+#include <CImg.h>
 #include <common/types.h>
+#include <string>
+#include <vector>
 
 namespace slib {
   namespace util {
@@ -19,6 +24,11 @@ namespace slib {
       static inline double GetTileSize() {
 	return GoogleMaps::_tileSize;
       }
+      
+      static FloatImage DrawPoints(const LatLon& southwest, const LatLon& northeast,
+				   const std::vector<LatLon>& locations, 
+				   const FloatImage& map_image, const int& zoom,
+				   const std::string& point_color = "336699", const int& point_size = -1);
     private:
       static const double _tileSize;
       static const Point2D _pixelOrigin;
