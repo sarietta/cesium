@@ -1,6 +1,6 @@
-CC 		= g++
-CC_FLAGS 	= -O3 -Wall
-#CC_FLAGS 	= -ggdb -Wall
+CC 		= icc
+CC_FLAGS 	= -O3 -Wall -std=c++0x -wd2196 -wd2536 -wd780
+#CC_FLAGS 	= -ggdb -Wall -std=c++0x -wd2196 -wd2536 -wd780
 LD_FLAGS 	= 
 LIBS 		= 
 

@@ -61,8 +61,11 @@ namespace slib {
       // 0.
       void SetCompletionHandler(CompletionHandler handler);
       void StartJobOnNode(const JobDescription& description, const int& node,
-			  const std::map<std::string, VariableType>& variable_types 
-			  = std::map<std::string, VariableType>());
+			  const std::map<std::string, VariableType>& variable_types);
+      inline void StartJobOnNode(const JobDescription& description, const int& node) {
+	StartJobOnNode(description, node, std::map<std::string, VariableType>());
+      }
+
       void CheckForCompletion();
 
     private:
@@ -82,8 +85,10 @@ namespace slib {
       static std::string WaitForString(const int& node = MPI_ROOT_NODE);
 
       static void SendJobDataToNode(const JobData& data, const int& node,
-				    const std::map<std::string, VariableType>& variable_types
-				    = std::map<std::string, VariableType>());
+				    const std::map<std::string, VariableType>& variable_types);
+      inline static void SendJobDataToNode(const JobData& data, const int& node) {
+	SendJobDataToNode(data, node, std::map<std::string, VariableType>());
+      }
       static void SendStringToNode(const std::string& message, const int& node);
 
       static void SendCompletionMessage(const int& node);

@@ -1,5 +1,5 @@
-CC 		= g++
-CC_FLAGS 	= -O3 -Wall
+CC 		= icc
+CC_FLAGS 	= -O3 -Wall -std=c++0x -wd2196 -wd2536 -wd780
 LD_FLAGS 	= -L/usr/X11R6/lib
 LIBS 		= -lGL -lGLU -lXxf86vm
 

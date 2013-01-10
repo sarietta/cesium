@@ -1,5 +1,6 @@
 #include "matlab.h"
 
+#include "assert.h"
 #include <CImg.h>
 #include <common/types.h>
 #include <glog/logging.h>
@@ -246,6 +247,7 @@ namespace slib {
 
     MatlabMatrix MatlabMatrix::GetCell(const int& index) const {
       if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
+	ASSERT_LT(index, GetNumberOfElements());
 	const mxArray* data = mxGetCell(_matrix, index);
 	return MatlabMatrix(data);
       } else {

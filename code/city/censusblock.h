@@ -40,7 +40,7 @@ namespace slib {
       std::string _name;
       LatLon _internal_point;
       
-      std::vector<CensusAttribute> _attributes;
+      //std::vector<CensusAttribute> _attributes;
     };
     
   }  // namespace city

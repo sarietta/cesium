@@ -1,5 +1,5 @@
-CC 		= g++
-CC_FLAGS 	= -O3 -Wall -I../ `pkg-config --cflags opencv`
+CC 		= icc
+CC_FLAGS 	= -O3 -Wall -std=c++0x -wd2196 -wd2536 -wd780 -I../ `pkg-config --cflags opencv` -DSKIP_OPENCV
 LD_FLAGS 	= 
 LIBS 		= `pkg-config --libs opencv`
 

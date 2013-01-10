@@ -1,5 +1,5 @@
-CC 		= g++
-CC_FLAGS 	= -Wall -I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
+CC 		= icc
+CC_FLAGS 	= -Wall -std=c++0x -wd2196 -wd2536 -wd780 -I/usr/local/include/eigen3 -I/opt/intel/mkl/include -std=c++0x \
 	 	  -ggdb -pg 
 
 LD_FLAGS 	= -L/usr/X11R6/lib

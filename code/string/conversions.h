@@ -5,7 +5,7 @@
 
 namespace slib {
   namespace string {
-    bool ParseHexString(const std::string& hex, int* value) {
+    inline bool ParseHexString(const std::string& hex, int* value) {
       *value = 0;
     
       int a = 0;
