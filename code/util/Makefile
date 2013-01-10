@@ -1,6 +1,6 @@
 CC 		= 	g++
-OPT		= 	-O3
-#OPT 		= 	-ggdb -pg
+#OPT		= 	-O3
+OPT 		= 	-ggdb -pg
 CC_FLAGS 	= 	$(OPT) -Wall -I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
 			-I/usr/local/MATLAB/R2011b/extern/include -DSKIP_OPENCV
 
