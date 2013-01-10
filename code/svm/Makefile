@@ -1,4 +1,4 @@
-CC 		= g++
+CC 		= icc
 OPT		= -O3
 #OPT 		= -ggdb -pg
 
@@ -8,7 +8,7 @@ else
 	ARCH=glnxa64
 endif
 
-CC_FLAGS = 	$(OPT) -Wall -I/usr/include/eigen3 -I/usr/local/include/eigen3 \
+CC_FLAGS = 	$(OPT) -Wall -std=c++0x -wd2196 -wd2536 -wd780 -I/usr/include/eigen3 -I/usr/local/include/eigen3 \
 	 	-I${HOME}/Development/slib/code \
 		-I/usr/local/MATLAB/R2011b/extern/include \
 		-DSKIP_OPENCV
