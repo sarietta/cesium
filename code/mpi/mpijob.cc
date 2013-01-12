@@ -37,7 +37,9 @@ namespace slib {
       }
     }
     
-    JobController::JobController() : _completion_handler(NULL) {}
+    JobController::JobController() : _completion_handler(NULL) {
+      MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+    }
 
     void JobController::SetCompletionHandler(CompletionHandler handler) {
       _completion_handler = handler;
@@ -61,9 +63,22 @@ namespace slib {
 	if (*request == MPI_REQUEST_NULL) {
 	  continue;
 	}
-	MPI_Test(request, &flag, &status);
-
+	const int state = MPI_Test(request, &flag, &status);
 	_request_handlers[iter->first] = *request;
+
+	if (state != MPI_SUCCESS) {
+	  const int node = iter->first;
+
+	  char error_string[4096];
+	  int length_of_error_string, error_class;
+	  
+	  MPI_Error_class(state, &error_class);
+	  MPI_Error_string(error_class, error_string, &length_of_error_string);
+	  LOG(ERROR) << "MPI Communication Error with Node" << node << ": " << error_string;
+	  MPI_Error_string(state, error_string, &length_of_error_string);
+	  LOG(ERROR) << "MPI Communication Error with Node" << node << ": " << error_string;
+	  continue;
+	}
 
 	if (flag == true) {
 	  const int node = iter->first;
