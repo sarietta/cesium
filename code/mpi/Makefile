@@ -1,6 +1,6 @@
 CC 		= 	mpicc
-OPT		= 	-O3
-#OPT 		= 	-ggdb -pg
+#OPT		= 	-O3
+OPT 		= 	-ggdb -pg
 CC_FLAGS 	= 	$(OPT) -Wall -std=c++0x -wd2196 -wd2536 -wd780 -I../ -I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
 			-I/usr/local/MATLAB/R2011b/extern/include \
 			-I/usr/include/mpi -DOMPI_SKIP_MPICXX -DMPICH_SKIP_MPICXX -DSKIP_OPENCV

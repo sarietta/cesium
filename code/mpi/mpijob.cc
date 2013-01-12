@@ -36,9 +36,16 @@ namespace slib {
 	return true;
       }
     }
+
+    void MPIErrorHandler (MPI_Comm* comm, int* err, ...) {
+      JobController::PrintMPICommunicationError(*err);
+    }
     
     JobController::JobController() : _completion_handler(NULL) {
       MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+
+      MPI_Comm_create_errhandler(MPIErrorHandler, &_error_handler);
+      MPI_Comm_set_errhandler(MPI_COMM_WORLD, _error_handler);
     }
 
     void JobController::SetCompletionHandler(CompletionHandler handler) {
@@ -55,6 +62,15 @@ namespace slib {
       MPI_Recv(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
+    void JobController::PrintMPICommunicationError(const int& state) {
+      char estring[MPI_MAX_ERROR_STRING];
+
+      int eclass, len;
+      MPI_Error_class(state, &eclass);
+      MPI_Error_string(state, estring, &len);
+      LOG(INFO) << "MPI Communication Error: " << estring << " (Error Class :: " << eclass << ")";
+    }
+
     void JobController::CheckForCompletion() {
       for (RequestIterator iter = _request_handlers.begin(); iter != _request_handlers.end(); iter++) {
 	int flag;
@@ -68,15 +84,8 @@ namespace slib {
 
 	if (state != MPI_SUCCESS) {
 	  const int node = iter->first;
-
-	  char error_string[4096];
-	  int length_of_error_string, error_class;
-	  
-	  MPI_Error_class(state, &error_class);
-	  MPI_Error_string(error_class, error_string, &length_of_error_string);
-	  LOG(ERROR) << "MPI Communication Error with Node" << node << ": " << error_string;
-	  MPI_Error_string(state, error_string, &length_of_error_string);
-	  LOG(ERROR) << "MPI Communication Error with Node" << node << ": " << error_string;
+	  LOG(ERROR) << "Communication error with node: " << node;
+	  PrintMPICommunicationError(state);
 	  continue;
 	}
 
@@ -86,7 +95,9 @@ namespace slib {
 	  SendCompletionResponse(node);
 
 	  JobOutput output = JobNode::WaitForJobData(node);
-	  (*_completion_handler)(output, node);
+	  if (_completion_handler != NULL) {
+	    (*_completion_handler)(output, node);
+	  }
 	}
       }
     }
