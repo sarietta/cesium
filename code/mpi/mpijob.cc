@@ -42,7 +42,7 @@ namespace slib {
     }
     
     JobController::JobController() : _completion_handler(NULL) {
-      MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+      //MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
       MPI_Comm_create_errhandler(MPIErrorHandler, &_error_handler);
       MPI_Comm_set_errhandler(MPI_COMM_WORLD, _error_handler);
@@ -69,6 +69,23 @@ namespace slib {
       MPI_Error_class(state, &eclass);
       MPI_Error_string(state, estring, &len);
       LOG(INFO) << "MPI Communication Error: " << estring << " (Error Class :: " << eclass << ")";
+    }
+
+    void JobController::CancelPendingRequests() {
+      for (RequestIterator iter = _request_handlers.begin(); iter != _request_handlers.end(); iter++) {
+	MPI_Request* request = &(iter->second);
+	MPI_Status status;
+	int flag;
+	if (request != NULL && *request != MPI_REQUEST_NULL) {
+	  MPI_Cancel(request); 
+	  MPI_Wait(request, &status);
+	  MPI_Test_cancelled(&status, &flag);
+	  if (!flag) {
+	    LOG(ERROR) << "Could not cancel pending request to node: " << iter->first;
+	  }	  
+	}	
+      }
+      
     }
 
     void JobController::CheckForCompletion() {

@@ -31,9 +31,10 @@ using std::map;
 using std::string;
 using std::stringstream;
 
+bool abort_job = false;
+
 void HandleSEGV(int signo) {
   //MPI_Comm_call_errhandler(MPI_COMM_WORLD, MPI_ERR_OTHER);
-
   JobOutput output;
   output.command = "Aborted";
   VLOG(1) << "Sending completion message";
@@ -42,19 +43,15 @@ void HandleSEGV(int signo) {
   JobNode::WaitForCompletionResponse(MPI_ROOT_NODE);
   LOG(INFO) << "Send job output to root";
   JobNode::SendJobDataToNode(output, MPI_ROOT_NODE);
-  while(1) {
-    sleep(1);
-  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Finalize();
+  exit(0);
 }
 
 void HandleJobCompleted(const JobOutput& output, const int& node) {
   LOG(INFO) << "Node " << node << " completed job: " << output.command;
   if (output.command == "Aborted") {
-    LOG(INFO) << "Aborting";
-    MPI_Abort(MPI_COMM_WORLD, 0);
-    MPI_Finalize();
-    LOG(INFO) << "Exiting";
-    exit(1);
+    abort_job = true;
   }
 }
 
@@ -111,6 +108,14 @@ int main(int argc, char** argv) {
 	LOG(INFO) << "Checking for completion";
 	sleep(5);
 	controller.CheckForCompletion();
+
+	if (abort_job) {
+	  controller.CancelPendingRequests();
+	  //MPI_Abort(MPI_COMM_WORLD, 0);
+	  MPI_Barrier(MPI_COMM_WORLD);
+	  MPI_Finalize();
+	  return 0;
+	}
       }
     }
 

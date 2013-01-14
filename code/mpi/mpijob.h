@@ -69,6 +69,8 @@ namespace slib {
       void CheckForCompletion();
       static void PrintMPICommunicationError(const int& state);
 
+      void CancelPendingRequests();
+
     private:
       CompletionHandler _completion_handler;
       std::map<int, MPI_Request> _request_handlers;
