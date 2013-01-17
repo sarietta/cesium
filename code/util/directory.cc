@@ -4,7 +4,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <vector>
-
+#include <unistd.h>
 #include <util/directory.h>
 
 using std::string;
@@ -89,7 +89,7 @@ namespace slib {
     }
 
     bool File::Exists(const string& path) {
-      return boost::filesystem::exists(path);
+      return (access(path.c_str(), F_OK) == 0);
     }
     
   }  // namespace util
