@@ -52,7 +52,7 @@ namespace slib {
       }
       ASSERT_EQ((int) (valid.size() + invalid.size()), all_features.rows());
 
-      LOG(INFO) << "Found " << invalid.size() << " invalid patches";
+      LOG(INFO) << "Found " << invalid.size() << " invalid patches (" << valid.size() << " valid)";
 	
       if (invalid.size() == 0) {
 	return all_features;

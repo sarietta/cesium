@@ -96,11 +96,10 @@ namespace slib {
 	return _original_image_size;
       }
 
-      inline Pair<Pair<float> > GetPatchSizeInLevel(const Pair<int32>& patch_size, const int32& level,
-						    const int32 bins) const {
-	ASSERT_LT((uint32) level, _scales.size());
-	const float level_scale = _scales[level];
-	const float canonical_scale = _canonical_scale;
+      static inline Pair<Pair<float> > GetPatchSizeInLevel(const Pair<int32>& patch_size, 
+							   const float& level_scale,
+							   const float& canonical_scale,
+							   const int32 bins) {
 	const float x2 = 
 	  round((((float) patch_size.x) + 2.0f) * ((float) bins) * level_scale / canonical_scale) 
 	  - 1.0f;
@@ -110,7 +109,16 @@ namespace slib {
       
 	return Pair<Pair<float> >(Pair<float>(0.0f, 0.0f), Pair<float>(x2, y2));
       }
-      
+
+      inline Pair<Pair<float> > GetPatchSizeInLevel(const Pair<int32>& patch_size, const int32& level,
+						    const int32 bins) const {
+	ASSERT_LT((uint32) level, _scales.size());
+	const float level_scale = _scales[level];
+	const float canonical_scale = _canonical_scale;
+
+	return FeaturePyramid::GetPatchSizeInLevel(patch_size, level_scale, canonical_scale, bins);
+      }
+
     private:
       int _num_levels;
       scoped_array<FloatImage> _levels;

@@ -60,7 +60,7 @@ namespace slib {
     }
 
     template <typename T>
-    string PrintVector(const vector<T>& V) {
+    std::string PrintVector(const vector<T>& V) {
       stringstream s(stringstream::out);
       s << "[";
       if (V.size() > 0) {
