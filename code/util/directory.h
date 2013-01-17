@@ -17,6 +17,13 @@ namespace util {
     static std::vector<std::string> 
     GetDirectoryFolders(const std::string& directory, 
 			const bool& recurse = false);
+
+  };
+
+  class File {
+  public:
+    // Determines if a file exists.
+    static bool Exists(const std::string& path);
   };
 }  // namespace util
 }  // namespace slib

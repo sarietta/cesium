@@ -1,3 +1,4 @@
+#include <boost/filesystem.hpp>
 #include <glob.h>
 #include <glog/logging.h>
 #include <string>
@@ -85,6 +86,10 @@ namespace slib {
 	}
       }
       return folders;
+    }
+
+    bool File::Exists(const string& path) {
+      return boost::filesystem::exists(path);
     }
     
   }  // namespace util
