@@ -1,4 +1,3 @@
-#include <boost/filesystem.hpp>
 #include <glob.h>
 #include <glog/logging.h>
 #include <string>
