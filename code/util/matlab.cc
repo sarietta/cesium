@@ -146,9 +146,9 @@ namespace slib {
 
 	for (int i = 0; i < num_elements;  i++) {
 	  for (uint32 j = 0; j < other_fields.size(); j++) {
-	    const MatlabMatrix this_field = GetStructField(other_fields[j], i);
+	    const MatlabMatrix this_field = GetCopiedStructField(other_fields[j], i);
 	    if (this_field.GetMatrixType() == MATLAB_NO_TYPE) {
-	      SetStructField(other_fields[j], i, other.GetStructField(other_fields[j], i));
+	      SetStructField(other_fields[j], i, other.GetCopiedStructField(other_fields[j], i));
 	    }
 	  }
 	}
@@ -157,9 +157,9 @@ namespace slib {
       } 
       case MATLAB_CELL_ARRAY:
 	for (int i = 0; i < num_elements; i++) {
-	  const MatlabMatrix this_cell = GetCell(i);
+	  const MatlabMatrix this_cell = GetCopiedCell(i);
 	  if (this_cell.GetMatrixType() == MATLAB_NO_TYPE) {	
-	    SetCell(i, other.GetCell(i));
+	    SetCell(i, other.GetCopiedCell(i));
 	  }
 	}
 	break;
@@ -223,7 +223,7 @@ namespace slib {
       return matrix;
     }
     
-    MatlabMatrix MatlabMatrix::GetStructField(const string& field, const int& index) const {
+    MatlabMatrix MatlabMatrix::GetCopiedStructField(const string& field, const int& index) const {
       if (_matrix != NULL && _type == MATLAB_STRUCT) {
 	// Check to make sure the field exists.
 	if (mxGetFieldNumber(_matrix, field.c_str()) == -1) {
@@ -239,13 +239,13 @@ namespace slib {
       }
     }
 
-    MatlabMatrix MatlabMatrix::GetCell(const int& row, const int& col) const {
+    MatlabMatrix MatlabMatrix::GetCopiedCell(const int& row, const int& col) const {
       	const mwIndex subscripts[2] = {row, col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
-	return GetCell(index);
+	return GetCopiedCell(index);
     }
 
-    MatlabMatrix MatlabMatrix::GetCell(const int& index) const {
+    MatlabMatrix MatlabMatrix::GetCopiedCell(const int& index) const {
       if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
 	ASSERT_LT(index, GetNumberOfElements());
 	const mxArray* data = mxGetCell(_matrix, index);
@@ -277,7 +277,7 @@ namespace slib {
       return 0.0f;
     }
 
-    FloatMatrix MatlabMatrix::GetContents() const {
+    FloatMatrix MatlabMatrix::GetCopiedContents() const {
       FloatMatrix matrix;
       if (_matrix != NULL && _type == MATLAB_MATRIX) {
 	const int dimensions = mxGetNumberOfDimensions(_matrix);
@@ -334,19 +334,19 @@ namespace slib {
       return contents;
     }
 
-    MatlabMatrix MatlabMatrix::GetStructEntry(const int& row, const int& col) const {
+    MatlabMatrix MatlabMatrix::GetCopiedStructEntry(const int& row, const int& col) const {
       	const mwIndex subscripts[2] = {row, col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
-	return GetStructEntry(index);
+	return GetCopiedStructEntry(index);
     }
     
-    MatlabMatrix MatlabMatrix::GetStructEntry(const int& index) const {
+    MatlabMatrix MatlabMatrix::GetCopiedStructEntry(const int& index) const {
       MatlabMatrix entry(MATLAB_STRUCT, Pair<int>(1,1));
       // Get a list of all of the fields in the contents.
       const vector<string> fields = GetStructFieldNames();
       for (int i = 0; i < (int) fields.size(); i++) {
 	const string field = fields[i];
-	entry.SetStructField(field, GetStructField(field, index));
+	entry.SetStructField(field, GetCopiedStructField(field, index));
       }
 
       return entry;
@@ -370,7 +370,7 @@ namespace slib {
       const vector<string> fields = contents.GetStructFieldNames();
       for (int i = 0; i < (int) fields.size(); i++) {
 	const string field = fields[i];
-	SetStructField(field, index, contents.GetStructField(field));
+	SetStructField(field, index, contents.GetCopiedStructField(field));
       }
     }
 
@@ -500,7 +500,7 @@ namespace slib {
 	vector<string> fields = GetStructFieldNames();
 	for (int i = 0; i < (int) fields.size(); i++) {
 	  VLOG(1) << "Writing output field to variable: " << fields[i];
-	  MatlabMatrix field = GetStructField(fields[i]);
+	  MatlabMatrix field = GetCopiedStructField(fields[i]);
 	  if (field.GetNumberOfElements() == 0) {
 	    continue;
 	  }
@@ -552,7 +552,7 @@ namespace slib {
 	  for (int j = 0; j < length; j++) {
 	    const int index = j;
 	    // Serialize each field to the stream.
-	    string field_serialized = GetStructField(field, index).Serialize();
+	    string field_serialized = GetCopiedStructField(field, index).Serialize();
 	    ss.write(field_serialized.data(), field_serialized.length());
 	  }
 	}
@@ -570,7 +570,7 @@ namespace slib {
 	for (int j = 0; j < length; j++) {
 	  const int index = j;
 	  // Serialize each field to the stream.
-	  string cell_serialized = GetCell(index).Serialize();
+	  string cell_serialized = GetCopiedCell(index).Serialize();
 	  ss.write(cell_serialized.data(), cell_serialized.length());
 	}
 	break;
@@ -583,7 +583,7 @@ namespace slib {
 	ss.write(reinterpret_cast<const char*>(&dimensions.x), sizeof(int));
 	ss.write(reinterpret_cast<const char*>(&dimensions.y), sizeof(int));
 	// Write out the actual data.
-	const FloatMatrix contents = GetContents();
+	const FloatMatrix contents = GetCopiedContents();
 	const int length = contents.rows() * contents.cols();
 	ss.write(reinterpret_cast<const char*>(contents.data()), sizeof(float) * length);
 	break;
