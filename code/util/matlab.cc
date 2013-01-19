@@ -25,19 +25,23 @@ namespace slib {
 
     MatlabMatrix::MatlabMatrix() 
       : _matrix(NULL)
+      , _shared(false)
       , _type(MATLAB_NO_TYPE) {}
     
     MatlabMatrix::MatlabMatrix(const MatlabMatrixType& type) 
       : _matrix(NULL)
+      , _shared(false)
       , _type(type) {}
 
     MatlabMatrix::MatlabMatrix(const MatlabMatrixType& type, const Pair<int>& dimensions) 
       : _matrix(NULL)
+      , _shared(false)
       , _type(type) {
       Initialize(type, dimensions);
     }
 
     void MatlabMatrix::Initialize(const MatlabMatrixType& type, const Pair<int>& dimensions) {
+      _shared = false;
       _type = type;
       if (_type == MATLAB_STRUCT) {
 	_matrix = mxCreateStructMatrix(dimensions.x, dimensions.y, 0, NULL);
@@ -53,7 +57,7 @@ namespace slib {
     }
 
     MatlabMatrix::~MatlabMatrix() {
-      if (_matrix != NULL) {
+      if (_matrix != NULL && !_shared) {
 	mxDestroyArray(_matrix);
       }
       _matrix = NULL;
@@ -61,6 +65,7 @@ namespace slib {
 
     MatlabMatrix::MatlabMatrix(const mxArray* data)
       : _matrix(NULL)
+      , _shared(false)
       , _type(MATLAB_NO_TYPE) {
       if (data != NULL) {
 	_type = GetType(data);
@@ -68,8 +73,20 @@ namespace slib {
       }
     }
 
+    MatlabMatrix::MatlabMatrix(mxArray* data)
+      : _matrix(NULL)
+      , _shared(true)
+      , _type(MATLAB_NO_TYPE) {
+      if (data != NULL) {
+	_type = GetType(data);
+	// WARNING: This is NOT a deep copy. Shared pointer!
+	_matrix = data;
+      }
+    }
+
     MatlabMatrix::MatlabMatrix(const MatlabMatrix& matrix) 
       : _matrix(NULL)
+      , _shared(false)
       , _type(matrix._type) {
       if (matrix._matrix != NULL) {
 	_matrix = mxDuplicateArray(matrix._matrix);
@@ -78,12 +95,14 @@ namespace slib {
 
     MatlabMatrix::MatlabMatrix(const string& contents) 
       : _matrix(NULL)
+      , _shared(false)
       , _type(MATLAB_STRING) {
       SetStringContents(contents);
     }
     
     MatlabMatrix::MatlabMatrix(const float& value)
       : _matrix(NULL)
+      , _shared(false)
       , _type(MATLAB_MATRIX) {
       FloatMatrix contents(1,1);
       contents(0,0) = value;
@@ -92,6 +111,7 @@ namespace slib {
     
     MatlabMatrix::MatlabMatrix(const float* contents, const int& rows, const int& cols) 
       : _matrix(NULL)
+      , _shared(false)
       , _type(MATLAB_MATRIX) {
       FloatMatrix matrix(rows, cols);
       memcpy(matrix.data(), contents, sizeof(float) * rows * cols);
@@ -100,6 +120,7 @@ namespace slib {
 
     MatlabMatrix::MatlabMatrix(const FloatMatrix& contents) 
       : _matrix(NULL)
+      , _shared(false)
       , _type(MATLAB_MATRIX) {
       SetContents(contents);
     }
@@ -110,6 +131,7 @@ namespace slib {
       }
       _matrix = mxDuplicateArray(right._matrix);
       _type = right._type;
+      _shared = false;
 
       return (*this);
     }
@@ -222,6 +244,65 @@ namespace slib {
       matrix.LoadMatrixFromFile(filename);
       return matrix;
     }
+
+    float MatlabMatrix::GetMatrixEntry(const int& row, const int& col) const {
+      if (_matrix != NULL && _type == MATLAB_MATRIX) {
+	const int dimensions = mxGetNumberOfDimensions(_matrix);
+	if (dimensions > 2) {
+	  LOG(ERROR) << "Only 2D matrices are supported";
+	  return 0.0f;
+	}
+	const int rows = mxGetM(_matrix);
+	const int cols = mxGetN(_matrix);
+
+	if (mxIsDouble(_matrix)) {
+	  const double* data = (double*) mxGetData(_matrix);
+	  return ((float) data[row + col * rows]);
+	} else if (mxIsSingle(_matrix)) {
+	  const float* data = (float*) mxGetData(_matrix);
+	  return data[row + col * rows];
+	} else {
+	  LOG(ERROR) << "Only float and double matrices are supported";
+	}
+      } else {
+	VLOG(2) << "Attempted to access non-matrix";
+      }
+
+      return 0.0f;
+    }
+
+    const MatlabMatrix MatlabMatrix::GetStructField(const string& field, const int& index) const {
+      if (_matrix != NULL && _type == MATLAB_STRUCT) {
+	// Check to make sure the field exists.
+	if (mxGetFieldNumber(_matrix, field.c_str()) == -1) {
+	  LOG(WARNING) << "No field named: " << field;
+	  return MatlabMatrix(MATLAB_NO_TYPE);
+	}
+
+	mxArray* data = mxGetField(_matrix, index, field.c_str());
+	return MatlabMatrix(data);
+      } else {
+	VLOG(2) << "Attempted to access non-struct (field: " << field << ")";
+	return MatlabMatrix(MATLAB_NO_TYPE);
+      }
+    }
+    
+    const MatlabMatrix MatlabMatrix::GetCell(const int& row, const int& col) const {
+      const mwIndex subscripts[2] = {row, col};
+      const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+      return GetCell(index);
+    }
+
+    const MatlabMatrix MatlabMatrix::GetCell(const int& index) const {
+      if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
+	ASSERT_LT(index, GetNumberOfElements());
+	mxArray* data = mxGetCell(_matrix, index);
+	return MatlabMatrix(data);
+      } else {
+	VLOG(2) << "Attempted to access non-cell array (" << index << ")";
+	return MatlabMatrix(MATLAB_NO_TYPE);
+      }
+    }
     
     MatlabMatrix MatlabMatrix::GetCopiedStructField(const string& field, const int& index) const {
       if (_matrix != NULL && _type == MATLAB_STRUCT) {
@@ -240,9 +321,9 @@ namespace slib {
     }
 
     MatlabMatrix MatlabMatrix::GetCopiedCell(const int& row, const int& col) const {
-      	const mwIndex subscripts[2] = {row, col};
-	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
-	return GetCopiedCell(index);
+      const mwIndex subscripts[2] = {row, col};
+      const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+      return GetCopiedCell(index);
     }
 
     MatlabMatrix MatlabMatrix::GetCopiedCell(const int& index) const {

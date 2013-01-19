@@ -106,6 +106,13 @@ namespace slib {
       MatlabMatrix GetCopiedCell(const int& row, const int& col) const;
       MatlabMatrix GetCopiedCell(const int& index) const;
       FloatMatrix GetCopiedContents() const;
+
+      // Non-mutator access. Should be faster and more memory efficient.
+      const MatlabMatrix GetStructField(const std::string& field, const int& index = 0) const;
+      const MatlabMatrix GetCell(const int& row, const int& col) const;
+      const MatlabMatrix GetCell(const int& index) const;
+      float GetMatrixEntry(const int& row, const int& col) const;
+
       float GetScalar() const;
       std::string GetStringContents() const;
 
@@ -179,11 +186,13 @@ namespace slib {
 
     private:
       mxArray* _matrix;
+      bool _shared;
       MatlabMatrixType _type;
 
       void Initialize(const MatlabMatrixType& type, const Pair<int>& dimensions);
 
       MatlabMatrix(const mxArray* data);
+      MatlabMatrix(mxArray* data);
 
       void LoadMatrixFromFile(const std::string& filename);
       MatlabMatrixType GetType(const mxArray* data) const;
