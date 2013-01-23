@@ -1,0 +1,25 @@
+{{!< default}}
+
+{{#contentFor "page-styles"}}
+<style type="text/css"></style>
+{{/contentFor}}
+
+<h2>{{title}}</h2>
+
+{{#contentFor "page-content"}}
+
+sGrok is a web tool/interface for automatically parsing C/C++ source
+code and determining the linkage therein. This is particularly useful
+for two reasons:
+
+<ol>
+  <li>You can easily find any function/variable/declaration/etc via simple regex search</li>
+
+  <li>
+    You can navigate source as it exists - if function A calls
+    function B, then right in the source code, you can follow the
+    execution path to function B
+  </li>
+</ol>
+
+{{/contentFor}}

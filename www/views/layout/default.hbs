@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <title>{{title}}</title>
+    <link type="text/css" rel="stylesheet" href="/public/css/main.css"/>
+    {{> scripts}}
+    {{{block "page-styles"}}}
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo"></div>
+      <div class="navigation">
+        <ul>
+          <li>home</li>
+          <li>projects</li>
+          <li>about</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="content">
+      {{{body}}}
+    
+      {{{block "page-content"}}}
+    </div>
+  </body>
+</html>
