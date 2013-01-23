@@ -7,21 +7,26 @@
     {{{block "page-styles"}}}
   </head>
   <body>
-    <div class="header">
+    <div class="container header">
       <div class="logo"></div>
       <div class="navigation">
         <ul>
-          <li>home</li>
-          <li>projects</li>
-          <li>about</li>
+          <li><a href="#home">home</a></li>
+          <li><a href="#projects">projects</a></li>
+          <li><a href="#search">search</a></li>
+          <li><a href="#about">about</a></li>
         </ul>
       </div>
     </div>
     
-    <div class="content">
+    <div class="container content">
       {{{body}}}
     
       {{{block "page-content"}}}
     </div>
+
+    <div class="container footer">
+
+      <div class="copyright">&copy; 2013 Sean M. Arietta</div>
   </body>
 </html>
