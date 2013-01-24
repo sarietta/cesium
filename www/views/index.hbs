@@ -1,0 +1,69 @@
+{{!< default}}
+
+{{#contentFor "page-styles"}}
+<style type="text/css"></style>
+{{/contentFor}}
+
+<h2>{{title}}</h2>
+
+{{#contentFor "page-content"}}
+
+sGrok is a web tool/interface for automatically parsing C/C++ source
+code and determining the linkage therein. This is particularly useful
+for two reasons:
+
+<ol>
+  <li>You can easily find any function/variable/declaration/etc via simple regex search</li>
+
+  <li>
+    You can navigate source as it exists - if function A calls
+    function B, then right in the source code, you can follow the
+    execution path to function B
+  </li>
+</ol>
+
+<h2>Quick Usage Tute</h2>
+
+<p>
+  So you've got that enormous project that you've been working on and
+  now you need to find function A. More importantly, function A calls
+  functions B, C, and D, and you want to know what the hell they do!
+</p>
+
+<p>
+  Well you could cat, pipe, grep all files, over and over and over
+  again. Or you could just save yourself the headache and use sGrok.
+</p>
+
+<p>
+  First, you need to tell sGrok where your project(s) live. This will
+  ensure that sGrok indexes and parses your source code so it can help
+  you find what you're looking for.
+</p>
+
+<p>
+  Go to the <a href="#projects">projects</a> page. Fill out the
+  information (name, source code location, etc), and then let it do its
+  magic.
+</p>
+
+<p>
+  Parsing C++ is NOT a simple task. It's not particularly fast either,
+  so this might take a while the first time. Thanks to caching, the next
+  time this happens (automatically for you) it won't take nearly as
+  long.
+</p>
+
+<p>
+  Now you can simple use the <a href="#search">search</a> page to find
+  that elusive function A.
+</p>
+
+<p>
+  You can also browse all of your source code by visiting the
+  <a href="#projects">projects</a> page.
+</p>
+
+Happy sGrok'ing!  
+
+{{/contentFor}}
