@@ -148,7 +148,7 @@ namespace slib {
     void JobNode::SendStringToNode(const string& message, const int& node) {
       VLOG(3) << "Sending string: " << message << " (receiver node: " << node << ")";
       int length = message.length() + 1;
-      scoped_ptr<char> message_c(new char[length]);
+      scoped_array<char> message_c(new char[length]);
       memcpy(message_c.get(), message.c_str(), sizeof(char) * length);
       MPI_Send(&length, 1, MPI_INT, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD);
       MPI_Send(message_c.get(), length, MPI_CHAR, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD);
@@ -158,7 +158,7 @@ namespace slib {
       VLOG(3) << "Waiting for string from node: " << node;
       int length;
       MPI_Recv(&length, 1, MPI_INT, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      scoped_ptr<char> message_c(new char[length]);
+      scoped_array<char> message_c(new char[length]);
       MPI_Recv(message_c.get(), length, MPI_CHAR, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
       VLOG(3) << "Recieved string: " << message_c.get() << " (sending node: " << node << ")";
@@ -245,7 +245,7 @@ namespace slib {
       // while to complete and we don't want to block on anything else
 
       // Copy the serialized strings into one big buffer.
-      scoped_ptr<char> serialized_variables_cstr(new char[total_bytes]);
+      scoped_array<char> serialized_variables_cstr(new char[total_bytes]);
       int byte_offset = 0;
       for (int i = 0; i < num_variables; i++) {
 	const int byte_length = serialized_variables[i].length();
@@ -310,7 +310,7 @@ namespace slib {
       // the JobData is complete.
       scoped_array<MPI_Request> request_handlers(new MPI_Request[num_variables]);
       // Allocate a buffer big enough for all of the variables.
-      scoped_ptr<char> serialized_variables(new char[total_bytes]);
+      scoped_array<char> serialized_variables(new char[total_bytes]);
       int byte_offset = 0;
       for (int i = 0; i < num_variables; i++) {
 	const int byte_length = input_byte_lengths[i];

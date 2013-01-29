@@ -39,16 +39,16 @@ int main(int argc, char** argv) {
     MatlabMatrix field2_cell4 = field2.GetCell(1, 1);
     
     if (FLAGS_iterations == 1) {
-      LOG(INFO) << "\n" << subfield1.GetContents();
-      LOG(INFO) << "\n" << field3.GetContents();
+      LOG(INFO) << "\n" << subfield1.GetCopiedContents();
+      LOG(INFO) << "\n" << field3.GetCopiedContents();
       
-      LOG(INFO) << "\n" << subfield2_cell1.GetContents();
-      LOG(INFO) << "\n" << subfield2_cell2.GetContents();
+      LOG(INFO) << "\n" << subfield2_cell1.GetCopiedContents();
+      LOG(INFO) << "\n" << subfield2_cell2.GetCopiedContents();
       
-      LOG(INFO) << "\n" << field2_cell1.GetContents();
-      LOG(INFO) << "\n" << field2_cell2.GetContents();
-      LOG(INFO) << "\n" << field2_cell3.GetContents();
-      LOG(INFO) << "\n" << field2_cell4.GetContents();
+      LOG(INFO) << "\n" << field2_cell1.GetCopiedContents();
+      LOG(INFO) << "\n" << field2_cell2.GetCopiedContents();
+      LOG(INFO) << "\n" << field2_cell3.GetCopiedContents();
+      LOG(INFO) << "\n" << field2_cell4.GetCopiedContents();
     }
     FloatMatrix m(2,2);
     m << 1, 2, 3, 4;
@@ -80,12 +80,12 @@ int main(int argc, char** argv) {
     cells.Merge(cell1).Merge(cell2).Merge(cell3);
 
     if (FLAGS_iterations == 1) {
-      LOG(INFO) << "\nCell 1:\n" << cell1.GetCell(0).GetContents();
-      LOG(INFO) << "\nCell 2:\n" << cell2.GetCell(1).GetContents();
-      LOG(INFO) << "\nCell 3:\n" << cell3.GetCell(2).GetContents();
-      LOG(INFO) << "\nCell 1:\n" << cells.GetCell(0).GetContents();
-      LOG(INFO) << "\nCell 2:\n" << cells.GetCell(1).GetContents();
-      LOG(INFO) << "\nCell 3:\n" << cells.GetCell(2).GetContents();
+      LOG(INFO) << "\nCell 1:\n" << cell1.GetCell(0).GetCopiedContents();
+      LOG(INFO) << "\nCell 2:\n" << cell2.GetCell(1).GetCopiedContents();
+      LOG(INFO) << "\nCell 3:\n" << cell3.GetCell(2).GetCopiedContents();
+      LOG(INFO) << "\nCell 1:\n" << cells.GetCell(0).GetCopiedContents();
+      LOG(INFO) << "\nCell 2:\n" << cells.GetCell(1).GetCopiedContents();
+      LOG(INFO) << "\nCell 3:\n" << cells.GetCell(2).GetCopiedContents();
     }
 
     MatlabMatrix cells1(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 4));
@@ -99,14 +99,14 @@ int main(int argc, char** argv) {
     
     if (FLAGS_iterations == 1) {
       LOG(INFO) << "====================================";
-      LOG(INFO) << "\nCell 1:\n" << cells1.GetCell(0).GetContents();
-      LOG(INFO) << "\nCell 2:\n" << cells1.GetCell(1).GetContents();
-      LOG(INFO) << "\nCell 3:\n" << cells1.GetCell(2).GetContents();
+      LOG(INFO) << "\nCell 1:\n" << cells1.GetCell(0).GetCopiedContents();
+      LOG(INFO) << "\nCell 2:\n" << cells1.GetCell(1).GetCopiedContents();
+      LOG(INFO) << "\nCell 3:\n" << cells1.GetCell(2).GetCopiedContents();
       LOG(INFO) << "\nCell 4:\n" << cells1.GetCell(3).GetStringContents();
       
-      LOG(INFO) << "\nCell 1:\n" << deserialized_cells1.GetCell(0).GetContents();
-      LOG(INFO) << "\nCell 2:\n" << deserialized_cells1.GetCell(1).GetContents();
-      LOG(INFO) << "\nCell 3:\n" << deserialized_cells1.GetCell(2).GetContents();
+      LOG(INFO) << "\nCell 1:\n" << deserialized_cells1.GetCell(0).GetCopiedContents();
+      LOG(INFO) << "\nCell 2:\n" << deserialized_cells1.GetCell(1).GetCopiedContents();
+      LOG(INFO) << "\nCell 3:\n" << deserialized_cells1.GetCell(2).GetCopiedContents();
       LOG(INFO) << "\nCell 4:\n" << deserialized_cells1.GetCell(3).GetStringContents();
     }
 
@@ -116,16 +116,16 @@ int main(int argc, char** argv) {
     struct1.SetStructField("field1", 0, MatlabMatrix(1.0f));
     struct2.SetStructField("field2", 0, MatlabMatrix(2.0f));
 
-    struct1.SetStructEntry(1, struct2.GetStructEntry(0));
+    struct1.SetStructEntry(1, struct2.GetCopiedStructEntry(0));
     struct1.SaveToFile("test_struct.mat");
 
     MatlabMatrix A(slib::util::MATLAB_MATRIX, Pair<int>(2, 2));
-    LOG(INFO) << A.GetContents();
+    LOG(INFO) << A.GetCopiedContents();
     A.Set(0, 0, MatlabMatrix(1.0f));
     A.Set(0, 1, MatlabMatrix(2.0f));
     A.Set(1, 0, MatlabMatrix(3.0f));
     A.Set(1, 1, MatlabMatrix(4.0f));
-    LOG(INFO) << A.GetContents();
+    LOG(INFO) << A.GetCopiedContents();
     
   }
   

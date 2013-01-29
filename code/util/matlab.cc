@@ -402,7 +402,7 @@ namespace slib {
 	const int cols = mxGetN(_matrix);
 	const int length = rows > cols ? rows : cols;
 
-	scoped_ptr<char> characters(new char[length+1]);
+	scoped_array<char> characters(new char[length+1]);
 	if (mxGetString(_matrix, characters.get(), length+1) == 0) {
 	  contents.assign(characters.get());
 	} else {
@@ -563,9 +563,12 @@ namespace slib {
       }
 
       _type = GetType(data);
+#if 0
       _matrix = mxDuplicateArray(data);
-
       mxDestroyArray(data);
+#else
+      _matrix = data;
+#endif
       matClose(pmat);
     }
 
@@ -719,7 +722,7 @@ namespace slib {
 	  memcpy(&field_length, ss, sizeof(int)); ss += sizeof(int);
 	  offset += sizeof(int) * 1;
 
-	  scoped_ptr<char> field_cstr(new char[field_length]);
+	  scoped_array<char> field_cstr(new char[field_length]);
 	  memcpy(field_cstr.get(), ss, sizeof(char) * field_length); ss += sizeof(char) * field_length;
 	  offset += sizeof(char) * field_length;
 
@@ -817,7 +820,7 @@ namespace slib {
 	const int length = rows > cols ? rows : cols;
 	VLOG(2) << "String length: " << length;
 
-	scoped_ptr<char> characters(new char[length+1]);
+	scoped_array<char> characters(new char[length+1]);
 	memcpy(characters.get(), ss, sizeof(char) * (length + 1)); ss += sizeof(char) * (length + 1);
 	offset += sizeof(char) * (length + 1);
 	SetStringContents(string(characters.get()));

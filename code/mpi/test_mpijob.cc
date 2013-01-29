@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
 	const string name = (*it).first;
 	const MatlabMatrix matrix = (*it).second;
 	if (FLAGS_matrix_size < 10) {
-	  LOG(INFO) << "Input: \n\t" << name << ":\n" << matrix.GetContents();
+	  LOG(INFO) << "Input: \n\t" << name << ":\n" << matrix.GetCopiedContents();
 	} else {
 	  LOG(INFO) << "Input: \n\t" << name;
 	}
@@ -192,14 +192,14 @@ int main(int argc, char** argv) {
 	const MatlabMatrix matrix = (*it).second;
 	if (FLAGS_matrix_size < 10) {
 	  if (matrix.GetMatrixType() == slib::util::MATLAB_MATRIX) {
-	    LOG(INFO) << "Input: \n\t" << name << ":\n" << matrix.GetContents();
+	    LOG(INFO) << "Input: \n\t" << name << ":\n" << matrix.GetCopiedContents();
 	  } else if (matrix.GetMatrixType() == slib::util::MATLAB_CELL_ARRAY) {
 	    stringstream ss(stringstream::out);
 	    ss << "Input: \n\t" << name << ":\n";
 	    const Pair<int> dims = matrix.GetDimensions();
 	    for (int row = 0; row < dims.x; row++) {
 	      for (int col = 0; col < dims.y; col++) {
-		ss << matrix.GetCell(row, col).GetContents() << " ";
+		ss << matrix.GetCell(row, col).GetCopiedContents() << " ";
 	      }
 	      ss << "\n";
 	    }
