@@ -11,8 +11,15 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include <svm/detector.h>
-#include <svm/model.h>
+
+namespace slib {
+  namespace svm {
+    class Detector;
+    class DetectionMetadata;
+    class DetectionResultSet;
+    class Model;
+  }
+}
 
 namespace slib {
   namespace util {

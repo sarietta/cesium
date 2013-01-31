@@ -23,6 +23,7 @@ namespace slib {
       PARTIAL_VARIABLE_ROWS,  // Rows are partially sent, but all cols are sent
       PARTIAL_VARIABLE_COLS,  // Same as above s/rows/cols
       COMPLETE_VARIABLE,  // A variable that needs all of its data sent
+      FEATURE_STRIPPED_VARIABLE,  // A partial variable that has been stripped of features
       DSWORK_COLUMN  // This variable will be saved directly to disk
 		     // on output in the format that dswork
 		     // expects. Note that only column vectors can be
