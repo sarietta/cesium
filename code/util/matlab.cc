@@ -125,11 +125,24 @@ namespace slib {
       SetContents(contents);
     }
 
+    void MatlabMatrix::AssignData(mxArray* data) {
+      if (data != NULL) {
+	_type = GetType(data);
+	_shared = true;
+	// WARNING: This is NOT a deep copy. Shared pointer!
+	_matrix = data;
+      }
+    }
+
     const MatlabMatrix& MatlabMatrix::operator=(const MatlabMatrix& right) {
       if (_matrix != NULL) {
 	mxDestroyArray(_matrix);
       }
-      _matrix = mxDuplicateArray(right._matrix);
+      if (right._matrix != NULL) {
+	_matrix = mxDuplicateArray(right._matrix);
+      } else {
+	_matrix = NULL;
+      }
       _type = right._type;
       _shared = false;
 
@@ -303,6 +316,16 @@ namespace slib {
 	return MatlabMatrix(MATLAB_NO_TYPE);
       }
     }
+
+    void MatlabMatrix::GetMutableCell(const int& index, MatlabMatrix* cell) const {
+      if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
+	ASSERT_LT(index, GetNumberOfElements());
+	mxArray* data = mxGetCell(_matrix, index);
+	cell->AssignData(data);
+      } else {
+	VLOG(2) << "Attempted to access non-cell array (" << index << ")";
+      }
+    }
     
     MatlabMatrix MatlabMatrix::GetCopiedStructField(const string& field, const int& index) const {
       if (_matrix != NULL && _type == MATLAB_STRUCT) {
@@ -358,6 +381,32 @@ namespace slib {
       return 0.0f;
     }
 
+    void MatlabMatrix::SetScalar(const float& scalar) {
+      if (_matrix != NULL && _type == MATLAB_MATRIX) {
+	const int dimensions = mxGetNumberOfDimensions(_matrix);
+	if (dimensions > 2) {
+	  LOG(ERROR) << "Only 2D matrices are supported";
+	  return;
+	}
+	const int rows = mxGetM(_matrix);
+	const int cols = mxGetN(_matrix);
+	if (rows != 1 || cols != 1) {
+	  LOG(ERROR) << "Attempted to access non-scalar matrix";
+	  return;
+	}
+
+	if (mxIsSingle(_matrix)) {
+	  float* data = (float*) mxGetData(_matrix);
+	  data[0] = scalar;
+	} else {
+	  LOG(ERROR) << "Only single precision matrices supported";
+	}
+      } else {
+	VLOG(2) << "Attempted to access non-matrix";
+      }
+    }
+
+
     FloatMatrix MatlabMatrix::GetCopiedContents() const {
       FloatMatrix matrix;
       if (_matrix != NULL && _type == MATLAB_MATRIX) {
@@ -393,6 +442,30 @@ namespace slib {
       }
 
       return matrix;
+    }
+
+    const float* MatlabMatrix::GetContents() const {
+      if (_matrix != NULL && _type == MATLAB_MATRIX) {
+	const int dimensions = mxGetNumberOfDimensions(_matrix);
+	if (dimensions > 2) {
+	  LOG(ERROR) << "Only 2D matrices are supported";
+	  return NULL;
+	}
+	if (mxIsDouble(_matrix)) {
+	  LOG(ERROR) << "Cannot get non-mutated access to double content";
+	  return NULL;
+	} else if (mxIsSingle(_matrix)) {
+	  return (float*) mxGetData(_matrix);
+	} else {
+	  LOG(ERROR) << "Only float and double matrices are supported";
+	  return NULL;
+	}
+      } else {
+	VLOG(2) << "Attempted to access non-matrix";
+	return NULL;
+      }
+
+      return NULL;
     }
 
     string MatlabMatrix::GetStringContents() const {

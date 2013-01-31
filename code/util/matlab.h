@@ -112,6 +112,12 @@ namespace slib {
       const MatlabMatrix GetCell(const int& row, const int& col) const;
       const MatlabMatrix GetCell(const int& index) const;
       float GetMatrixEntry(const int& row, const int& col) const;
+      const float* GetContents() const;
+
+      // Mutable access. Use these at your own risk. You can seriously
+      // corrupt the hierarchy of the matrices if you mess around.
+      void GetMutableCell(const int& index, MatlabMatrix* cell) const;
+      //MatlabMatrix* GetMutableStructField(const std::string& field, const int& index = 0) const;
 
       float GetScalar() const;
       std::string GetStringContents() const;
@@ -126,6 +132,8 @@ namespace slib {
       void SetCell(const int& index, const MatlabMatrix& contents);
       void SetContents(const FloatMatrix& contents);
       void SetStringContents(const std::string& contents);
+
+      void SetScalar(const float& scalar);
 
       // Although the return type is a "string", the contents of that
       // string will be fwrite-style bytes.
@@ -196,6 +204,8 @@ namespace slib {
 
       void LoadMatrixFromFile(const std::string& filename);
       MatlabMatrixType GetType(const mxArray* data) const;
+
+      void AssignData(mxArray* data);
 
       friend class MatlabConverter;
     };

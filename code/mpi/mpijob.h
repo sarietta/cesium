@@ -37,6 +37,11 @@ namespace slib {
 
       const slib::util::MatlabMatrix& GetInputByName(const std::string& name) const; 
       bool HasInput(const std::string& name) const; 
+
+      ~JobData() {
+	indices.clear();
+	variables.clear();
+      }
     };
 
     struct JobQueue {
