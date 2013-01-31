@@ -317,6 +317,12 @@ namespace slib {
       }
     }
 
+    void MatlabMatrix::GetMutableCell(const int& row, const int& col, MatlabMatrix* cell) const {
+      const mwIndex subscripts[2] = {row, col};
+      const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+      GetMutableCell(index, cell);
+    }
+
     void MatlabMatrix::GetMutableCell(const int& index, MatlabMatrix* cell) const {
       if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
 	ASSERT_LT(index, GetNumberOfElements());
@@ -601,6 +607,23 @@ namespace slib {
 	    data[j + i * contents.rows()] = contents(j, i);
 	  }
 	}
+      } else {
+	LOG(WARNING) << "Attempted to access non-matrix";
+      }
+    }
+
+    void MatlabMatrix::SetContents(const float* contents, const int& length, const bool& iscol) {
+      const int rows = iscol ? length : 1;
+      const int cols = iscol ? 1 : length;
+      if (_type == MATLAB_MATRIX) {
+	// Overwrite the already existing data if necessary.
+	if (_matrix != NULL) {
+	  mxDestroyArray(_matrix);
+	}
+	// Matlab matrices are in column-major order.
+	_matrix = mxCreateNumericMatrix(rows, cols, mxSINGLE_CLASS, mxREAL);
+	float* data = (float*) mxGetData(_matrix);
+	memcpy(data, contents, sizeof(float) * length);
       } else {
 	LOG(WARNING) << "Attempted to access non-matrix";
       }

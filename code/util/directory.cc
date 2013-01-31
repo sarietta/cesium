@@ -87,6 +87,11 @@ namespace slib {
       return folders;
     }
 
+    bool Directory::Exists(const string& path) {
+      struct stat sb;
+      return (stat(path.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode));
+    }
+
     bool File::Exists(const string& path) {
       return (access(path.c_str(), F_OK) == 0);
     }

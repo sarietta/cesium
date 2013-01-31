@@ -124,6 +124,7 @@ namespace slib {
       // Mutable access. Use these at your own risk. You can seriously
       // corrupt the hierarchy of the matrices if you mess around.
       void GetMutableCell(const int& index, MatlabMatrix* cell) const;
+      void GetMutableCell(const int& row, const int& col, MatlabMatrix* cell) const;
       //MatlabMatrix* GetMutableStructField(const std::string& field, const int& index = 0) const;
 
       float GetScalar() const;
@@ -138,6 +139,8 @@ namespace slib {
       void SetCell(const int& row, const int& col, const MatlabMatrix& contents);
       void SetCell(const int& index, const MatlabMatrix& contents);
       void SetContents(const FloatMatrix& contents);
+      // iscol = is this a column-vector, i.e. rows = length
+      void SetContents(const float* contents, const int& length, const bool& iscol = false);
       void SetStringContents(const std::string& contents);
 
       void SetScalar(const float& scalar);
