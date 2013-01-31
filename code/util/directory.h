@@ -18,7 +18,6 @@ namespace util {
     GetDirectoryFolders(const std::string& directory, 
 			const bool& recurse = false);
 
-
     static bool Exists(const std::string& path);
   };
 
