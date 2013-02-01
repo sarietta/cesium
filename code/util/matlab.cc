@@ -376,7 +376,7 @@ namespace slib {
 	const int rows = mxGetM(_matrix);
 	const int cols = mxGetN(_matrix);
 	if (rows != 1 || cols != 1) {
-	  LOG(ERROR) << "Attempted to access non-scalar matrix";
+	  LOG(ERROR) << "Attempted to access non-scalar matrix: " << rows << " x " << cols;
 	  return 0.0f;
 	}
 
