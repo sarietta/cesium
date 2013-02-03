@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <map>
 #include "matlab.h"
 #include <iostream>
 #include <sstream>
@@ -18,6 +19,7 @@ DEFINE_bool(test_mutators, true, "");
 
 using Eigen::MatrixXf;
 using slib::util::MatlabMatrix;
+using std::map;
 using std::string;
 
 int main(int argc, char** argv) {
@@ -162,6 +164,7 @@ int main(int argc, char** argv) {
     MatlabMatrix cell1_m;
     A.GetMutableCell(0, &cell1_m);
     cell1_m.SetStructField("features", 0, MatlabMatrix(0.0f));
+    cell1_m.SetStructField("features", 1, MatlabMatrix(10.0f));
 
     LOG(INFO) << "A:\n" 
 	      << " {0}:\n" 
@@ -173,6 +176,24 @@ int main(int argc, char** argv) {
 	      << " {1}:\n" 
 	      << "  (0):\n" 
 	      << "   features: " << A.GetCell(1).GetStructField("features", 0).GetCopiedContents();
+
+    map<string, MatlabMatrix> mapp;
+    mapp["test"] = A;
+
+    LOG(INFO) << "A:\n" 
+	      << " {0}:\n" 
+	      << "  (0):\n" 
+	      << "   features: " << mapp["test"].GetCell(0).GetStructField("features", 0).GetCopiedContents() << "\n"
+	      << " {0}:\n" 
+	      << "  (1):\n" 
+	      << "   features: " << mapp["test"].GetCell(0).GetStructField("features", 1).GetCopiedContents() << "\n"
+	      << " {1}:\n" 
+	      << "  (0):\n" 
+	      << "   features: " << mapp["test"].GetCell(1).GetStructField("features", 0).GetCopiedContents();
+
+
+    A = MatlabMatrix();
+    mapp["test"] = MatlabMatrix();
   }
   
   return 0;

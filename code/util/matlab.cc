@@ -308,7 +308,6 @@ namespace slib {
 
     const MatlabMatrix MatlabMatrix::GetCell(const int& index) const {
       if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
-	ASSERT_LT(index, GetNumberOfElements());
 	mxArray* data = mxGetCell(_matrix, index);
 	return MatlabMatrix(data);
       } else {
@@ -325,7 +324,6 @@ namespace slib {
 
     void MatlabMatrix::GetMutableCell(const int& index, MatlabMatrix* cell) const {
       if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
-	ASSERT_LT(index, GetNumberOfElements());
 	mxArray* data = mxGetCell(_matrix, index);
 	cell->AssignData(data);
       } else {
@@ -357,7 +355,6 @@ namespace slib {
 
     MatlabMatrix MatlabMatrix::GetCopiedCell(const int& index) const {
       if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
-	ASSERT_LT(index, GetNumberOfElements());
 	const mxArray* data = mxGetCell(_matrix, index);
 	return MatlabMatrix(data);
       } else {
