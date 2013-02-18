@@ -30,6 +30,13 @@ namespace slib {
 					   std::vector<int32>* levels,
 					   std::vector<Pair<int32> >* indices);
 
+      // Gets a single feature vector from the level at the specified
+      // position. Stores the result in the poniter feature. The size
+      // of the memory pointed to by that pointer should be the size
+      // of a feature vector.
+      void GetFeatureVector(const int& level, const int& x, const int& y,
+			    const Pair<int32>& patch_size, float* feature) const;
+
       // Gets the actual feature vector for the specified level. The
       // output of this method is a matrix of size (# of features) x
       // (feature_dimensions) That is, there are rows = the number of

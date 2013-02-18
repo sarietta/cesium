@@ -252,9 +252,9 @@ namespace slib {
       return fields;
     }
     
-    MatlabMatrix MatlabMatrix::LoadFromFile(const string& filename) {
+    MatlabMatrix MatlabMatrix::LoadFromFile(const string& filename, const bool& multivariable) {
       MatlabMatrix matrix;
-      matrix.LoadMatrixFromFile(filename);
+      matrix.LoadMatrixFromFile(filename, multivariable);
       return matrix;
     }
 
@@ -639,7 +639,7 @@ namespace slib {
       }
     }
         
-    void MatlabMatrix::LoadMatrixFromFile(const string& filename) {
+    void MatlabMatrix::LoadMatrixFromFile(const string& filename, const bool& multivariable) {
       MATFile* pmat = matOpen(filename.c_str(), "r");
       if (pmat == NULL) {
 	LOG(ERROR) << "Error Opening MAT File: " << filename;
@@ -647,21 +647,37 @@ namespace slib {
       }
       VLOG(1) << "Reading matrix from file: " << filename;
 
-      // Should only have one entry.
-      const char* name = NULL;
-      mxArray* data = matGetNextVariable(pmat, &name);
-      VLOG(1) << "Found variable " << name << " in file: " << filename;
-      if (matGetNextVariable(pmat, &name) != NULL) {
-	LOG(WARNING) << "Only one entry per MAT-file supported (name: " << name << ")";
+      if (multivariable) {
+	const char* name = NULL;
+	mxArray* data;
+
+	_matrix = mxCreateStructMatrix(1, 1, 0, NULL);
+	_type = MATLAB_STRUCT;
+
+	while ((data = matGetNextVariable(pmat, &name)) != NULL) {
+	  VLOG(1) << "Found variable " << name << " in file: " << filename;
+
+	  SetStructField(name, 0, MatlabMatrix(data));
+	  mxDestroyArray(data);
+	}
+      } else {
+	// Should only have one entry.      
+	const char* name = NULL;
+	mxArray* data = matGetNextVariable(pmat, &name);
+	VLOG(1) << "Found variable " << name << " in file: " << filename;
+	if (matGetNextVariable(pmat, &name) != NULL) {
+	  LOG(WARNING) << "Only one entry per MAT-file supported (name: " << name << ")";
+	}
+
+	_type = GetType(data);
+#if 0
+	_matrix = mxDuplicateArray(data);
+	mxDestroyArray(data);
+#else
+	_matrix = data;
+#endif
       }
 
-      _type = GetType(data);
-#if 0
-      _matrix = mxDuplicateArray(data);
-      mxDestroyArray(data);
-#else
-      _matrix = data;
-#endif
       matClose(pmat);
     }
 

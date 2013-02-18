@@ -87,6 +87,18 @@ namespace slib {
       return features;
     }
 
+    void FeaturePyramid::GetFeatureVector(const int& level, const int& x, const int& y,
+					  const Pair<int32>& patch_size, float* feature) const {
+      const FloatImage& pyramid_level = _levels[level];
+
+      const FloatImage pyramid_feature = 
+	pyramid_level.get_crop(x, y, x + patch_size.y - 1, y + patch_size.x - 1)
+	.transpose().unroll('x');
+      const float* feature_data = pyramid_feature.data();
+      // Fast copy.
+      memcpy(feature, feature_data, sizeof(float) * pyramid_feature.width() * pyramid_feature.height());
+    }
+
     void FeaturePyramid::GetLevelFeatureVector(const int& index, 
 					       const Pair<int32>& patch_size, 
 					       const int32& feature_dimensions,

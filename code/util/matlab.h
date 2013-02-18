@@ -100,7 +100,7 @@ namespace slib {
       // matrix will be given priority.
       MatlabMatrix& Merge(const MatlabMatrix& other);
 
-      static MatlabMatrix LoadFromFile(const std::string& filename);
+      static MatlabMatrix LoadFromFile(const std::string& filename, const bool& multivariable = false);
       bool SaveToFile(const std::string& filename, const bool& struct_format = false) const;
 
       // TODO(sarietta): Slowly transition this to be GetMutable* and Get*.
@@ -212,7 +212,7 @@ namespace slib {
       MatlabMatrix(const mxArray* data);
       MatlabMatrix(mxArray* data);
 
-      void LoadMatrixFromFile(const std::string& filename);
+      void LoadMatrixFromFile(const std::string& filename, const bool& multivariable);
       MatlabMatrixType GetType(const mxArray* data) const;
 
       void AssignData(mxArray* data);
