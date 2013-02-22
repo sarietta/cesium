@@ -10,6 +10,9 @@
 #include <string>
 #include <vector>
 
+DEFINE_double(gaussian_colormap_shape, -1, "Shape of generalized gaussian");
+DEFINE_double(gaussian_colormap_epsilon, 0.4, "Epsilon of generalized gaussian");
+
 namespace slib {
   namespace util {
     
@@ -26,6 +29,40 @@ namespace slib {
 	rgb[0] = jetmap[idx * 3];
 	rgb[1] = jetmap[idx * 3 + 1];
 	rgb[2] = jetmap[idx * 3 + 2];
+      }
+
+      template <typename T>
+      static void RGBToHSV(const T* rgb, T* hsv) {
+	T min = rgb[0] < rgb[1] ? rgb[0] : rgb[1];
+	min = min  < rgb[2] ? min  : rgb[2];
+	
+	T max = rgb[0] > rgb[1] ? rgb[0] : rgb[1];
+	max = max  > rgb[2] ? max  : rgb[2];
+	
+	hsv[2] = max;
+	T delta = max - min;
+	if (max > 0) {
+	  hsv[1] = (delta / max);
+	} else {
+	  hsv[1] = 0;
+	  hsv[0] = 0;
+	  return;
+	}
+	if (rgb[0] >= max) {
+	  hsv[0] = (rgb[1] - rgb[2]) / delta;
+	} else {
+	  if (rgb[1] >= max) {
+	    hsv[0] = 2 + (rgb[2] - rgb[0]) / delta;
+	  } else {
+	    hsv[0] = 4 + (rgb[0] - rgb[1]) / delta;
+	  }
+	}
+	
+	hsv[0] *= 60;
+	
+	if (hsv[0] < 0) {
+	  hsv[0] += 360;
+	}
       }
       
       template <typename T>
@@ -103,7 +140,8 @@ namespace slib {
       static void OverlayLegend(const std::vector<T>& transformed_values, 
 				const std::vector<T>& original_values,
 				void (*colormap_function)(const float&, float*), 
-				float (*inverse_function)(const float&, const float&, const float&), 
+				float (*inverse_function)(const float&, const float&, const float&, 
+							  float, float), 
 				FloatImage* image) {
 	const int32 N = transformed_values.size();
 	float* transformed_values_ptr = new float[N];
@@ -156,7 +194,9 @@ namespace slib {
 	  if ((x - colormap_padding) % tick_separation == 0) {
 	    image->draw_line(x, line_y-10, x, line_height+10, white);
 
-	    const float point_value = (*inverse_function)(max_original_value, min_original_value, val);
+	    const float point_value = (*inverse_function)(max_original_value, min_original_value, val, 
+							  FLAGS_gaussian_colormap_shape, 
+							  FLAGS_gaussian_colormap_epsilon);
 
 	    char str[255];
 	    sprintf(str, "%.2f", point_value);

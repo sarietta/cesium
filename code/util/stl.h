@@ -77,7 +77,11 @@ namespace slib {
     // specified in the input vector of indices.
     template <typename T>
     void TrimVectorEntries(const vector<int>& indices, vector<T>* V) {
-      if (indices.size() == 0 || V == NULL || V->size() == 0) {
+      if (V == NULL || V->size() == 0) {
+	return;
+      }
+      if (indices.size() == 0) {
+	V->clear();
 	return;
       }
       int previous_index = V->size();
