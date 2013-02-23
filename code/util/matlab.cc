@@ -376,8 +376,19 @@ namespace slib {
 	  LOG(ERROR) << "Attempted to access non-scalar matrix: " << rows << " x " << cols;
 	  return 0.0f;
 	}
-
+#if 1
+	float value = 0.0f;
+	if (mxIsSingle(_matrix)) {
+	  value = ((float*) mxGetData(_matrix))[0];
+	} else if (mxIsDouble(_matrix)) {
+	  value = (float) ((double*) mxGetData(_matrix))[0];
+	} else {
+	  LOG(ERROR) << "Attempted to access non-numeric matrix";
+	}
+	return value;
+#else
 	return ((float) mxGetScalar(_matrix));
+#endif
       } else {
 	VLOG(2) << "Attempted to access non-matrix";
       }
