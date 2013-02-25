@@ -258,6 +258,22 @@ namespace slib {
       return matrix;
     }
 
+    MatlabMatrix MatlabMatrix::LoadFromBinaryFile(const string& filename) {
+      FILE* fid = fopen(filename.c_str(), "rb");
+      int length;
+      fread(&length, sizeof(int), 1, fid);
+      char buffer[4096];
+      string contents;
+      while (!feof(fid)) {
+	const int read = fread(buffer, sizeof(char), 4096, fid);
+	contents.append(buffer, read);
+      }
+      fclose(fid);
+      MatlabMatrix matrix;
+      matrix.Deserialize(contents);
+      return matrix;
+    }
+
     float MatlabMatrix::GetMatrixEntry(const int& row, const int& col) const {
       if (_matrix != NULL && _type == MATLAB_MATRIX) {
 	const int dimensions = mxGetNumberOfDimensions(_matrix);
@@ -690,6 +706,25 @@ namespace slib {
       }
 
       matClose(pmat);
+    }
+
+    bool MatlabMatrix::SaveToBinaryFile(const string& filename) const {
+      FILE* fid = fopen(filename.c_str(), "wb");
+      if (!fid) {
+	LOG(ERROR) << "Could not open file for writing: " << filename;
+	return false;
+      }
+      const string contents = Serialize();
+      const int length = contents.length();
+      fwrite(&length, sizeof(int), 1, fid);
+      if (fwrite(contents.data(), sizeof(char), length, fid) != length) {
+	LOG(ERROR) << "Error writing contents to file: " << filename;
+	fclose(fid);
+	return false;
+      }
+      fclose(fid);
+
+      return true;
     }
 
     bool MatlabMatrix::SaveToFile(const string& filename, const bool& struct_format) const {

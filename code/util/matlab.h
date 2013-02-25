@@ -101,7 +101,9 @@ namespace slib {
       MatlabMatrix& Merge(const MatlabMatrix& other);
 
       static MatlabMatrix LoadFromFile(const std::string& filename, const bool& multivariable = false);
+      static MatlabMatrix LoadFromBinaryFile(const std::string& filename);
       bool SaveToFile(const std::string& filename, const bool& struct_format = false) const;
+      bool SaveToBinaryFile(const std::string& filename) const;
 
       // TODO(sarietta): Slowly transition this to be GetMutable* and Get*.
 
