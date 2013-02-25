@@ -223,7 +223,8 @@ namespace slib {
     class MatlabConverter {
     public:
       static MatlabMatrix ConvertModelToMatrix(const slib::svm::Model& model);
-      static MatlabMatrix ConvertMetadataToMatrix(const std::vector<slib::svm::DetectionMetadata>& metadata);
+      static MatlabMatrix ConvertMetadataToMatrix(const std::vector<slib::svm::DetectionMetadata>& metadata,
+						  const bool& minimal = false);
 
       // Assumes the indices and clusters are specified in 0-based indexing.
       static MatlabMatrix 

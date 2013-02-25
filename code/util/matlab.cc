@@ -703,8 +703,8 @@ namespace slib {
       if (struct_format && GetMatrixType() == MATLAB_STRUCT && GetNumberOfElements() == 1) {
 	vector<string> fields = GetStructFieldNames();
 	for (int i = 0; i < (int) fields.size(); i++) {
-	  VLOG(1) << "Writing output field to variable: " << fields[i];
-	  MatlabMatrix field = GetCopiedStructField(fields[i]);
+	  VLOG(2) << "Writing output field to variable: " << fields[i];
+	  const MatlabMatrix field = GetStructField(fields[i]);
 	  if (field.GetNumberOfElements() == 0) {
 	    continue;
 	  }
@@ -976,7 +976,8 @@ namespace slib {
       return matrix;
     }
     
-    MatlabMatrix MatlabConverter::ConvertMetadataToMatrix(const vector<DetectionMetadata>& metadata) {
+    MatlabMatrix MatlabConverter::ConvertMetadataToMatrix(const vector<DetectionMetadata>& metadata,
+							  const bool& minimal) {
       MatlabMatrix matrix(MATLAB_STRUCT, Pair<int>(1, metadata.size()));
 
       for (int i = 0; i < (int) metadata.size(); i++) {
@@ -987,6 +988,9 @@ namespace slib {
 	matrix.SetStructField("y1", i, MatlabMatrix((float) entry.y1 + 1));
 	matrix.SetStructField("y2", i, MatlabMatrix((float) entry.y2 + 1));
 
+	if (minimal) {
+	  continue;
+	}
 	matrix.SetStructField("flip", i, MatlabMatrix(0.0f));
 	matrix.SetStructField("trunc", i, MatlabMatrix(0.0f));
 
