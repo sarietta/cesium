@@ -987,7 +987,7 @@ namespace slib {
 	break;
       }
       default:
-	LOG(ERROR) << "Unknown matrix type: " << type;
+	LOG(ERROR) << "Unknown matrix type: " << type << " (Offset: " << offset << ")";
 	return 0;
       }
 
