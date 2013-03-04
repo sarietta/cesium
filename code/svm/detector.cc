@@ -434,7 +434,7 @@ namespace slib {
     struct ComponentwiseThresholdFunctor {
       float threshold;
       ComponentwiseThresholdFunctor(const float& threshold_) : threshold(threshold_) {}
-      const float operator()(const float& x) const {
+      float operator()(const float& x) const {
 	return (x >= threshold) ? 1.0f : 0.0f;
       }
     };
@@ -665,34 +665,35 @@ namespace slib {
 	    selected_indices.push_back(j);
 	  }
 	}
-	if (selected_indices.size() < 1) {
-	  continue;
-	}
-	
-	Timer::Start();
-	vector<DetectionMetadata> metadata 
-	  = Detector::GetDetectionMetadata(pyramid, indices, selected_indices, levels, _parameters);
-	VLOG(2) << "Time spent collating the metadata: " << Timer::Stop();
-	
-	Timer::Start();
-	vector<int32> final_indices
-	  = SelectViaNonMaxSuppression(metadata, selected_indices, detections.col(i), _parameters.overlap);
-	VLOG(2) << "Time spent performing non-maximum suppression: " << Timer::Stop();
-	
+
 	ModelDetectionResultSet model_result_set;
-	model_result_set.model_id = i;
-	if (!_parameters.removeFeatures) {
-	  model_result_set.features.resize(final_indices.size(), features.cols());
-	}
-	for (uint32 k = 0; k < final_indices.size(); k++) {
-	  const int32 selected_index = final_indices[k];
-	  DetectionResult result;
-	  result.metadata = metadata[selected_index];
-	  result.score = detections(selected_indices[selected_index], i);      
-	  model_result_set.detections.push_back(result);
+	if (selected_indices.size() < 1) {
+	  //continue;
+	} else {	
+	  Timer::Start();
+	  vector<DetectionMetadata> metadata 
+	    = Detector::GetDetectionMetadata(pyramid, indices, selected_indices, levels, _parameters);
+	  VLOG(2) << "Time spent collating the metadata: " << Timer::Stop();
 	  
+	  Timer::Start();
+	  vector<int32> final_indices
+	    = SelectViaNonMaxSuppression(metadata, selected_indices, detections.col(i), _parameters.overlap);
+	  VLOG(2) << "Time spent performing non-maximum suppression: " << Timer::Stop();
+	  
+	  model_result_set.model_id = i;
 	  if (!_parameters.removeFeatures) {
-	    model_result_set.features.row(k) = features.row(selected_indices[selected_index]);
+	    model_result_set.features.resize(final_indices.size(), features.cols());
+	  }
+	  for (uint32 k = 0; k < final_indices.size(); k++) {
+	    const int32 selected_index = final_indices[k];
+	    DetectionResult result;
+	    result.metadata = metadata[selected_index];
+	    result.score = detections(selected_indices[selected_index], i);      
+	    model_result_set.detections.push_back(result);
+	    
+	    if (!_parameters.removeFeatures) {
+	      model_result_set.features.row(k) = features.row(selected_indices[selected_index]);
+	    }
 	  }
 	}
 	result_set.model_detections.push_back(model_result_set);
