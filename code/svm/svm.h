@@ -122,6 +122,13 @@ namespace slib {
     // cli.
     bool Train(const Eigen::VectorXf& labels, const FloatMatrix& samples,
 	       const std::string& flags, Model* model);
+
+    // This will use libsvm's built in prediction approach. Note that
+    // the Detector class has its own (fast) prediction method,
+    // however it assumes linear kernels which may not always be the
+    // case.
+    FloatMatrix Predict(const FloatMatrix& features);
+
   }  // namespace svm
 }  // namespace slib
 

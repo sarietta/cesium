@@ -287,5 +287,30 @@ namespace slib {
 
       return true;
     }
+
+    FloatMatrix Predict(const FloatMatrix& features) {
+      // DO NOT CALL THIS METHOD.
+      LOG(ERROR) << "You should not call this method in its current state. Aborting";
+      ASSERT_EQ(false, true);
+
+      FloatMatrix predicted_labels(features.rows(), 1);
+
+      const int feature_dimensions = features.cols();
+      for (int i = 0; i < features.rows(); i++) {
+	scoped_array<svm_node> x(new svm_node[feature_dimensions]);
+	for (int j = 0; j < feature_dimensions; j++) {
+	  x[j].index = j;
+	  x[j].value = features(i, j);
+	}
+
+	// The current system implicitly assumes a certain style of
+	//model which is not generally compatible with whatever comes
+	//out of libsvm, so for now this is unimplemented.
+	//predicted_labels(i, 0) = svm_predict(model, x.get());
+      }
+
+      return predicted_labels;
+    }
+
   }  // namespace svm
 }  // namespace slib
