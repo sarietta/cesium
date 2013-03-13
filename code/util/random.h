@@ -13,6 +13,7 @@ namespace slib {
     class Random {
     public:
       static void Initialize(const int& seed = 4);
+      static void InitializeIfNecessary(const int& seed = 4);
       static int RandomInteger(const int& rangeStart, const int& rangeEnd);
       static uint32 RandomUnsignedInteger(const uint32& rangeStart, const uint32& rangeEnd);
       static float Uniform(const float& rangeStart, const float& rangeEnd);
@@ -25,6 +26,7 @@ namespace slib {
 
     private:
       static char* rngState;
+      static bool _initialized;
 
       Random();
     };

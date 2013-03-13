@@ -18,9 +18,17 @@ namespace slib {
   namespace util {
 
     char* Random::rngState = new char[256];
+    bool Random::_initialized = false;
+
+    void Random::InitializeIfNecessary(const int& seed) {
+      if (!_initialized) {
+	Initialize(seed);
+      }
+    }
 
     void Random::Initialize(const int& seed) {
       initstate(seed, rngState, 256);
+      _initialized = true;
     }
 
     int Random::RandomInteger(const int& rangeStart, const int& rangeEnd) {
