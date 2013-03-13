@@ -1,21 +1,23 @@
-#ifndef __EIGS_H__
-#define __EIGS_H__
+#ifndef __SLIB_MATRIX_EIGS_H__
+#define __SLIB_MATRIX_EIGS_H__
 
-#if  defined(RIOS) && !defined(CLAPACK)
-#define F77NAME(x) x
-#else
-#define F77NAME(x) x ## _
-#endif
+#include <common/scoped_ptr.h>
+#include <common/types.h>
+#undef Success
+#include <Eigen/Dense>
 
-// Type conversion.
+namespace slib {
+  namespace matrix {
 
-typedef int ARint;
-typedef int ARlogical;
+    class EigenSolver {
+    public:
+      static int eigs(const FloatMatrix& A, const int& neigs, 
+		      FloatMatrix* eigvals, FloatMatrix* eigvecs);
 
-class EigenSolver {
-public:
-  static int eigs(const float* A, const int& N,
-		  const int& neigs, float* eigvals, float* eigvecs);
-};
+      static int eigs(const float* A, const int& N,
+		      const int& neigs, float* eigvals, float* eigvecs);
+    };
+  }  // namespace matrix
+}  // namespace slib
 
 #endif
