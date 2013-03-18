@@ -73,7 +73,7 @@ CFLAGS = -O3 -Wall -DASSERT
 # Make the program
 #-----------------------------------------------------------------------------
 
-default: $(KMLTEST)
+default: lib
 
 lib: KM_ANN.o KMeans.o KMterm.o KMrand.o KCutil.o KCtree.o KMdata.o KMcenters.o KMfilterCenters.o KMlocal.o
 	@ar rcs libkmeans.a $?
@@ -88,15 +88,12 @@ minimal: $(KMLMINIMAL)
 
 $(KMLTEST): $(TESTOBJECTS) kmltest.o
 	$(C++) $(TESTOBJECTS) kmltest.o -o kmltest $(LDFLAGS) $(OTHERLIBS)
-	mv -f kmltest $(KMLTEST)
 
 $(KMLSAMPLE): $(TESTOBJECTS) kmlsample.o
 	$(C++) $(TESTOBJECTS) kmlsample.o -o kmlsample $(LDFLAGS) $(OTHERLIBS)
-	mv -f kmlsample $(KMLSAMPLE)
 
 $(KMLMINIMAL): $(TESTOBJECTS) kmlminimal.o
 	$(C++) $(TESTOBJECTS) kmlminimal.o -o kmlminimal $(LDFLAGS) $(OTHERLIBS)
-	mv -f kmlminimal $(KMLMINIMAL)
 
 #-----------------------------------------------------------------------------
 # Object files
