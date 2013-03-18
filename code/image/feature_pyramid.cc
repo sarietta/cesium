@@ -117,8 +117,12 @@ namespace slib {
 	    // Unrolled patch of gradient values.
 	    const FloatImage& gradient 
 	      = _gradient_levels[index].get_crop(j, i, j + patch_size.y - 1, i + patch_size.x - 1);
+#if 0
 	    const float* gradient_data = gradient.data();
 	    gradient_sums->push_back(slib::util::Mean<float>(gradient_data, patch_size.x * patch_size.y));
+#else
+	    gradient_sums->push_back(gradient.mean());
+#endif
 	  }
 	  // Unrolled patch of "features" values (HOG, color, etc).
 	  const FloatImage feature = level

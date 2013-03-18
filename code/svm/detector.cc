@@ -16,6 +16,7 @@
 #include <svm/model.h>
 #include <util/assert.h>
 #include <util/matlab.h>
+#include <util/stl.h>
 #include <util/timer.h>
 #include <vector>
 
@@ -624,6 +625,11 @@ namespace slib {
       LOG(INFO) << "Elapsed time to compute feature pyramid: " << Timer::Stop();
       
       Timer::Start();  
+      /* ============== Compute Detections ========================
+	 detections is an N x M matrix, where N is the number of
+	 features in the image and M is the number of models in the
+	 detector.
+       */
       FloatMatrix detections = Predict(features);
       LOG(INFO) << "Elapsed time to compute detections: " << Timer::Stop();
       
@@ -633,29 +639,24 @@ namespace slib {
       if (_parameters.selectTopN) {
 	selected.resize(detections.rows(), detections.cols());
 	selected.fill(0.0f);  // "false"
-	
-	priority_queue<IndexedValue, vector<IndexedValue>, IndexedCompareLessThan> heap;
-	for (int i = 0; i < detections.rows(); i++) {
-	  for (int j = 0; j < detections.cols(); j++) {
-	    IndexedValue iv;
-	    iv.index = Pair<int32>(i, j);
-	    iv.value = detections(i, j);
-	    
-	    heap.push(iv);
+
+	for (int i = 0; i < detections.cols(); i++) {
+	  vector<float> scores(detections.rows());
+	  for (int j = 0; j < scores.size(); j++) {
+	    scores[j] = detections(j, i);
 	  }
-	}
-	
-	for (int i = 0; i < _parameters.numToSelect; i++) {
-	  const IndexedValue& iv = heap.top();
-	  selected(iv.index.x, iv.index.y) = 1.0f;  // "true"
-	  heap.pop();
+	  const vector<int> indices = slib::util::Sort(&scores);
+
+	  for (int j = 0; j < min((int) scores.size(), _parameters.numToSelect); j++) {
+	    selected(indices[indices.size() - 1 - j], i) = 1.0f;  // true
+	  }
 	}
       } else if (_parameters.useDecisionThresh) {  // Select wrt threshold
 	selected = detections.unaryExpr(ComponentwiseThresholdFunctor(_parameters.fixedDecisionThresh));
       } else {  // No threshold.
 	selected = detections.unaryExpr(ComponentwiseThresholdFunctor(0.0f));
-      }
-      
+      }     
+
       // Construct the result set per model.
       Timer::Start();
       for (int32 i = 0; i < detections.cols(); i++) {

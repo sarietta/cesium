@@ -29,6 +29,7 @@ typedef cimg_library::CImg<uint8> UInt8Image;
 #endif
 
 #define FloatMatrix Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+#define DoubleMatrix Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
 
 template <typename T>
 struct Pair {

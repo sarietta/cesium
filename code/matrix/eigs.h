@@ -16,6 +16,12 @@ namespace slib {
 
       static int eigs(const float* A, const int& N,
 		      const int& neigs, float* eigvals, float* eigvecs);
+
+      static int eigs(const DoubleMatrix& A, const int& neigs, 
+		      DoubleMatrix* eigvals, DoubleMatrix* eigvecs);
+
+      static int eigs(const double* A, const int& N,
+		      const int& neigs, double* eigvals, double* eigvecs);
     };
   }  // namespace matrix
 }  // namespace slib

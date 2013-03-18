@@ -3,6 +3,7 @@
 #include <Eigen/Dense>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <iomanip>
 #include <iostream>
 #include "eigs.h"
 #include <sstream>
@@ -43,12 +44,12 @@ int main(int argc, char** argv) {
       eigenvectors = eigensolver.eigenvectors();
     }
     
-    LOG(INFO) << "\nA:\n" << A;
-    LOG(INFO) << "\n\nEigenvalues:\n" << eigenvalues;
-    LOG(INFO) << "\n\nEigenvectors:\n" << eigenvectors;
+    std::cout << std::setprecision(10) << "\nA:\n" << A;
+    std::cout << std::setprecision(10) << "\n\nEigenvalues:\n" << eigenvalues;
+    std::cout << std::setprecision(10) << "\n\nEigenvectors:\n" << eigenvectors;
   }
 
-  LOG(INFO) << "\n\n==============================================\n\n";
+  std::cout << "\n\n==============================================\n\n";
   
   {
     const int neigs = 2;
@@ -58,10 +59,30 @@ int main(int argc, char** argv) {
     EigenSolver::eigs(A, neigs, &eigenvalues, &eigenvectors);
     eigenvectors.transposeInPlace();
 
-    LOG(INFO) << "\nA:\n" << A;
-    LOG(INFO) << "\n\nEigenvalues:\n" << eigenvalues;
-    LOG(INFO) << "\n\nEigenvectors:\n" << eigenvectors;
+    std::cout << std::setprecision(10) << "\n\nEigenvalues:\n" << eigenvalues;
+    std::cout << std::setprecision(10) << "\n\nEigenvectors:\n" << eigenvectors;
   }
+
+  std::cout << "\n\n==============================================\n\n";
+  
+  {
+    const int neigs = 2;
+    DoubleMatrix eigenvalues_d(neigs, 1);
+    DoubleMatrix eigenvectors_d(neigs, A.rows());
+    
+    const DoubleMatrix A_d = A.cast<double>();
+
+    EigenSolver::eigs(A_d, neigs, &eigenvalues_d, &eigenvectors_d);
+    eigenvectors_d.transposeInPlace();
+
+    const FloatMatrix eigenvalues = eigenvalues_d.cast<float>();
+    const FloatMatrix eigenvectors = eigenvectors_d.cast<float>();
+
+    std::cout << std::setprecision(10) << "\n\nEigenvalues:\n" << eigenvalues;
+    std::cout << std::setprecision(10) << "\n\nEigenvectors:\n" << eigenvectors;
+  }
+
+  std::cout << "\n";
 
   return 0;
 }
