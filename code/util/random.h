@@ -23,7 +23,8 @@ namespace slib {
 
       static Eigen::VectorXf SampleArbitraryDistribution(const Eigen::VectorXf& distribution, 
 							 const int& num_samples);
-
+      static FloatMatrix SampleArbitraryDistribution(const FloatMatrix& distribution, 
+						     const int& num_samples);
     private:
       static char* rngState;
       static bool _initialized;

@@ -833,7 +833,7 @@ namespace slib {
 #if 1
       // Image should have pixels in [0,1]
       if (image.max() > 1.0f) {
-	LOG(ERROR) << "Image pixels must lie in the domain [0,1]";
+	LOG(ERROR) << "Image pixels must lie in the domain [0,1] (Max: " << image.max() << ")";
 	return FeaturePyramid(0);
       }
 #endif

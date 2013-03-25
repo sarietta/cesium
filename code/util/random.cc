@@ -83,10 +83,12 @@ namespace slib {
     VectorXf Random::SampleArbitraryDistribution(const VectorXf& distribution, const int& num_samples) {
       const int size = distribution.size();
 
+      const VectorXf normalized = distribution / distribution.sum();
+
       VectorXf cumulative(size);
-      cumulative(0) = distribution(0);
+      cumulative(0) = normalized(0);
       for (int i = 1; i < size;  i++) {
-	cumulative(i) = cumulative(i - 1) + distribution(i);
+	cumulative(i) = cumulative(i - 1) + normalized(i);
       }
 
       vector<float> steps(size);
@@ -94,7 +96,7 @@ namespace slib {
 	steps[i] = ((float) i) / ((float) size - 1);
       }
       steps[size-1] = 1.0f;
-      
+
       VectorXf cumulative_inverse(size);
       int index = 0;
       for (int i = 0; i < size; i++) {
@@ -118,10 +120,27 @@ namespace slib {
       
       VectorXf samples(num_samples);
       for (int i = 0; i < samples.size(); i++) {
-	const float random = Random::Uniform(0.0f, 1.0f);
-	const float number = random * ((float) distribution.size() - 1.0f);
-	const int index = (int) floor(number + 0.5f);
+	const int index = rand() % (distribution.size() - 1);
 	samples(i) = cumulative_inverse(index);
+      }
+      
+      return samples;
+    }
+
+    FloatMatrix Random::SampleArbitraryDistribution(const FloatMatrix& distribution, const int& num_samples) {
+      // Compute marginal probability distribution over one of the dimensions (cols).
+      const VectorXf marginal = distribution.rowwise().sum() / ((float) distribution.cols());
+      
+      FloatMatrix samples(num_samples, 2);
+      // Sample the marginal PDF.
+      const VectorXf row_samples = SampleArbitraryDistribution(marginal, num_samples);
+      for (int i = 0; i < num_samples; i++) {
+	const int row = row_samples(i);
+	// Sample the column PDF.
+	const VectorXf row_data = distribution.row(row);
+	const VectorXf column_sample = SampleArbitraryDistribution(row_data, 1);
+	samples(i, 0) = column_sample(0);
+	samples(i, 1) = row;
       }
       
       return samples;
