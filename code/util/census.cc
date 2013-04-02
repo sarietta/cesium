@@ -59,30 +59,41 @@ namespace slib {
       bytes_read += fread(&shape_type, sizeof(int), 1, _fid);
       record_number = __builtin_bswap32(record_number);  // Endian swap
       record_length = __builtin_bswap32(record_length);  // Endian swap
-      if (bytes_read != 3 || shape_type != 5 /* Polygon */) {
-	goto fail;
-      }
-      // Read in the first part of the polygon (no dynamic arrays).
-      if (fread(polygon->bbox, sizeof(double), 4, _fid) != 4) {
-	goto fail;
-      }
-      if (fread(&(polygon->num_parts), sizeof(int), 1, _fid) != 1
-	  || polygon->num_parts < 0) {
-	goto fail;
-      }
-      if (fread(&(polygon->num_points), sizeof(int), 1, _fid) != 1
-	  || polygon->num_points < 0) {
-	goto fail;
-      }
-      polygon->parts = new int[polygon->num_parts];
-      polygon->points = new Point2D[polygon->num_points];
-      if (fread(polygon->parts, sizeof(int), polygon->num_parts, _fid) != (uint32) polygon->num_parts) {
-	goto fail;
-      }
-      for (int i = 0; i < polygon->num_points; i++) {
-	if (fread(&(polygon->points[i].x), sizeof(double), 1, _fid) != 1 ||
-	    fread(&(polygon->points[i].y), sizeof(double), 1, _fid) != 1) {
+
+      if (bytes_read == 3 && shape_type == 1) {
+	polygon->num_parts = 0;
+	polygon->num_points = 1;
+	polygon->points = new Point2D[polygon->num_points];	
+	if (fread(&(polygon->points[0].x), sizeof(double), 1, _fid) != 1 ||
+	      fread(&(polygon->points[0].y), sizeof(double), 1, _fid) != 1) {
 	  goto fail;
+	}
+      } else {
+	if (bytes_read != 3 || shape_type != 5 /* Polygon */) {
+	  goto fail;
+	}
+	// Read in the first part of the polygon (no dynamic arrays).
+	if (fread(polygon->bbox, sizeof(double), 4, _fid) != 4) {
+	  goto fail;
+	}
+	if (fread(&(polygon->num_parts), sizeof(int), 1, _fid) != 1
+	    || polygon->num_parts < 0) {
+	  goto fail;
+	}
+	if (fread(&(polygon->num_points), sizeof(int), 1, _fid) != 1
+	    || polygon->num_points < 0) {
+	  goto fail;
+	}
+	polygon->parts = new int[polygon->num_parts];
+	polygon->points = new Point2D[polygon->num_points];
+	if (fread(polygon->parts, sizeof(int), polygon->num_parts, _fid) != (uint32) polygon->num_parts) {
+	  goto fail;
+	}
+	for (int i = 0; i < polygon->num_points; i++) {
+	  if (fread(&(polygon->points[i].x), sizeof(double), 1, _fid) != 1 ||
+	      fread(&(polygon->points[i].y), sizeof(double), 1, _fid) != 1) {
+	    goto fail;
+	  }
 	}
       }
 
@@ -160,7 +171,7 @@ namespace slib {
 		<< z_range[0] << " :: " << z_range[1] << " :: " 
 		<< m_range[0] << " :: " << m_range[1];
 
-      if (shape_type != 5) {
+      if (shape_type != 5 && shape_type != 1) {
 	LOG(WARNING) << "Shape type reading for type " << shape_type << " is not implemented";
 	Close();
 	return;
