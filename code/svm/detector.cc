@@ -182,6 +182,15 @@ namespace slib {
       if ((field = mxGetField(params, 0, "sampleBig"))) {
 	parameters.sampleBig = (bool) mxGetScalar(field);
       }
+      if ((field = mxGetField(params, 0, "selectTopN"))) {
+	parameters.selectTopN = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "numToSelect"))) {
+	parameters.numToSelect = (int) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "gradientSumThreshold"))) {
+	parameters.gradientSumThreshold = (float) mxGetScalar(field);
+      }
       
       return parameters;
     }
@@ -231,6 +240,8 @@ namespace slib {
       params.SetStructField("fixedDecisionThresh", 
 			    MatlabMatrix(static_cast<float>(_parameters.fixedDecisionThresh)));
       params.SetStructField("removeFeatures", MatlabMatrix(static_cast<float>(_parameters.removeFeatures)));
+      params.SetStructField("gradientSumThreshold", 
+			    MatlabMatrix(static_cast<float>(_parameters.gradientSumThreshold)));
 
       (*matrix) = mxDuplicateArray(&params.GetMatlabArray());
     }
@@ -640,6 +651,8 @@ namespace slib {
 	selected.resize(detections.rows(), detections.cols());
 	selected.fill(0.0f);  // "false"
 
+	VLOG(1) << "Selecting top " << _parameters.numToSelect;
+
 	for (int i = 0; i < detections.cols(); i++) {
 	  vector<float> scores(detections.rows());
 	  for (int j = 0; j < scores.size(); j++) {
@@ -666,6 +679,7 @@ namespace slib {
 	    selected_indices.push_back(j);
 	  }
 	}
+	VLOG(1) << "Initial number of detections: " << selected_indices.size();
 
 	ModelDetectionResultSet model_result_set;
 	if (selected_indices.size() < 1) {
@@ -681,6 +695,8 @@ namespace slib {
 	    = SelectViaNonMaxSuppression(metadata, selected_indices, detections.col(i), _parameters.overlap);
 	  VLOG(2) << "Time spent performing non-maximum suppression: " << Timer::Stop();
 	  
+	  VLOG(1) << "Final number of detections: " << final_indices.size();
+
 	  model_result_set.model_id = i;
 	  if (!_parameters.removeFeatures) {
 	    model_result_set.features.resize(final_indices.size(), features.cols());
