@@ -1,5 +1,6 @@
 #include <glob.h>
 #include <glog/logging.h>
+#include <stdio.h>
 #include <string>
 #include <sys/stat.h>
 #include <vector>
@@ -11,6 +12,15 @@ using std::vector;
 
 namespace slib {
   namespace util {
+    
+    string Directory::GenerateTemporaryFilename(const string& root) {
+      char buffer[L_tmpnam];
+      tmpnam(buffer);
+
+      const string temporary_filename(buffer);
+
+      return (root + "/" + temporary_filename);
+    }
     
     vector<string> Directory::GetDirectoryContents(const string& directory, 
 						   const string& filter,
