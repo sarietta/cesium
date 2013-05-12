@@ -25,6 +25,10 @@ namespace slib {
 
     static FloatImage FastFilter(const FloatImage& image, const FloatImage& kernel);
 
+    static void DrawThickLine(const int x1, const int& y1, const int& x2, const int& y2,
+			      const float& thickness, const float* color, const float& opacity,
+			      FloatImage* image);
+
 #ifndef SKIP_OPENCV
     static IplImage* GetIplImage(const UInt8Image& image) {
       const int32 width = image.width();

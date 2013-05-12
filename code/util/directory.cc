@@ -19,7 +19,7 @@ namespace slib {
 
       const string temporary_filename(buffer);
 
-      return (root + "/" + temporary_filename);
+      return (temporary_filename);
     }
     
     vector<string> Directory::GetDirectoryContents(const string& directory, 

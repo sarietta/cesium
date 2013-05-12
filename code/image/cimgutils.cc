@@ -12,7 +12,7 @@ using std::max;
 using std::min;
 
 namespace slib {
-
+  
   void CImgUtils::PrettyPrintFloatImage(const FloatImage& image) {
     if (image.size() > 100) {
       fprintf(stderr, "Not outputting images larger than 100 values total.\n");
@@ -30,7 +30,7 @@ namespace slib {
     }
     printf("\n\n");
   }
-
+  
   void CImgUtils::DisplayEigenMatrix(const FloatMatrix& matrix) {
     UInt8Image image(matrix.cols(), matrix.rows(), 1, 1);
     for (int row = 0; row < matrix.rows(); row++) {
@@ -38,22 +38,22 @@ namespace slib {
 	image(col, row) = (char) (matrix(row, col) * 255.0f);
       }
     }
-
+    
     image.map(CImg<unsigned char>::jet_LUT256());
     image.display();
   }
-
+  
   inline int nexthigher(int k) {
     k--;
     for (int i=1; i<32; i<<=1)
       k = k | k >> i;
     return k+1;
   }
-
+  
   FloatImage CImgUtils::FastFilter(const FloatImage& image, const FloatImage& kernel) {    
     FloatImage filtered(image.width(), image.height());
     filtered.fill(0.0f);
-
+    
     int padding = kernel.width();
     int _w = nexthigher(image.width() + padding*2);
     int _h = nexthigher(image.height() + padding*2);
@@ -201,7 +201,7 @@ namespace slib {
 	LOG(WARNING) << "Wrote wisdom file: " << fname;
       }
     }
-
+    
     // clean up convolution buffers
     fftwf_free(imageBuffer);
     fftwf_free(filterBuffer);
@@ -214,8 +214,180 @@ namespace slib {
     
     // drop wisdom
     fftwf_forget_wisdom();
-
+    
     return filtered;
+  }
+  
+  /**
+   * Draws a line between two points p1(p1x,p1y) and p2(p2x,p2y).
+   * This function is based on the Bresenham's line algorithm and is highly 
+   * optimized to be able to draw lines very quickly. There is no floating point 
+   * arithmetic nor multiplications and divisions involved. Only addition, 
+   * subtraction and bit shifting are used. 
+   *
+   * Note that you have to define your own customized setPixel(x,y) function, 
+   * which essentially lights a pixel on the screen.
+   */  
+  void __p_swap(int& x, int& y) {
+    const int z = x;
+    x = y;
+    y = z;
+  }
+
+  void CImgUtils::DrawThickLine(const int x1, const int& y1, const int& x2, const int& y2,
+				const float& thickness, const float* color, const float& opacity,
+				FloatImage* image) {
+    int p1x = x1;
+    int p1y = y1;
+    int p2x = x2;
+    int p2y = y2;
+
+    const float t2 = thickness / 2.0f;
+    int F, x, y;
+    
+    if (p1x > p2x)  // Swap points if p1 is on the right of p2
+      {
+	__p_swap(p1x, p2x);
+	__p_swap(p1y, p2y);
+      }
+    
+    // Handle trivial cases separately for algorithm speed up.
+    // Trivial case 1: m = +/-INF (Vertical line)
+    if (p1x == p2x)
+      {
+	if (p1y > p2y)  // Swap y-coordinates if p1 is above p2
+	  {
+	    __p_swap(p1y, p2y);
+	  }
+	
+	x = p1x;
+	y = p1y;
+	while (y <= p2y)
+	  {
+	    image->draw_rectangle(x - t2, y - t2, x + t2, y + t2, color, opacity);
+	    y++;
+	  }
+	return;
+      }
+    // Trivial case 2: m = 0 (Horizontal line)
+    else if (p1y == p2y)
+      {
+	x = p1x;
+	y = p1y;
+	
+	while (x <= p2x)
+	  {
+	    image->draw_rectangle(x - t2, y - t2, x + t2, y + t2, color, opacity);
+	    x++;
+	  }
+	return;
+      }
+    
+    
+    int dy            = p2y - p1y;  // y-increment from p1 to p2
+    int dx            = p2x - p1x;  // x-increment from p1 to p2
+    int dy2           = (dy << 1);  // dy << 1 == 2*dy
+    int dx2           = (dx << 1);
+    int dy2_minus_dx2 = dy2 - dx2;  // precompute constant for speed up
+    int dy2_plus_dx2  = dy2 + dx2;
+    
+    
+    if (dy >= 0)    // m >= 0
+      {
+	// Case 1: 0 <= m <= 1 (Original case)
+	if (dy <= dx)   
+	  {
+	    F = dy2 - dx;    // initial F
+	    
+	    x = p1x;
+	    y = p1y;
+	    while (x <= p2x)
+	      {
+		image->draw_rectangle(x - t2, y - t2, x + t2, y + t2, color, opacity);
+		if (F <= 0)
+		  {
+		    F += dy2;
+		  }
+		else
+		  {
+		    y++;
+		    F += dy2_minus_dx2;
+		  }
+		x++;
+	      }
+	  }
+	// Case 2: 1 < m < INF (Mirror about y=x line
+	// replace all dy by dx and dx by dy)
+	else
+	  {
+	    F = dx2 - dy;    // initial F
+	    
+	    y = p1y;
+	    x = p1x;
+	    while (y <= p2y)
+	      {
+		image->draw_rectangle(x - t2, y - t2, x + t2, y + t2, color, opacity);
+		if (F <= 0)
+		  {
+		    F += dx2;
+		  }
+		else
+		  {
+		    x++;
+		    F -= dy2_minus_dx2;
+		  }
+		y++;
+	      }
+	  }
+      }
+    else    // m < 0
+      {
+	// Case 3: -1 <= m < 0 (Mirror about x-axis, replace all dy by -dy)
+	if (dx >= -dy)
+	  {
+	    F = -dy2 - dx;    // initial F
+	    
+	    x = p1x;
+	    y = p1y;
+	    while (x <= p2x)
+	      {
+		image->draw_rectangle(x - t2, y - t2, x + t2, y + t2, color, opacity);
+		if (F <= 0)
+		  {
+		    F -= dy2;
+		  }
+		else
+		  {
+		    y--;
+		    F -= dy2_plus_dx2;
+		  }
+		x++;
+	      }
+	  }
+	// Case 4: -INF < m < -1 (Mirror about x-axis and mirror 
+	// about y=x line, replace all dx by -dy and dy by dx)
+	else    
+	  {
+	    F = dx2 + dy;    // initial F
+	    
+	    y = p1y;
+	    x = p1x;
+	    while (y >= p2y)
+	      {
+		image->draw_rectangle(x - t2, y - t2, x + t2, y + t2, color, opacity);
+		if (F <= 0)
+		  {
+		    F += dx2;
+		  }
+		else
+		  {
+		    x++;
+		    F += dy2_plus_dx2;
+		  }
+		y--;
+	      }
+	  }
+      }
   }
 
 }  // namespace slib
