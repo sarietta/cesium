@@ -15,6 +15,7 @@ set(CMAKE_CXX_FLAGS "-O3 -Wall -std=c++0x")
 add_definitions(-DSKIP_OPENCV)
 
 include_directories(./thirdparty/CImg)
+include_directories(./code)
 
 set(CMAKE_MODULE_PATH ./cmake)
 
