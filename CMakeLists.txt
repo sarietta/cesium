@@ -9,9 +9,10 @@ find_program(INTEL_CC "icc")
 if(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 else(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
   set(CMAKE_CXX_COMPILER "icc")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd2196 -wd2536 -wd780")
 endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 
-set(CMAKE_CXX_FLAGS "-O3 -Wall -std=c++0x")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -std=c++0x")
 add_definitions(-DSKIP_OPENCV)
 
 include_directories(./thirdparty/CImg)
@@ -20,6 +21,8 @@ include_directories(./code)
 set(CMAKE_MODULE_PATH ./cmake)
 
 # Required libraries
+
+## Eigen3
 if(DEFINED ENV{EIGEN3_INCLUDE_DIR})
   include_directories($ENV{EIGEN3_INCLUDE_DIR})
 else(DEFINED ENV{EIGEN3_INCLUDE_DIR})
@@ -31,11 +34,36 @@ else(DEFINED ENV{EIGEN3_INCLUDE_DIR})
   endif(EIGEN3_FOUND)
 endif(DEFINED ENV{EIGEN3_INCLUDE_DIR})
 
+## MATLAB
 if(DEFINED ENV{MATLAB_INCLUDE_DIR})
 else(DEFINED ENV{MATLAB_INCLUDE_DIR})
   message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR to the include directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/include/.")
 endif(DEFINED ENV{MATLAB_INCLUDE_DIR})
 include_directories($ENV{MATLAB_INCLUDE_DIR})
+
+## Google Flags
+if(DEFINED ENV{GFLAGS_INCLUDE_DIR})
+  include_directories($ENV{GFLAGS_INCLUDE_DIR})
+else(DEFINED ENV{GFLAGS_INCLUDE_DIR})
+  find_package(GoogleFlags)
+  if(GFLAGS_FOUND)
+    include_directories(${GFLAGS_INCLUDE_DIR})
+  else(GFLAGS_FOUND)
+    message(FATAL_ERROR "\nCouldn't automatically locate your Google Flags installation directory. Please set the environment variable GFLAGS_INCLUDE_DIR to the correct directory.")
+  endif(GFLAGS_FOUND)
+endif(DEFINED ENV{GFLAGS_INCLUDE_DIR})
+
+## Google Logging
+if(DEFINED ENV{GLOG_INCLUDE_DIR})
+  include_directories($ENV{GLOG_INCLUDE_DIR})
+else(DEFINED ENV{GLOG_INCLUDE_DIR})
+  find_package(GoogleLogging)
+  if(GLOG_FOUND)
+    include_directories(${GLOG_INCLUDE_DIR})
+  else(GLOG_FOUND)
+    message(FATAL_ERROR "\nCouldn't automatically locate your Google Logging installation directory. Please set the environment variable GLOG_INCLUDE_DIR to the correct directory.")
+  endif(GLOG_FOUND)
+endif(DEFINED ENV{GLOG_INCLUDE_DIR})
 
 set(MODULES util drawing string image gl interpolation svm mpi matrix kmeans)
 

@@ -1,0 +1,32 @@
+# - Try to find Google Flags lib
+#
+#  GFLAGS_FOUND - system has Google Flags lib
+#  GFLAGS_INCLUDE_DIR - the Google Flags include directory
+#  GFLAGS_LIBRARY - the Google Flags library
+
+find_path(GFLAGS_INCLUDE_DIR NAMES gflags.h
+  HINTS
+  ${CMAKE_INSTALL_PREFIX}/include
+  ${CMAKE_SYSTEM_INCLUDE_PATH}/include
+  ${KDE4_INCLUDE_DIR}
+  PATH_SUFFIXES gflags)
+
+find_library(GFLAGS_LIBRARY NAMES gflags
+  HINTS
+  ${CMAKE_INSTALL_PREFIX}/include
+  ${CMAKE_SYSTEM_INCLUDE_PATH}/include
+  ${KDE4_INCLUDE_DIR}
+  PATH_SUFFIXES gflags)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(GoogleFlags DEFAULT_MSG GFLAGS_LIBRARY GFLAGS_INCLUDE_DIR)
+
+set (GFLAGS_FOUND TRUE)
+if (GFLAGS_LIBRARY MATCHES GFLAGS_LIBRARY-NOTFOUND)
+  set (GFLAGS_FOUND FALSE)
+endif (GFLAGS_LIBRARY MATCHES GFLAGS_LIBRARY-NOTFOUND)
+if (GFLAGS_INCLUDE_DIR MATCHES GFLAGS_INCLUDE_DIR-NOTFOUND)
+  set (GFLAGS_FOUND FALSE)
+endif (GFLAGS_INCLUDE_DIR MATCHES GFLAGS_INCLUDE_DIR-NOTFOUND)
+
+mark_as_advanced(GFLAGS_INCLUDE_DIR GFLAGS_LIBRARY)
