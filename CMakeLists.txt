@@ -17,8 +17,16 @@ add_definitions(-DSKIP_OPENCV)
 set(CMAKE_MODULE_PATH ./cmake)
 
 # Required libraries
-find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
+if(DEFINED ENV{EIGEN3_INCLUDE_DIR})
+  include_directories($ENV{EIGEN3_INCLUDE_DIR})
+else(DEFINED ENV{EIGEN3_INCLUDE_DIR})
+  find_package(Eigen3)
+  if(EIGEN3_FOUND)
+    include_directories(${EIGEN3_INCLUDE_DIR})
+  else(EIGEN3_FOUND)
+    message(FATAL_ERROR "\nCouldn't automatically locate your Eigen3 installation directory. Please set the environment variable EIGEN3_INCLUDE_DIR to the correct directory.")
+  endif(EIGEN3_FOUND)
+endif(DEFINED ENV{EIGEN3_INCLUDE_DIR})
 
 if(DEFINED ENV{MATLAB_INCLUDE_DIR})
 else(DEFINED ENV{MATLAB_INCLUDE_DIR})
