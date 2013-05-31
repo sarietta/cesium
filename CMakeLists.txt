@@ -69,6 +69,10 @@ endif(DEFINED ENV{GLOG_INCLUDE_DIR})
 find_package(FFTW3 REQUIRED)
 include_directories(${FFTW3_INCLUDE_DIRS})
 
+## BLAS
+find_package(BLAS REQUIRED)
+include_directories(${BLAS_INCLUDE_DIRS})
+
 set(MODULES util drawing string image gl interpolation svm mpi matrix kmeans)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
