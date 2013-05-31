@@ -67,6 +67,7 @@ endif(DEFINED ENV{GLOG_INCLUDE_DIR})
 
 ## FFTW3
 find_package(FFTW3 REQUIRED)
+include_directories(${FFTW3_INCLUDE_DIRS})
 
 set(MODULES util drawing string image gl interpolation svm mpi matrix kmeans)
 
