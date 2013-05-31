@@ -65,6 +65,9 @@ else(DEFINED ENV{GLOG_INCLUDE_DIR})
   endif(GLOG_FOUND)
 endif(DEFINED ENV{GLOG_INCLUDE_DIR})
 
+## FFTW3
+find_package(FFTW3 REQUIRED)
+
 set(MODULES util drawing string image gl interpolation svm mpi matrix kmeans)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
