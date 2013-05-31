@@ -7,12 +7,13 @@ set (slib_VERSION_MINOR 12)
 # Standard configuration parameters
 find_program(INTEL_CC "icc")
 if(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 else(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
   set(CMAKE_CXX_COMPILER "icc")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd2196 -wd2536 -wd780 -mkl")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w1 -wd2536 -wd780 -mkl")
 endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -std=c++0x")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++0x")
 add_definitions(-DSKIP_OPENCV)
 
 include_directories(./thirdparty/CImg)
