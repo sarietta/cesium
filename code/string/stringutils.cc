@@ -5,6 +5,13 @@
 
 #include "stringutils.h"
 
+// va_copy not available on all platforms
+#if !defined(__STDC_VERSION__) || !(__STDC_VERSION__ >= 199901L)
+#if !defined(va_copy) && defined(__va_copy) 
+#define va_copy(DST,SRC) __va_copy(DST,SRC) 
+#endif /* need va_copy */ 
+#endif /* !C99 */
+
 using std::string;
 using std::vector;
 
