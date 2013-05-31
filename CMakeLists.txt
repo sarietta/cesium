@@ -9,7 +9,7 @@ find_program(INTEL_CC "icc")
 if(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 else(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
   set(CMAKE_CXX_COMPILER "icc")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd2196 -wd2536 -wd780")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd2196 -wd2536 -wd780 -mkl")
 endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -std=c++0x")
@@ -70,8 +70,8 @@ find_package(FFTW3 REQUIRED)
 include_directories(${FFTW3_INCLUDE_DIRS})
 
 ## BLAS
-find_package(BLAS REQUIRED)
-include_directories(${BLAS_INCLUDE_DIRS})
+#find_package(BLAS REQUIRED)
+#include_directories(${BLAS_INCLUDE_DIRS})
 
 set(MODULES util drawing string image gl interpolation svm mpi matrix kmeans)
 
