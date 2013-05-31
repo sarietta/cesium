@@ -71,8 +71,14 @@ find_package(FFTW3 REQUIRED)
 include_directories(${FFTW3_INCLUDE_DIRS})
 
 ## BLAS
-#find_package(BLAS REQUIRED)
-#include_directories(${BLAS_INCLUDE_DIRS})
+#if(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
+#  find_package(BLAS REQUIRED)
+#  include_directories(${BLAS_INCLUDE_DIRS})
+#endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
+
+## MPI
+find_package(MPI REQUIRED CXX)
+include_directories(${MPI_CXX_INCLUDE_PATH})
 
 set(MODULES util drawing string image gl interpolation svm mpi matrix kmeans)
 
