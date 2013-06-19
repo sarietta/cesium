@@ -108,6 +108,7 @@ namespace slib {
       // TODO(sarietta): Slowly transition this to be GetMutable* and Get*.
 
       MatlabMatrix GetCopiedStructField(const std::string& field, const int& index = 0) const;
+      MatlabMatrix GetCopiedStructField(const std::string& field, const int& row, const int& col) const;
       // Gets the entire struct at the index. In MATLAB for a struct A, A(index).
       MatlabMatrix GetCopiedStructEntry(const int& index = 0) const;
       MatlabMatrix GetCopiedStructEntry(const int& row, const int& col) const;
@@ -118,6 +119,7 @@ namespace slib {
 
       // Non-mutator access. Should be faster and more memory efficient.
       const MatlabMatrix GetStructField(const std::string& field, const int& index = 0) const;
+      const MatlabMatrix GetStructField(const std::string& field, const int& row, const int& col) const;
       const MatlabMatrix GetCell(const int& row, const int& col) const;
       const MatlabMatrix GetCell(const int& index) const;
       float GetMatrixEntry(const int& row, const int& col) const;
@@ -203,6 +205,37 @@ namespace slib {
 	}
       }
 
+      // Print a friendly version of the matrix based on the type.
+      friend std::ostream& operator<<(std::ostream& os, const MatlabMatrix& obj) {
+	const Pair<int> dimensions = obj.GetDimensions();
+	if (obj.GetMatrixType() == MATLAB_MATRIX) {
+	  os << "Matrix Format:" << std::endl;
+	  os << obj.GetCopiedContents();
+	} else if (obj.GetMatrixType() == MATLAB_CELL_ARRAY) {
+	  os << "Cell Format:" << std::endl;
+	  for (int i = 0; i < dimensions.x; i++) {
+	    for (int j = 0; j < dimensions.y; j++) {
+	      os << "{" << i << "," << j << "}: " << std::endl << obj.GetCell(i, j) << std::endl << std::endl;
+	    }
+	  }
+	} else if (obj.GetMatrixType() == MATLAB_STRUCT) {
+	  os << "Struct Format:" << std::endl;
+	  const std::vector<std::string> fields = obj.GetStructFieldNames();
+	  for (int i = 0; i < dimensions.x; i++) {
+	    for (int j = 0; j < dimensions.y; j++) {
+	      os << "(" << i << "," << j << "): " << std::endl;
+	      for (int k = 0; k < fields.size(); k++) {
+		os << fields[k] << ": " << obj.GetStructField(fields[k], i, j) << std::endl;
+	      }
+	      os << std::endl;
+	    }
+	  }
+	} else if (obj.GetMatrixType() == MATLAB_STRING) {
+	  os << "String Format: " << obj.GetStringContents();
+	}
+	os << std::endl;
+	return os;
+      }
 
     private:
       mxArray* _matrix;

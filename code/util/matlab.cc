@@ -300,6 +300,12 @@ namespace slib {
       return 0.0f;
     }
 
+    const MatlabMatrix MatlabMatrix::GetStructField(const string& field, const int& row, const int& col) const {
+      const mwIndex subscripts[2] = {row, col};
+      const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+      return GetStructField(field, index);
+    }
+
     const MatlabMatrix MatlabMatrix::GetStructField(const string& field, const int& index) const {
       if (_matrix != NULL && _type == MATLAB_STRUCT) {
 	// Check to make sure the field exists.
@@ -345,6 +351,12 @@ namespace slib {
       } else {
 	VLOG(2) << "Attempted to access non-cell array (" << index << ")";
       }
+    }
+
+    MatlabMatrix MatlabMatrix::GetCopiedStructField(const string& field, const int& row, const int& col) const {
+      const mwIndex subscripts[2] = {row, col};
+      const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+      return GetCopiedStructField(field, index);
     }
     
     MatlabMatrix MatlabMatrix::GetCopiedStructField(const string& field, const int& index) const {
