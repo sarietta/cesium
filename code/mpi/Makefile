@@ -1,6 +1,6 @@
 CC 		= 	mpicc
-OPT		= 	-O3
-#OPT 		= 	-ggdb -pg
+#OPT		= 	-O3
+OPT 		= 	-ggdb -pg
 CC_FLAGS 	= 	$(OPT) -Wall -std=c++0x -wd2196 -wd2536 -wd780 -I../ -I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
 			-I/usr/local/MATLAB/R2011b/extern/include \
 			-I/usr/include/mpi -DOMPI_SKIP_MPICXX -DMPICH_SKIP_MPICXX -DSKIP_OPENCV
@@ -14,7 +14,8 @@ SRCS	= $(wildcard *.cc)
 OBJS	= $(filter-out test%, $(SRCS:.cc=.o))
 TOBJS	= $(filter test%, $(SRCS:.cc=.o))
 TESTS	= $(subst .cc,,$(filter test%, $(SRCS)))
-EXTOBJS = ../util/matlab.o ../svm/detector.o ../util/timer.o ../image/feature_pyramid.o ../image/feature_computer.o
+EXTOBJS = 	../util/matlab.o ../svm/detector.o ../util/timer.o ../image/feature_pyramid.o \
+		../image/feature_computer.o ../string/stringutils.o ../util/system.o
 
 %.o:%.cc
 	$(CC) $(CC_FLAGS) -c $< 
