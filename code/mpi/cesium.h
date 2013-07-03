@@ -13,7 +13,7 @@
 #include <util/matlab.h>
 #include <vector>
 
-#define CESIUM_REGISTER_COMMAND(command, function) slib::mpi::Cesium::RegisterCommand(#command, function);
+#define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
 
 namespace slib {
   namespace mpi {
