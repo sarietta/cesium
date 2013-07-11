@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
 
   Cesium* instance = Cesium::GetInstance();
   if (instance->Start() == slib::mpi::CesiumMasterNode) {
+    FLAGS_logtostderr = true;
     {
       JobDescription job;
       job.command = "TestFunction1";
@@ -110,6 +111,8 @@ int main(int argc, char** argv) {
 
     instance->Finish();
   }
+
+  MPI_Finalize();
 
   return 0;
 }

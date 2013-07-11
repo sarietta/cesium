@@ -49,7 +49,12 @@ namespace slib {
     }
     
     void Cesium::RegisterCommand(const string& command, const Function& function) {
-      _available_commands[command] = function;
+      if (command == CESIUM_FINISH_JOB_STRING) {
+	LOG(ERROR) << "Attempted to register a job under the protected name: " << CESIUM_FINISH_JOB_STRING;
+	LOG(ERROR) << "Please rename your function to avoid this collision";
+      } else {
+	_available_commands[command] = function;
+      }
     }
     
     CesiumNodeType Cesium::Start() {
@@ -77,6 +82,13 @@ namespace slib {
     }
     
     void Cesium::Finish() {
+      JobController controller;
+      
+      JobDescription finish;
+      finish.command = CESIUM_FINISH_JOB_STRING;
+      for (int i = 1; i < _size; i++) {
+	controller.StartJobOnNode(finish, i);
+      }
     }
 
     // This is just a wrapper to avoid passing a pointer to a member
@@ -253,8 +265,13 @@ namespace slib {
       while (1) {
 	VLOG(1) << "Waiting for a new job...";
 	JobDescription job = JobNode::WaitForJobData();
+	if (job.command == CESIUM_FINISH_JOB_STRING) {
+	  LOG(INFO) << "Node " << _rank << " finishing";
+	  break;
+	}
+
 	LOG(INFO) << "Received new job: " << job.command;
-	
+
 	// Run the appropriate command.
 	JobOutput output;
 	output.command = job.command;

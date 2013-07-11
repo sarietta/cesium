@@ -14,6 +14,7 @@
 #include <vector>
 
 #define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
+#define CESIUM_FINISH_JOB_STRING "__CESIUM_FINISH_JOB__"
 
 namespace slib {
   namespace mpi {
