@@ -80,6 +80,11 @@ namespace slib {
       // equivalent.
       void SetWorkingDirectory(const std::string& directory);
 
+      // Sets the number of indices that will be processed at one
+      // time. Make sure to disable intelligent parameters if you want
+      // this to take effect.
+      void SetBatchSize(const int& batch_size);
+
       // This method should be called when all processes are
       // completed.
       void Finish();
@@ -115,6 +120,7 @@ namespace slib {
       scoped_ptr<CesiumExecutionInstance> _instance;
 
       int _batch_size;
+      int _checkpoint_interval;
 
       static scoped_ptr<Cesium> _singleton;
       static std::map<std::string, Function> _available_commands;

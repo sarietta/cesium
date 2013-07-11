@@ -15,6 +15,8 @@ DEFINE_bool(cesium_export_log, true, "If true, will export the master's log to t
 
 DEFINE_int32(cesium_wait_interval, 5, "The number of seconds to wait between checking status of job.");
 
+DEFINE_bool(cesium_intelligent_parameters, true, "Automatically sets batch size and checkpoint interval.");
+
 DEFINE_bool(cesium_debug_mode, false, 
 	    "Whether the job should run in a debugging mode that will skip inputs, etc based on "
 	    "subsequent commands.");
@@ -37,8 +39,12 @@ namespace slib {
     scoped_ptr<Cesium> Cesium::_singleton;
     map<string, Function> Cesium::_available_commands;
     
-    Cesium::Cesium() {
-    }
+    Cesium::Cesium() 
+      : _rank(-1)
+      , _size(-1)
+      , _hostname("")
+      , _batch_size(5)
+      , _checkpoint_interval(-1) {}
     
     Cesium* Cesium::GetInstance() {
       if (_singleton.get() == NULL) {
@@ -57,7 +63,14 @@ namespace slib {
       }
     }
 
-    void Cesium::SetParametersIntelligently(const int& total_indices, const int& num_nodes) {
+    void Cesium::SetBatchSize(const int& batch_size)  {
+      _batch_size = batch_size;
+    }
+
+    void Cesium::SetParametersIntelligently() {
+      const int total_indices = _instance->total_indices;
+      const int num_nodes = _instance->available_processors.size();
+
       if (total_indices < 15) {
 	_batch_size = 3;
       } else if (total_indices < 30) {
@@ -76,27 +89,21 @@ namespace slib {
       if (_batch_size <= 0) {
 	_batch_size = 1;
       }
-      
-      // Special consideration for autoclust_mine_negs since we know that
-      // it consumes a lot of memory.
-      if (FLAGS_command == "autoclust_mine_negs") {
-	_batch_size = _batch_size > 5 ? 5 : _batch_size;
-      }
-      
+            
       // In general we want about a checkpoint every couple of batches.
       if (num_nodes < 5) {
-	FLAGS_checkpoint_interval = _batch_size * 2;
+	_checkpoint_interval = _batch_size * 2;
       } else if (num_nodes < 50) {
-	FLAGS_checkpoint_interval = _batch_size * 10;
+	_checkpoint_interval = _batch_size * 10;
       } else if (num_nodes < 100) {
-	FLAGS_checkpoint_interval = _batch_size * 20;
+	_checkpoint_interval = _batch_size * 20;
       } else {
-	FLAGS_checkpoint_interval = _batch_size * 50;
+	_checkpoint_interval = _batch_size * 50;
       }
       
       LOG(INFO) << "***********************************************";
       LOG(INFO) << "Setting batch size: " << _batch_size;
-      LOG(INFO) << "Setting checkpoint interval: " << FLAGS_checkpoint_interval;
+      LOG(INFO) << "Setting checkpoint interval: " << _checkpoint_interval;
       LOG(INFO) << "***********************************************";
     }
     
@@ -186,11 +193,10 @@ namespace slib {
 	}
       }
       VLOG(1) << "Available processors: " << _instance->available_processors.size();
-#if 0
-      if (FLAGS_intelligent_parameters) {
-	SetParametersIntelligently(all_indices.size(), size - 1);
+
+      if (FLAGS_cesium_intelligent_parameters) {
+	SetParametersIntelligently();
       }
-#endif
       
       const int last_node = _size - 1;
       
@@ -344,7 +350,7 @@ namespace slib {
       }
     }
 
-    void Cesium::ExportLog(const int& pid) {
+    void Cesium::ExportLog(const int& pid) const {
       const string filename = FLAGS_cesium_working_directory + "/master.log";
 
       const string cmd 
@@ -356,7 +362,7 @@ namespace slib {
       FLAGS_cesium_working_directory = directory;
     }
 
-    void Cesium::ShowProgress(const string& command) {
+    void Cesium::ShowProgress(const string& command) const {
       const int running = _size - 1 - (int) _instance->available_processors.size();
       const int total_indices = _instance->total_indices;
 
