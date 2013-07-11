@@ -18,6 +18,8 @@ using std::vector;
 namespace slib {
   namespace mpi {
 
+    bool JobNode::_initialized = false;
+
     MatlabMatrix empty_matrix;
     const MatlabMatrix& JobData::GetInputByName(const string& name) const {
       map<string, MatlabMatrix>::const_iterator iter = variables.find(name);
@@ -42,6 +44,11 @@ namespace slib {
     }
     
     JobController::JobController() : _completion_handler(NULL) {
+      int flag;
+      MPI_Initialized(&flag);
+      if (!flag) {
+	LOG(ERROR) << "You tried to create a JobController before calling MPI_Init. Shame on you. Fix it!";
+      }
       //MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
       MPI_Comm_create_errhandler(MPIErrorHandler, &_error_handler);
@@ -58,6 +65,7 @@ namespace slib {
     }
 
     void JobNode::WaitForCompletionResponse(const int& node) {
+      CheckInitialized();
       int message;
       MPI_Recv(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
@@ -155,6 +163,7 @@ namespace slib {
     }
 
     string JobNode::WaitForString(const int& node) {
+      CheckInitialized();
       VLOG(3) << "Waiting for string from node: " << node;
       int length;
       MPI_Recv(&length, 1, MPI_INT, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -168,6 +177,7 @@ namespace slib {
 
     void JobNode::SendJobDataToNode(const JobData& data, const int& node,
 				    const map<string, VariableType>& variable_types) {
+      CheckInitialized();
       // Send the command.
       SendStringToNode(data.command, node);
 
@@ -270,6 +280,7 @@ namespace slib {
     }
 
     JobData JobNode::WaitForJobData(const int& node) {
+      CheckInitialized();
       // These routines match the sends above.
       JobData data;
 
@@ -343,8 +354,25 @@ namespace slib {
     }
 
     void JobNode::SendCompletionMessage(const int& node) {
+      CheckInitialized();
       int message = 1;
       MPI_Send(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG, MPI_COMM_WORLD);
+    }
+
+    bool JobNode::CheckInitialized() {
+      if (_initialized) {
+	return true;
+      } else {
+	int flag;
+	MPI_Initialized(&flag);
+	if (!flag) {
+	  LOG(ERROR) << "Attempted to call a JobNode method before calling MPI_Init. "
+		     << "You must call MPI_Init before any JobNode methods.";
+	  return false;
+	}
+	_initialized = true;
+	return true;
+      }
     }
 
   }  // namespace util

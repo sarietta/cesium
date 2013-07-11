@@ -53,6 +53,12 @@ namespace slib {
     }
     
     CesiumNodeType Cesium::Start() {
+      int flag;
+      MPI_Initialized(&flag);
+      if (!flag) {
+	LOG(ERROR) << "Attempted to start a Cesium job before calling MPI_Init. "
+		   << "You must call MPI_Init before any Cesium methods.";
+      }
       MPI_Comm_rank(MPI_COMM_WORLD, &_rank);
       MPI_Comm_size(MPI_COMM_WORLD, &_size);
 

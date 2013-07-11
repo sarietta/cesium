@@ -1,3 +1,5 @@
+// MPI_Init should be called before any of the methods in this file.
+
 #ifndef __SLIB_UTIL_MPI_H__
 #define __SLIB_UTIL_MPI_H__
 
@@ -62,16 +64,29 @@ namespace slib {
     public:
       JobController();
 
-      // MUST always call MPI_Init before calling any of these
-      // routines. This assumes that the master node is ALWAYS node #
-      // 0.
+      // You should almost always set a completion handler or jobs may
+      // never actually complete correctly. In some cases you can omit
+      // this, but if you ever want to handle outputs from nodes you
+      // must implement and set such a method.
+      // 
+      // The signature for the CompletionHandler is: 
+      // void CompletionHandler(const slib::mpi::JobOutput&, const int&);
       void SetCompletionHandler(CompletionHandler handler);
+
+      // Starts a job on the specified node. Non-blocking. 
       void StartJobOnNode(const JobDescription& description, const int& node,
 			  const std::map<std::string, VariableType>& variable_types);
+      // Almost always use this method unless you know what you're
+      // doing and understand VariableTypes.
       inline void StartJobOnNode(const JobDescription& description, const int& node) {
 	StartJobOnNode(description, node, std::map<std::string, VariableType>());
       }
 
+      // You have to run this method periodically to have the
+      // CompletionHandler method called appropriately.
+      //
+      // TODO(sarietta): This shouldn't be necessary, but without
+      // spawning a new thread to poll MPI it must remain this way.
       void CheckForCompletion();
       static void PrintMPICommunicationError(const int& state);
 
@@ -83,14 +98,32 @@ namespace slib {
       int _completion_status;
       MPI_Errhandler _error_handler;
 
+      // When a node completes, it should send a completion message
+      // via SendCompletionMessage. The master receives this message
+      // and then sends a completion response
+      // automatically. Typically, on the node, immediately after
+      // calling SendCompletionMessage you call the blocking method
+      // WaitForCompletionResponse. The method below sends the
+      // response to the node and unblocks that call to
+      // WaitForCompletion Response.
+      //
+      // ------------- Time t -----------------------
+      // Node: <SendCompletionMessage>
+      // Master: <>
+      // ------------- Time t + 1 -------------------
+      // Node: <WaitForCompletionResponse> (blocking)
+      // Master: <ReceiveCompletionMessage>
+      // ------------- Time t + 2 -------------------
+      // Node: <WaitForCompletionResponse> (blocking)
+      // Master: <SendCompletionResponse>
+      // ------------- Time t + 3 -------------------
+      // Node: Execution Continues
+      // Master: <>
       void SendCompletionResponse(const int& node);
     };
 
     class JobNode {
     public:
-      // MUST always call MPI_Init before calling any of these
-      // routines. This assumes that the master node is ALWAYS node #
-      // 0.
       static JobData WaitForJobData(const int& node = MPI_ROOT_NODE);   
       static std::string WaitForString(const int& node = MPI_ROOT_NODE);
 
@@ -101,8 +134,16 @@ namespace slib {
       }
       static void SendStringToNode(const std::string& message, const int& node);
 
+      // Alert the master that this node is done with an operation.
       static void SendCompletionMessage(const int& node);
+      // Blocking call to wait for the master to acknowledge the
+      // previous method's message. Almost always call this directly
+      // after previous method.
       static void WaitForCompletionResponse(const int& node);
+
+    private:
+      static bool _initialized;
+      static bool CheckInitialized();
     };
   }  // namespace util
 }  // namespace slib
