@@ -51,6 +51,49 @@ namespace slib {
     void Cesium::RegisterCommand(const string& command, const Function& function) {
       _available_commands[command] = function;
     }
+
+    void Cesium::SetParametersIntelligently(const int& total_indices, const int& num_nodes) {
+      if (total_indices < 15) {
+	_batch_size = 3;
+      } else if (total_indices < 30) {
+	_batch_size = 7;
+      } else if (total_indices < 100) {
+	_batch_size = 10;
+      } else {
+	_batch_size = 25;
+      }
+      
+      const int even = (int) (floor(((float) total_indices) / ((float) num_nodes)));
+      if (_batch_size > even) {
+	_batch_size = even;
+      }
+      
+      if (_batch_size <= 0) {
+	_batch_size = 1;
+      }
+      
+      // Special consideration for autoclust_mine_negs since we know that
+      // it consumes a lot of memory.
+      if (FLAGS_command == "autoclust_mine_negs") {
+	_batch_size = _batch_size > 5 ? 5 : _batch_size;
+      }
+      
+      // In general we want about a checkpoint every couple of batches.
+      if (num_nodes < 5) {
+	FLAGS_checkpoint_interval = _batch_size * 2;
+      } else if (num_nodes < 50) {
+	FLAGS_checkpoint_interval = _batch_size * 10;
+      } else if (num_nodes < 100) {
+	FLAGS_checkpoint_interval = _batch_size * 20;
+      } else {
+	FLAGS_checkpoint_interval = _batch_size * 50;
+      }
+      
+      LOG(INFO) << "***********************************************";
+      LOG(INFO) << "Setting batch size: " << _batch_size;
+      LOG(INFO) << "Setting checkpoint interval: " << FLAGS_checkpoint_interval;
+      LOG(INFO) << "***********************************************";
+    }
     
     CesiumNodeType Cesium::Start() {
       int flag;
@@ -188,7 +231,7 @@ namespace slib {
 	      indices_list = StringUtils::StringPrintf("%s %d", indices_list.c_str(), indices.back());
 	      _instance->pending_indices[index] = true;
 #if 0
-	      if (FLAGS_batch_size > 0 && indices.size() >= FLAGS_batch_size) {
+	      if (_batch_size > 0 && indices.size() >= _batch_size) {
 		break;
 	      }
 #endif

@@ -103,13 +103,17 @@ namespace slib {
       void HandleJobCompleted(const JobOutput& output, const int& node);
       friend void __HandleJobCompletedWrapper__(const JobOutput& output, const int& node);
 
-      void ExportLog(const int& pid);
-      void ShowProgress(const std::string& command);
+      void ExportLog(const int& pid) const;
+      void ShowProgress(const std::string& command) const;
+
+      void SetParametersIntelligently();
 
       int _rank;
       int _size;
       std::string _hostname;
       scoped_ptr<CesiumExecutionInstance> _instance;
+
+      int _batch_size;
 
       static scoped_ptr<Cesium> _singleton;
       static std::map<std::string, Function> _available_commands;
