@@ -23,9 +23,14 @@
 find_package(PkgConfig)
 
 pkg_check_modules(PC_FFTW3 fftw3)
-find_path(FFTW3_INCLUDE_DIR fftw3.h HINTS ${PC_FFTW3_INCLUDE_DIRS})
-
-find_library(FFTW3_LIBRARY NAMES fftw3 HINTS ${PC_FFTW3_LIBRARY_DIRS} )
+if (PC_FFTW3_FOUND)
+  find_path(FFTW3_INCLUDE_DIR fftw3.h HINTS ${PC_FFTW3_INCLUDE_DIRS})
+  find_library(FFTW3_LIBRARY NAMES fftw3 HINTS ${PC_FFTW3_LIBRARY_DIRS} )
+else()
+  pkg_check_modules(PC_FFTW3 fftw3f)
+  find_path(FFTW3_INCLUDE_DIR fftw3.h HINTS ${PC_FFTW3_INCLUDE_DIRS})
+  find_library(FFTW3_LIBRARY NAMES fftw3f HINTS ${PC_FFTW3_LIBRARY_DIRS} )
+endif()
 
 set(FFTW3_LIBRARIES ${FFTW3_LIBRARY} )
 set(FFTW3_INCLUDE_DIRS ${FFTW3_INCLUDE_DIR} )
