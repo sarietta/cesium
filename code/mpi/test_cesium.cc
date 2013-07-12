@@ -97,6 +97,7 @@ int main(int argc, char** argv) {
 
   CESIUM_REGISTER_COMMAND(TestFunction1);
   CESIUM_REGISTER_COMMAND(TestFunction2);
+  CESIUM_REGISTER_COMMAND(TestFunction3);
 
   Cesium* instance = Cesium::GetInstance();
   if (instance->Start() == slib::mpi::CesiumMasterNode) {
