@@ -12,6 +12,16 @@
     }									\
   }
 
+#define ASSERT_TRUE(a) {						\
+    if (a == NULL) {							\
+      LOG(ERROR) << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__	\
+		 << ":: Assertion Failed! Expected "			\
+		 << #a << " TRUE";					\
+      exit(1);								\
+    }									\
+  }
+
+
 #define ASSERT_EQ(a, b) {						\
     if (a != b) {							\
       LOG(ERROR) << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__	\

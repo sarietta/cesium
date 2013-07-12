@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string>
 #include <string/stringutils.h>
+#include <util/assert.h>
 #include <util/matlab.h>
 #include <vector>
 
@@ -30,14 +31,14 @@ using std::string;
 using std::vector;
 
 void ShowVariables(const map<string, MatlabMatrix> variables) {
-  LOG(INFO) << "****************************";
+  VLOG(1) << "****************************";
   for (map<string, MatlabMatrix>::const_iterator iter = variables.begin();
        iter != variables.end(); iter++) {
-    LOG(INFO) << "Found variable: " << (*iter).first;
-    LOG(INFO) << (*iter).second;
-    LOG(INFO) << "===================";
+    VLOG(1) << "Found variable: " << (*iter).first;
+    VLOG(1) << (*iter).second;
+    VLOG(1) << "===================";
   }
-  LOG(INFO) << "****************************\n\n";
+  VLOG(1) << "****************************\n\n";
 }
 
 MatlabMatrix MakeCellMatrix(const float value) {
@@ -47,7 +48,7 @@ MatlabMatrix MakeCellMatrix(const float value) {
 }
 
 void TestFunction1(const JobDescription& job, JobOutput* output) {
-  LOG(INFO) << "\n\nTestFunction1";
+  VLOG(1) << "\n\nTestFunction1";
   ShowVariables(job.variables);
 
   output->indices = job.indices;
@@ -56,12 +57,16 @@ void TestFunction1(const JobDescription& job, JobOutput* output) {
 }
 
 void TestFunction2(const JobDescription& job, JobOutput* output) {
-  LOG(INFO) << "\n\nTestFunction2";
+  VLOG(1) << "\n\nTestFunction2";
   ShowVariables(job.variables);
  
   output->indices = job.indices;
   output->variables["output_variable3"] = MakeCellMatrix(3.0f);
   output->variables["output_variable4"] = MakeCellMatrix(4.0f);
+}
+
+bool TEST_MATLAB_MATRIX_EQUAL(const MatlabMatrix& A, const MatlabMatrix& B) {
+  return (A.Serialize() == B.Serialize());
 }
 
 int main(int argc, char** argv) {
@@ -92,8 +97,11 @@ int main(int argc, char** argv) {
 
       JobOutput output;
       instance->ExecuteJob(job, &output);
-      LOG(INFO) << "\n\nOUTPUT :: TestFunction1";
+      VLOG(1) << "\n\nOUTPUT :: TestFunction1";
       ShowVariables(output.variables);
+
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output_variable1"], MakeCellMatrix(1.0f)));
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output_variable2"], MakeCellMatrix(2.0f)));
     }
 
     {
@@ -105,8 +113,11 @@ int main(int argc, char** argv) {
 
       JobOutput output;
       instance->ExecuteJob(job, &output);
-      LOG(INFO) << "\n\nOUTPUT :: TestFunction2";
+      VLOG(1) << "\n\nOUTPUT :: TestFunction2";
       ShowVariables(output.variables);
+
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output_variable3"], MakeCellMatrix(3.0f)));
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output_variable4"], MakeCellMatrix(4.0f)));
     }
 
     instance->Finish();
