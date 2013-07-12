@@ -7,6 +7,7 @@
 
 #include <boost/signals2/mutex.hpp>
 #include <common/scoped_ptr.h>
+#include <gflags/gflags.h>
 #include <map>
 #include <mpi/mpijob.h>
 #include <string>
@@ -15,6 +16,17 @@
 
 #define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
 #define CESIUM_FINISH_JOB_STRING "__CESIUM_FINISH_JOB__"
+
+DECLARE_string(cesium_working_directory);
+DECLARE_string(cesium_temporary_directory);
+DECLARE_bool(cesium_export_log);
+DECLARE_int32(cesium_wait_interval);
+DECLARE_bool(cesium_checkpoint_variables);
+DECLARE_bool(cesium_intelligent_parameters);
+DECLARE_int32(cesium_partial_variable_chunk_size);
+DECLARE_bool(cesium_debug_mode);
+DECLARE_int32(cesium_debug_mode_node);
+DECLARE_int32(cesium_debug_mode_process_single_index);
 
 namespace slib {
   namespace mpi {

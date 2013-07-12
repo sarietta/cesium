@@ -65,6 +65,19 @@ void TestFunction2(const JobDescription& job, JobOutput* output) {
   output->variables["output_variable4"] = MakeCellMatrix(4.0f);
 }
 
+void TestFunction3(const JobDescription& job, JobOutput* output) {
+  VLOG(1) << "\n\nTestFunction3";
+  ShowVariables(job.variables);
+ 
+  output->indices = job.indices;
+
+  MatlabMatrix matrix(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 3));
+  matrix.SetCell(0, MatlabMatrix("CELL 0"));
+  matrix.SetCell(1, MatlabMatrix("CELL 1"));
+  matrix.SetCell(2, MatlabMatrix("CELL 2"));
+  output->variables["output"] = matrix;
+}
+
 bool TEST_MATLAB_MATRIX_EQUAL(const MatlabMatrix& A, const MatlabMatrix& B) {
   return (A.Serialize() == B.Serialize());
 }
@@ -118,6 +131,30 @@ int main(int argc, char** argv) {
 
       ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output_variable3"], MakeCellMatrix(3.0f)));
       ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output_variable4"], MakeCellMatrix(4.0f)));
+    }
+
+    {
+      JobDescription job;
+      job.command = "TestFunction3";
+      job.variables["variable1"] = MatlabMatrix(1.0f);
+      job.indices.push_back(0);
+
+      FLAGS_cesium_partial_variable_chunk_size = 1;
+      FLAGS_cesium_temporary_directory = "/tmp";
+      job.SetVariableType("output", slib::mpi::PARTIAL_VARIABLE_COLS);
+
+      JobOutput output;
+      instance->ExecuteJob(job, &output);
+      VLOG(1) << "\n\nOUTPUT :: TestFunction3";
+      ShowVariables(output.variables);
+
+      MatlabMatrix cell1 = MatlabMatrix::LoadFromFile("/tmp/output/1.mat");
+      MatlabMatrix cell2 = MatlabMatrix::LoadFromFile("/tmp/output/2.mat");
+      MatlabMatrix cell3 = MatlabMatrix::LoadFromFile("/tmp/output/3.mat");
+
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(cell1, MatlabMatrix("CELL 0")));
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(cell2, MatlabMatrix("CELL 1")));
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(cell3, MatlabMatrix("CELL 2")));
     }
 
     instance->Finish();
