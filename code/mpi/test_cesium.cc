@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
       FLAGS_cesium_intelligent_parameters = false;
 
       instance->SetBatchSize(1);
-      job.SetVariableType("output", slib::mpi::PARTIAL_VARIABLE_COLS);
+      instance->SetOutputVariableType("output", slib::mpi::PARTIAL_VARIABLE_COLS);
 
       JobOutput output;
       instance->ExecuteJob(job, &output);

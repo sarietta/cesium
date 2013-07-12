@@ -73,8 +73,9 @@ namespace slib {
       // Synchronizes access to the above resources.
       boost::signals2::mutex job_completion_mutex;
 
-      // Holds the variable types so they don't need to be passed around.
-      std::map<std::string, VariableType> variable_types;
+      // Holds the variable types.
+      std::map<std::string, VariableType> input_variable_types;
+      std::map<std::string, VariableType> output_variable_types;
     };  // struct CesiumExecutionInstance
 
     class Cesium {
@@ -107,6 +108,14 @@ namespace slib {
       // completed.
       void Finish();
 
+      // These two functions allow you to specify the types of the
+      // inputs and outputs. You can omit these if your variables are
+      // just normal matrices and don't need special consideration.
+      //
+      // Note: These must be set before EACH call to an Execute* method.
+      void SetOutputVariableType(const std::string& name, const VariableType& type);
+      void SetInputVariableType(const std::string& name, const VariableType& type);
+
       bool ExecuteJob(const JobDescription& job, JobOutput* output);
 #if 0
       void ExecuteKernel(const Kernel& kernel, const JobDescription& job, JobOutput* output);
@@ -135,9 +144,9 @@ namespace slib {
       void SetParametersIntelligently();
 
       // Checks the variable types that were specified for the current
-      // job via the field variable_types in JobDescrption passed to
-      // Execute*.
-      VariableType GetVariableType(const std::string& variable_name) const;
+      // job via the Set*VariableType methods.
+      VariableType GetInputVariableType(const std::string& variable_name) const;
+      VariableType GetOutputVariableType(const std::string& variable_name) const;
 
       // Helper function to save a matrix to a temporary file.
       void SaveTemporaryOutput(const std::string& name, const slib::util::MatlabMatrix& matrix) const;

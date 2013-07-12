@@ -167,7 +167,6 @@ namespace slib {
       JobDescription mutable_job = job;
 
       _instance.reset(new CesiumExecutionInstance());
-      _instance->variable_types = job.variable_types;
             
       const int pid = getpid();
       if (FLAGS_logtostderr) {
@@ -384,12 +383,33 @@ namespace slib {
       google::FlushLogFiles(google::GLOG_INFO);
     }
 
-    VariableType Cesium::GetVariableType(const string& variable_name) const {
-      const map<string, VariableType>::const_iterator iter = _instance->variable_types.find(variable_name);
-      if (iter == _instance->variable_types.end()) {
+    // Helper function for methods below.
+    VariableType GetVariableType(const map<string, VariableType>& types, const string& variable_name) {
+      const map<string, VariableType>::const_iterator iter = types.find(variable_name);
+      if (iter == types.end()) {
 	return COMPLETE_VARIABLE;
       } else {
 	return (*iter).second;
+      }
+    }
+
+    VariableType Cesium::GetInputVariableType(const string& variable_name) const {
+      return GetVariableType(_instance->input_variable_types, variable_name);
+    }
+
+    VariableType Cesium::GetOutputVariableType(const string& variable_name) const {
+      return GetVariableType(_instance->output_variable_types, variable_name);
+    }
+
+    void Cesium::SetInputVariableType(const string& variable_name, const VariableType& type) {
+      if (_instance.get() != NULL) {
+	_instance->input_variable_types[variable_name] = type;
+      }
+    }
+
+    void Cesium::SetOutputVariableType(const string& variable_name, const VariableType& type) {
+      if (_instance.get() != NULL) {
+	_instance->output_variable_types[variable_name] = type;
       }
     }
 
@@ -408,7 +428,7 @@ namespace slib {
       for (map<string, MatlabMatrix>::iterator iter = _instance->final_outputs.begin();
 	   iter != _instance->final_outputs.end(); iter++) {
 	const string& name = (*iter).first;
-	const VariableType type = GetVariableType(name);
+	const VariableType type = GetOutputVariableType(name);
 	
 	if (type == PARTIAL_VARIABLE_ROWS || type == PARTIAL_VARIABLE_COLS) {
 	  return;
@@ -462,7 +482,7 @@ namespace slib {
 	  const Pair<int> dimensions = matrix.GetDimensions();
 	  VLOG(1) << "Found output: " << name << " (" << dimensions.x << " x " << dimensions.y << ")";
 
-	  if (!HandleSpecialVariable(output, matrix, name, GetVariableType(name))) {
+	  if (!HandleSpecialVariable(output, matrix, name, GetOutputVariableType(name))) {
 	    _instance->final_outputs[name].Merge(matrix);
 	  }
 	}
