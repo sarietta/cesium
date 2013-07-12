@@ -259,11 +259,10 @@ namespace slib {
 	      indices.push_back(index);
 	      indices_list = StringUtils::StringPrintf("%s %d", indices_list.c_str(), indices.back());
 	      _instance->pending_indices[index] = true;
-#if 0
+
 	      if (_batch_size > 0 && indices.size() >= _batch_size) {
 		break;
 	      }
-#endif
 	    }
 	    
 	    indices_list = StringUtils::StringPrintf("%s]", indices_list.c_str());

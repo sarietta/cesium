@@ -72,9 +72,15 @@ void TestFunction3(const JobDescription& job, JobOutput* output) {
   output->indices = job.indices;
 
   MatlabMatrix matrix(slib::util::MATLAB_CELL_ARRAY, Pair<int>(3, 1));
-  matrix.SetCell(0, MatlabMatrix("CELL 0"));
-  matrix.SetCell(1, MatlabMatrix("CELL 1"));
-  matrix.SetCell(2, MatlabMatrix("CELL 2"));
+  if (job.indices[0] == 0) {
+    matrix.SetCell(0, MatlabMatrix("CELL 0"));
+  }
+  if (job.indices[0] == 1) {
+    matrix.SetCell(1, MatlabMatrix("CELL 1"));
+  }
+  if (job.indices[0] == 2) {
+    matrix.SetCell(2, MatlabMatrix("CELL 2"));
+  }
   output->variables["output"] = matrix;
 }
 
@@ -102,6 +108,7 @@ int main(int argc, char** argv) {
   Cesium* instance = Cesium::GetInstance();
   if (instance->Start() == slib::mpi::CesiumMasterNode) {
     FLAGS_logtostderr = true;
+#if 0
     {
       JobDescription job;
       job.command = "TestFunction1";
@@ -133,15 +140,20 @@ int main(int argc, char** argv) {
       ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output_variable3"], MakeCellMatrix(3.0f)));
       ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output_variable4"], MakeCellMatrix(4.0f)));
     }
-
+#endif
     {
       JobDescription job;
       job.command = "TestFunction3";
       job.variables["variable1"] = MatlabMatrix(1.0f);
       job.indices.push_back(0);
+      job.indices.push_back(1);
+      job.indices.push_back(2);
 
       FLAGS_cesium_partial_variable_chunk_size = 1;
       FLAGS_cesium_temporary_directory = "/tmp";
+      FLAGS_cesium_intelligent_parameters = false;
+
+      instance->SetBatchSize(1);
       job.SetVariableType("output", slib::mpi::PARTIAL_VARIABLE_COLS);
 
       JobOutput output;
@@ -149,19 +161,21 @@ int main(int argc, char** argv) {
       VLOG(1) << "\n\nOUTPUT :: TestFunction3";
       ShowVariables(output.variables);
 
-      MatlabMatrix cell1 = MatlabMatrix::LoadFromFile("/tmp/output/1.mat");
-      MatlabMatrix cell2 = MatlabMatrix::LoadFromFile("/tmp/output/2.mat");
-      MatlabMatrix cell3 = MatlabMatrix::LoadFromFile("/tmp/output/3.mat");
+      MatlabMatrix cell1 = MatlabMatrix::LoadFromFile("/tmp/output/0.mat");
+      MatlabMatrix cell2 = MatlabMatrix::LoadFromFile("/tmp/output/1.mat");
+      MatlabMatrix cell3 = MatlabMatrix::LoadFromFile("/tmp/output/2.mat");
 
-      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(cell1, MatlabMatrix("CELL 0")));
-      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(cell2, MatlabMatrix("CELL 1")));
-      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(cell3, MatlabMatrix("CELL 2")));
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(cell1.GetCell(0), MatlabMatrix("CELL 0")));
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(cell2.GetCell(1), MatlabMatrix("CELL 1")));
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(cell3.GetCell(2), MatlabMatrix("CELL 2")));
     }
 
     instance->Finish();
   }
 
   MPI_Finalize();
+
+  LOG(INFO) << "ALL TESTS PASSED";
 
   return 0;
 }
