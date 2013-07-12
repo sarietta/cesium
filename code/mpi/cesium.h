@@ -21,6 +21,9 @@ namespace slib {
     class Kernel;
     typedef void (*Function)(const slib::mpi::JobDescription&, JobOutput* output);
   }
+  namespace util {
+    class MatlabMatrix;
+  }
 }
 
 namespace slib {
@@ -57,6 +60,9 @@ namespace slib {
       
       // Synchronizes access to the above resources.
       boost::signals2::mutex job_completion_mutex;
+
+      // Holds the variable types so they don't need to be passed around.
+      std::map<std::string, VariableType> variable_types;
     };  // struct CesiumExecutionInstance
 
     class Cesium {
@@ -109,10 +115,29 @@ namespace slib {
       void HandleJobCompleted(const JobOutput& output, const int& node);
       friend void __HandleJobCompletedWrapper__(const JobOutput& output, const int& node);
 
+      // Logging/Output functions.
       void ExportLog(const int& pid) const;
       void ShowProgress(const std::string& command) const;
 
+      // Sets the batch size and the checkpoint interval automatically.
       void SetParametersIntelligently();
+
+      // Checks the variable types that were specified for the current
+      // job via the field variable_types in JobDescrption passed to
+      // Execute*.
+      VariableType GetVariableType(const std::string& variable_name) const;
+
+      // Helper function to save a matrix to a temporary file.
+      void SaveTemporaryOutput(const std::string& name, const slib::util::MatlabMatrix& matrix) const;
+      // Checkpoints variables if checkpointing is enabled.
+      void CheckpointOutputFiles(const JobOutput& output);
+
+      // This function handles a non-COMPLETE_VARIABLE
+      // VariableType. It returns a boolean indicating whether it was
+      // able to handle the variable. If this function returns false,
+      // you should save/merge the variable as you normally would.
+      bool HandleSpecialVariable(const JobOutput& output, const slib::util::MatlabMatrix& matrix,
+				 const std::string& name, const VariableType& type);
 
       int _rank;
       int _size;

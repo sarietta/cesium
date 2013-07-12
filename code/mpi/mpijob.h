@@ -22,14 +22,21 @@ namespace slib {
   namespace mpi {
 
     enum VariableType {
-      PARTIAL_VARIABLE_ROWS,  // Rows are partially sent, but all cols are sent
-      PARTIAL_VARIABLE_COLS,  // Same as above s/rows/cols
-      COMPLETE_VARIABLE,  // A variable that needs all of its data sent
-      FEATURE_STRIPPED_ROW_VARIABLE,  // A partial variable that has been stripped of features
-      DSWORK_COLUMN  // This variable will be saved directly to disk
-		     // on output in the format that dswork
-		     // expects. Note that only column vectors can be
-		     // saved in this special way.
+      // Rows are partially sent, but all cols are sent
+      PARTIAL_VARIABLE_ROWS = 1 << 1,  
+      // Same as above s/rows/cols
+      PARTIAL_VARIABLE_COLS = 1 << 2,  
+      // A variable that needs all of its data sent (NORMAL)
+      COMPLETE_VARIABLE = 1 << 3,
+      // A partial variable that has been stripped of features
+      FEATURE_STRIPPED_ROW_VARIABLE = 1 << 4,
+      // This variable will be saved directly to disk on output in the
+      // format that dswork expects. Note that only column vectors can
+      // be saved in this special way.
+      DSWORK_COLUMN = 1 << 5,
+      // Indicates that this variable should be cached. Can safely be
+      // OR'ed with all other types.
+      CACHED_VARIABLE = 1 << 10
     };
 
     struct JobData {
@@ -37,13 +44,18 @@ namespace slib {
       std::vector<int> indices;
 
       std::map<std::string, slib::util::MatlabMatrix> variables;
+      std::map<std::string, VariableType> variable_types;
 
       const slib::util::MatlabMatrix& GetInputByName(const std::string& name) const; 
       bool HasInput(const std::string& name) const; 
 
+      VariableType GetVariableType(const std::string& variable_name) const;
+      void SetVariableType(const std::string& variable_name, const VariableType& type);
+
       ~JobData() {
 	indices.clear();
 	variables.clear();
+	variable_types.clear();
       }
     };
 

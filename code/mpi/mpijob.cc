@@ -39,6 +39,19 @@ namespace slib {
       }
     }
 
+    VariableType JobData::GetVariableType(const string& variable_name) const {
+      const map<string, VariableType>::const_iterator iter = variable_types.find(variable_name);
+      if (iter == variable_types.end()) {
+	return COMPLETE_VARIABLE;
+      } else {
+	return (*iter).second;
+      }
+    }
+
+    void JobData::SetVariableType(const string& variable_name, const VariableType& type) {
+      variable_types[variable_name] = type;
+    }
+
     void MPIErrorHandler (MPI_Comm* comm, int* err, ...) {
       JobController::PrintMPICommunicationError(*err);
     }
@@ -143,7 +156,9 @@ namespace slib {
 
 	// Allocate space for the completion status and the request handler.
 	if (iter == _request_handlers.end()) {
-	  MPI_Request request_handler;
+	  // We really shouldn't set this variable to anything, but
+	  // compilers issue a warning if we don't :(.
+	  MPI_Request request_handler = -1;  
 	  _request_handlers[node] = request_handler;
 	}
 

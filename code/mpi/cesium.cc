@@ -11,11 +11,17 @@
 
 DEFINE_string(cesium_working_directory, "/srv/cluster-fs", 
 	      "The root directory where the input files live and the output files will be saved.");
-DEFINE_bool(cesium_export_log, true, "If true, will export the master's log to the working directory.");
+DEFINE_string(cesium_temporary_directory, "/tmp", "Directory to store temp files.");
 
+DEFINE_bool(cesium_export_log, true, "If true, will export the master's log to the working directory.");
 DEFINE_int32(cesium_wait_interval, 5, "The number of seconds to wait between checking status of job.");
 
+DEFINE_bool(cesium_checkpoint_variables, true, "Set to false if you don't want to checkpoint variables.");
 DEFINE_bool(cesium_intelligent_parameters, true, "Automatically sets batch size and checkpoint interval.");
+DEFINE_int32(cesium_partial_variable_chunk_size, 50, 
+	     "The size of each chunk of a partial variable. "
+	     "If a variable is NxM and is a partial row variable, "
+	     "there will a set of partial_variable_chunck_sizexM files that comprise it in the working directory.");
 
 DEFINE_bool(cesium_debug_mode, false, 
 	    "Whether the job should run in a debugging mode that will skip inputs, etc based on "
@@ -103,7 +109,11 @@ namespace slib {
       
       LOG(INFO) << "***********************************************";
       LOG(INFO) << "Setting batch size: " << _batch_size;
-      LOG(INFO) << "Setting checkpoint interval: " << _checkpoint_interval;
+      if (FLAGS_cesium_checkpoint_variables) {
+	LOG(INFO) << "Setting checkpoint interval: " << _checkpoint_interval;
+      } else {
+	_checkpoint_interval = -1;
+      }
       LOG(INFO) << "***********************************************";
     }
     
@@ -157,6 +167,7 @@ namespace slib {
       JobDescription mutable_job = job;
 
       _instance.reset(new CesiumExecutionInstance());
+      _instance->variable_types = job.variable_types;
             
       const int pid = getpid();
       if (FLAGS_logtostderr) {
@@ -374,11 +385,65 @@ namespace slib {
       google::FlushLogFiles(google::GLOG_INFO);
     }
 
+    VariableType Cesium::GetVariableType(const string& variable_name) const {
+      const map<string, VariableType>::const_iterator iter = _instance->variable_types.find(variable_name);
+      if (iter == _instance->variable_types.end()) {
+	return COMPLETE_VARIABLE;
+      } else {
+	return (*iter).second;
+      }
+    }
+
+    void Cesium::SaveTemporaryOutput(const string& name, const MatlabMatrix& matrix) const {
+      const string local_file = FLAGS_cesium_temporary_directory + "/" + name + ".mat";
+      if (!matrix.SaveToFile(local_file)) {
+	LOG(ERROR) << "Could not save matrix to temporary file: " << local_file;
+      }
+    }
+
+    void Cesium::CheckpointOutputFiles(const JobOutput& output) {
+      if (_checkpoint_interval < 0) {
+	return;
+      }
+
+      for (map<string, MatlabMatrix>::iterator iter = _instance->final_outputs.begin();
+	   iter != _instance->final_outputs.end(); iter++) {
+	const string& name = (*iter).first;
+	const VariableType type = GetVariableType(name);
+	
+	if (type == PARTIAL_VARIABLE_ROWS || type == PARTIAL_VARIABLE_COLS) {
+	  return;
+	}
+	
+	if (_instance->output_counts.find(name) == _instance->output_counts.end()) {
+	  _instance->output_counts[name] = output.indices.size();
+	} else {
+	  _instance->output_counts[name] = _instance->output_counts[name] + output.indices.size();
+	}
+	
+	if (_instance->output_indices.find(name) == _instance->output_indices.end()) {
+	  _instance->output_indices[name] = output.indices;
+	} else {
+	  _instance->output_indices[name].insert(_instance->output_indices[name].end(), 
+						 output.indices.begin(), 
+						 output.indices.end());
+	}
+	
+	if (_instance->output_counts[name] >= _checkpoint_interval) {
+	  LOG(INFO) << "***********************************************";
+	  LOG(INFO) << "Checkpointing output variable: " << name;
+	  LOG(INFO) << "***********************************************";
+	  
+	  SaveTemporaryOutput(name + "_checkpoint", (*iter).second);
+	  SaveTemporaryOutput(name + "_checkpoint_indices", MatlabMatrix(_instance->output_indices[name]));
+	  _instance->output_counts[name] = 0;
+	}
+      }
+    }
+
     void Cesium::HandleJobCompleted(const JobOutput& output, const int& node) {
       LOG(INFO) << "Job completed on node: " << node;
-#if 0
-      map<string, VariableType> variable_types = GetOutputVariableTypes(output.command);
-#endif
+
       // Synchronized access with the accessor routines in the main loop
       // below.
       _instance->job_completion_mutex.lock(); {
@@ -388,6 +453,7 @@ namespace slib {
 	  _instance->completed_indices[output.indices[i]] = true;
 	  _instance->pending_indices.erase(output.indices[i]);
 	}
+	
 	LOG(INFO) << "Node " << node << " output indices: " << output_indices_list << "]";
 	for (map<string, MatlabMatrix>::const_iterator it = output.variables.begin(); 
 	     it != output.variables.end(); 
@@ -396,94 +462,85 @@ namespace slib {
 	  const MatlabMatrix matrix = (*it).second;
 	  const Pair<int> dimensions = matrix.GetDimensions();
 	  VLOG(1) << "Found output: " << name << " (" << dimensions.x << " x " << dimensions.y << ")";
-#if 0
-	  if (variable_types.find(name) != variable_types.end()) {	
-	    if (variable_types[name] == slib::mpi::PARTIAL_VARIABLE_ROWS
-		|| variable_types[name] == slib::mpi::PARTIAL_VARIABLE_COLS) {
-	      // Save current outputs and output indices.
-	      final_outputs[name].Merge(matrix);
-	      partial_output_indices[name].insert(partial_output_indices[name].end(), 
-						  output.indices.begin(), output.indices.end());
-	      // Check to see if the current size of the matrix is above the chunk size.
-	      if (partial_output_indices[name].size() >= FLAGS_partial_variable_chunk_size) {
-		LOG(INFO) << "***********************************************";
-		LOG(INFO) << "Saving chunk for partial variable: " << name;
-		LOG(INFO) << "***********************************************";
-		System::ExecuteSystemCommand("mkdir -p " + FLAGS_temporary_directory + "/" + name);
-		SaveOutput(StringUtils::StringPrintf("%s/%d", name.c_str(), partial_output_unique_int),
-			   final_outputs[name], true);
-		SaveOutputMetadata(StringUtils::StringPrintf("%s/%s/%d.ind", FLAGS_temporary_directory.c_str(),
-							     name.c_str(), partial_output_unique_int),
-				   partial_output_indices[name]);
-		partial_output_indices[name].clear();
-		final_outputs[name] = MatlabMatrix();
-		partial_output_unique_int++;
-	      }
-	    } else if (variable_types[name] == slib::mpi::DSWORK_COLUMN) {
-	      if (processors_completed_one.size() == 0) {
-		const string remote_directory 
-		  = StringUtils::Replace(working_host + ":", FLAGS_working_directory + "/" + name, "");
-		if (working_host == node_hostname || FLAGS_disable_remote_copy) {
-		  System::ExecuteSystemCommand("rm -rf " + remote_directory);
-		  System::ExecuteSystemCommand("mkdir -p " + remote_directory);
-		} else {
-		  System::ExecuteSystemCommand("ssh " + working_host + " rm -rf " + remote_directory);
-		  System::ExecuteSystemCommand("ssh " + working_host + " mkdir -p " + remote_directory);
-		}
-	      }
-	      for (int col = 0; col < (int) output.indices.size(); col++) {
-		MatlabMatrix column(slib::util::MATLAB_STRUCT, Pair<int>(1, 1));
-		vector<int> rows;
-		for (int row = 0; row < dimensions.x; row++) {
-		  if (output.indices[col] >= dimensions.y) {
-		    LOG(WARNING) << "No output data was found in column: " << output.indices[col];
-		    continue;
-		  }
-		  
-		  const MatlabMatrix entry = matrix.GetCell(row, output.indices[col]);
-		  if (entry.GetMatrixType() != slib::util::MATLAB_NO_TYPE && entry.GetNumberOfElements() > 0) {
-		    rows.push_back(row+1);
-		    column.SetStructField(StringUtils::StringPrintf("data%d", row+1), entry);
-		  }
-		}
-		if (rows.size() == 0) {
-		  VLOG(1) << "No output data was found in column: " << output.indices[col];
-		  continue;
-		}
-		
-		column.SetStructField("contents", MatlabMatrix(rows, false));
-		
-		if (output.HasInput("binarydetections")) {
-		  SaveOutput(StringUtils::StringPrintf("%s/%d", name.c_str(), output.indices[col]+1), 
-			     column, false, false, true);
-		} else {
-#if 0
-		  SaveOutput(StringUtils::StringPrintf("%s/%d", name.c_str(), output.indices[col]+1), 
-			     column, false, true);
-#else
-		  SaveOutput(StringUtils::StringPrintf("%s/%d", name.c_str(), output.indices[col]+1), 
-			     column, false, false);
-#endif
-		}
-	      }
-	    } else {
-	      _instance->final_outputs[name].Merge(matrix);
-	    }
-	  } else {
-#endif
+
+	  if (!HandleSpecialVariable(output, matrix, name, GetVariableType(name))) {
 	    _instance->final_outputs[name].Merge(matrix);
-#if 0
 	  }
-#endif
 	}
 	_instance->available_processors.push_back(node);
 	_instance->processors_completed_one[node] = true;
-#if 0
+
 	CheckpointOutputFiles(output);
-#endif
       } 
       _instance->job_completion_mutex.unlock();
-}
+    }
+
+    bool Cesium::HandleSpecialVariable(const JobOutput& output, const MatlabMatrix& matrix,
+				       const string& name, const VariableType& type) {
+      const Pair<int> dimensions = matrix.GetDimensions();
+
+      if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+	// Save current outputs and output indices.
+	_instance->final_outputs[name].Merge(matrix);
+	_instance->partial_output_indices[name].insert(_instance->partial_output_indices[name].end(), 
+						       output.indices.begin(), output.indices.end());
+
+	// Check to see if the current size of the matrix is above the chunk size.
+	if (_instance->partial_output_indices[name].size() >= FLAGS_cesium_partial_variable_chunk_size) {
+	  LOG(INFO) << "***********************************************";
+	  LOG(INFO) << "Saving chunk for partial variable: " << name;
+	  LOG(INFO) << "***********************************************";
+
+	  System::ExecuteSystemCommand("mkdir -p " + FLAGS_cesium_temporary_directory + "/" + name);
+	  SaveTemporaryOutput(StringUtils::StringPrintf("%s/%d", name.c_str(), _instance->partial_output_unique_int),
+			      _instance->final_outputs[name]);
+
+	  _instance->partial_output_indices[name].clear();
+	  _instance->final_outputs[name] = MatlabMatrix();
+	  _instance->partial_output_unique_int++;
+	}
+	return true;
+      } else if (type == slib::mpi::DSWORK_COLUMN) {
+	if (_instance->processors_completed_one.size() == 0) {
+	  const string directory = FLAGS_cesium_working_directory + "/" + name;
+	  System::ExecuteSystemCommand("rm -rf " + directory);
+	  System::ExecuteSystemCommand("mkdir -p " + directory);
+	}
+
+	for (int col = 0; col < (int) output.indices.size(); col++) {
+	  MatlabMatrix column(slib::util::MATLAB_STRUCT, Pair<int>(1, 1));
+	  vector<int> rows;
+	  for (int row = 0; row < dimensions.x; row++) {
+	    if (output.indices[col] >= dimensions.y) {
+	      LOG(WARNING) << "No output data was found in column: " << output.indices[col];
+	      continue;
+	    }
+	    
+	    const MatlabMatrix entry = matrix.GetCell(row, output.indices[col]);
+	    if (entry.GetMatrixType() != slib::util::MATLAB_NO_TYPE && entry.GetNumberOfElements() > 0) {
+	      rows.push_back(row+1);
+	      column.SetStructField(StringUtils::StringPrintf("data%d", row+1), entry);
+	    }
+	  }
+	  if (rows.size() == 0) {
+	    VLOG(1) << "No output data was found in column: " << output.indices[col];
+	    continue;
+	  }
+	  
+	  column.SetStructField("contents", MatlabMatrix(rows, false));
+
+	  const string filename = StringUtils::StringPrintf("%s/%s/%d.mat", 
+							    FLAGS_cesium_working_directory.c_str(),
+							    name.c_str(), output.indices[col]+1);
+	  if (!matrix.SaveToBinaryFile(filename)) {
+	    LOG(ERROR) << "Could not save variable piece to file: " << filename;
+	  }
+	}
+	return true;
+      }
+
+      return false;
+    }
     
   }  // namespace mpi
 }  // namespace slib
