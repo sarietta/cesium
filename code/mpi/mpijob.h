@@ -44,13 +44,18 @@ namespace slib {
       std::vector<int> indices;
 
       std::map<std::string, slib::util::MatlabMatrix> variables;
+      std::map<std::string, VariableType> variable_types;
 
       const slib::util::MatlabMatrix& GetInputByName(const std::string& name) const; 
       bool HasInput(const std::string& name) const; 
 
+      VariableType GetVariableType(const std::string& variable_name) const;
+      void SetVariableType(const std::string& variable_name, const VariableType& type);
+
       ~JobData() {
 	indices.clear();
 	variables.clear();
+	variable_types.clear();
       }
     };
 

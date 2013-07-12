@@ -154,9 +154,10 @@ int main(int argc, char** argv) {
       FLAGS_cesium_intelligent_parameters = false;
 
       instance->SetBatchSize(1);
-      instance->SetOutputVariableType("output", slib::mpi::PARTIAL_VARIABLE_COLS);
 
       JobOutput output;
+      output.SetVariableType("output", slib::mpi::PARTIAL_VARIABLE_COLS);
+
       instance->ExecuteJob(job, &output);
       VLOG(1) << "\n\nOUTPUT :: TestFunction3";
       ShowVariables(output.variables);

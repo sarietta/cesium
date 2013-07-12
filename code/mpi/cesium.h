@@ -108,14 +108,6 @@ namespace slib {
       // completed.
       void Finish();
 
-      // These two functions allow you to specify the types of the
-      // inputs and outputs. You can omit these if your variables are
-      // just normal matrices and don't need special consideration.
-      //
-      // Note: These must be set before EACH call to an Execute* method.
-      void SetOutputVariableType(const std::string& name, const VariableType& type);
-      void SetInputVariableType(const std::string& name, const VariableType& type);
-
       bool ExecuteJob(const JobDescription& job, JobOutput* output);
 #if 0
       void ExecuteKernel(const Kernel& kernel, const JobDescription& job, JobOutput* output);
@@ -144,7 +136,8 @@ namespace slib {
       void SetParametersIntelligently();
 
       // Checks the variable types that were specified for the current
-      // job via the Set*VariableType methods.
+      // job via the field variable_types in JobDescription and
+      // JobOutput passed to Execute*.
       VariableType GetInputVariableType(const std::string& variable_name) const;
       VariableType GetOutputVariableType(const std::string& variable_name) const;
 

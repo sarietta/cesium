@@ -167,6 +167,8 @@ namespace slib {
       JobDescription mutable_job = job;
 
       _instance.reset(new CesiumExecutionInstance());
+      _instance->input_variable_types = job.variable_types;
+      _instance->output_variable_types = output->variable_types;
             
       const int pid = getpid();
       if (FLAGS_logtostderr) {
@@ -399,18 +401,6 @@ namespace slib {
 
     VariableType Cesium::GetOutputVariableType(const string& variable_name) const {
       return GetVariableType(_instance->output_variable_types, variable_name);
-    }
-
-    void Cesium::SetInputVariableType(const string& variable_name, const VariableType& type) {
-      if (_instance.get() != NULL) {
-	_instance->input_variable_types[variable_name] = type;
-      }
-    }
-
-    void Cesium::SetOutputVariableType(const string& variable_name, const VariableType& type) {
-      if (_instance.get() != NULL) {
-	_instance->output_variable_types[variable_name] = type;
-      }
     }
 
     void Cesium::SaveTemporaryOutput(const string& name, const MatlabMatrix& matrix) const {
