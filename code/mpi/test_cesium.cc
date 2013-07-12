@@ -71,7 +71,7 @@ void TestFunction3(const JobDescription& job, JobOutput* output) {
  
   output->indices = job.indices;
 
-  MatlabMatrix matrix(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, 3));
+  MatlabMatrix matrix(slib::util::MATLAB_CELL_ARRAY, Pair<int>(3, 1));
   matrix.SetCell(0, MatlabMatrix("CELL 0"));
   matrix.SetCell(1, MatlabMatrix("CELL 1"));
   matrix.SetCell(2, MatlabMatrix("CELL 2"));
