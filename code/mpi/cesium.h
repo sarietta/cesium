@@ -76,6 +76,11 @@ namespace slib {
       // Holds the variable types.
       std::map<std::string, VariableType> input_variable_types;
       std::map<std::string, VariableType> output_variable_types;
+      
+      // For input partial variables. This map allows us to postpone
+      // loading each part of the partial variable until we execute
+      // the job.
+      std::map<std::string, std::pair<slib::util::MatlabMatrix, FILE*> > partial_variables;
     };  // struct CesiumExecutionInstance
 
     class Cesium {
@@ -107,6 +112,26 @@ namespace slib {
       // This method should be called when all processes are
       // completed.
       void Finish();
+
+      // This is really a helper function because you are not required
+      // to load variables via Cesium. You can load them yourself and
+      // simply specify them in the JobDescription you pass to
+      // Execute*, but this function will take care of loading
+      // non-standard VariableTypes for you. This will always look for
+      // the input variable in the FLAGS_cesium_working_directory. If
+      // you want to load an absolute path use
+      // LoadInputVariableWithAbsolutePath instead.
+      //
+      // You DO NOT need to specify the correct VariableType in the
+      // JobDescription for the corresponding variable.
+      //
+      // TODO(sean): This copies the return value. Should pointer-ize
+      // this method for speed.
+      slib::util::MatlabMatrix LoadInputVariable(const std::string& variable_name, 
+						 const VariableType& type = COMPLETE_VARIABLE);
+      slib::util::MatlabMatrix LoadInputVariableWithAbsolutePath(const std::string& variable_name, 
+								 const std::string& filename, 
+								 const VariableType& type = COMPLETE_VARIABLE);
 
       bool ExecuteJob(const JobDescription& job, JobOutput* output);
 #if 0
@@ -152,6 +177,12 @@ namespace slib {
       // you should save/merge the variable as you normally would.
       bool HandleSpecialVariable(const JobOutput& output, const slib::util::MatlabMatrix& matrix,
 				 const std::string& name, const VariableType& type);
+
+      // This function checks to see if there is an existing instance
+      // and if not it creates one. Currently there will only ever be
+      // a single instance in use at a time so really the instance
+      // member variable should be a singleton but it isn't.
+      void InitializeInstance();
 
       int _rank;
       int _size;

@@ -15,7 +15,7 @@ OBJS	= $(filter-out test%, $(SRCS:.cc=.o))
 TOBJS	= $(filter test%, $(SRCS:.cc=.o))
 TESTS	= $(subst .cc,,$(filter test%, $(SRCS)))
 EXTOBJS = 	../util/matlab.o ../svm/detector.o ../util/timer.o ../image/feature_pyramid.o \
-		../image/feature_computer.o ../string/stringutils.o ../util/system.o
+		../image/feature_computer.o ../string/stringutils.o ../util/system.o ../util/directory.o
 
 %.o:%.cc
 	$(CC) $(CC_FLAGS) -c $< 

@@ -5,8 +5,10 @@
 #include <map>
 #include <string>
 #include <string/stringutils.h>
+#include <svm/detector.h>
 #include <util/matlab.h>
 #include <util/system.h>
+#include <util/timer.h>
 #include <vector>
 
 DEFINE_string(cesium_working_directory, "/srv/cluster-fs", 
@@ -33,9 +35,13 @@ DEFINE_int32(cesium_debug_mode_process_single_index, -1,
 	     "Useful if a job is failing on a specific index.");
 
 using slib::StringUtils;
+using slib::svm::Detector;
 using slib::util::MatlabMatrix;
 using slib::util::System;
+using slib::util::Timer;
+using std::make_pair;
 using std::map;
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -156,6 +162,12 @@ namespace slib {
     void __HandleJobCompletedWrapper__(const JobOutput& output, const int& node) {
       Cesium::GetInstance()->HandleJobCompleted(output, node);
     }
+
+    void Cesium::InitializeInstance() {
+      if (_instance.get() == NULL) {
+	_instance.reset(new CesiumExecutionInstance());
+      }
+    }
     
     bool Cesium::ExecuteJob(const JobDescription& job, JobOutput* output) {
       LOG(INFO) << "Total processors: " << _size - 1;
@@ -166,7 +178,7 @@ namespace slib {
 
       JobDescription mutable_job = job;
 
-      _instance.reset(new CesiumExecutionInstance());
+      InitializeInstance();
       _instance->input_variable_types = job.variable_types;
       _instance->output_variable_types = output->variable_types;
             
@@ -280,6 +292,45 @@ namespace slib {
 	    }
 	    
 	    mutable_job.indices = indices;
+
+	    // Handle partial variables that were loaded via the
+	    // LoadInputVariable method.
+	    for (map<string, pair<MatlabMatrix, FILE*> >::const_iterator iter = _instance->partial_variables.begin();
+		 iter != _instance->partial_variables.end(); iter++) {
+	      const string name = (*iter).first;
+
+	      // TODO(sean): This is WAY too specific to the silicon
+	      // project. This needs to be made more general in the
+	      // near future.
+	      const int32 feature_dimensions = 
+		Detector::GetFeatureDimensions(Detector::GetDefaultDetectionParameters());
+	      scoped_array<float> data(new float[feature_dimensions]);
+	      
+	      mutable_job.variables[name] = _instance->partial_variables[name].first;
+	      FILE* fid = _instance->partial_variables[name].second;
+	      fseek(fid, 0, SEEK_SET);
+	      
+	      long int seek = 0;	      
+	      if (FLAGS_v >= 1) {
+		  Timer::Start();
+	      }
+	      for (int k = 0; k < (int) indices.size(); k++) {
+		const int row = indices[k];
+		for (int col = 0; col < (int) mutable_job.variables[name].GetDimensions().y; col++) {
+		  MatlabMatrix cell;
+		  mutable_job.variables[name].GetMutableCell(row, col, &cell);
+		  for (int kk = 0; kk < cell.GetNumberOfElements(); kk++) {
+		    const long int feature_index = (long int) cell.GetStructField("features", kk).GetScalar();
+		    fseek(fid, (feature_index - seek) * sizeof(float) * feature_dimensions, SEEK_CUR);
+		    fread(data.get(), sizeof(float), feature_dimensions, fid);
+		    
+		    cell.SetStructField("features", kk, MatlabMatrix(data.get(), 1, feature_dimensions));
+		    seek = feature_index + 1;
+		  }
+		}
+	      }
+	      VLOG(1) << "Elapsed time to load partial input [" << name << "]: " << Timer::Stop();
+	    }
 	    
 	    // Run the job.
 	    LOG(INFO) << "Starting job " << mutable_job.command << " on node " << node << ": " << indices_list;
@@ -301,6 +352,9 @@ namespace slib {
       }
       
       output->variables = _instance->final_outputs;
+
+      // This kills the current instance so that any modifications to
+      // an "instance" will effectively create a new one.
       _instance.reset(NULL);
 
       return true;
@@ -549,6 +603,39 @@ namespace slib {
       }
 
       return false;
+    }
+
+    MatlabMatrix Cesium::LoadInputVariable(const string& variable_name, const VariableType& type) {
+      return Cesium::LoadInputVariableWithAbsolutePath(variable_name, 
+						       FLAGS_cesium_working_directory + "/" + variable_name + ".mat",
+						       type);
+    }
+
+    MatlabMatrix Cesium::LoadInputVariableWithAbsolutePath(const std::string& variable_name, 
+							   const string& filename, 
+							   const VariableType& type) {
+      InitializeInstance();
+      
+      LOG(INFO) << "Loading input: " << filename;      
+      MatlabMatrix input = MatlabMatrix::LoadFromFile(filename);
+	
+      Pair<int> dimensions = input.GetDimensions();
+      VLOG(2) << "Input dimensions: " << dimensions.x << " x " << dimensions.y;
+		
+      if (input.GetMatrixType() == slib::util::MATLAB_NO_TYPE) {
+	LOG(ERROR) << "Could not read input file: " << filename;
+	return input;
+      }
+	
+      // If it's a partial variable, wait to load it when the job
+      // starts so we don't have to keep the whole thing in memory.
+      if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
+	const string feature_filename = StringUtils::Replace(".mat", filename, ".features.bin");
+	_instance->partial_variables[variable_name] = make_pair(input, fopen(feature_filename.c_str(),"rb"));
+	_instance->input_variable_types[variable_name] = slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE;
+      }
+
+      return input;
     }
     
   }  // namespace mpi
