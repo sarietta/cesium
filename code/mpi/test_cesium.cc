@@ -81,7 +81,7 @@ void TestFunction2(const JobDescription& job, JobOutput* output) {
 }
 
 void TestFunction3_1(const JobDescription& job, JobOutput* output) {
-  VLOG(1) << "\n\nTestFunction3";
+  VLOG(1) << "\n\nTestFunction3_1";
   ShowVariables(job.variables);
  
   output->indices = job.indices;
@@ -100,6 +100,9 @@ void TestFunction3_1(const JobDescription& job, JobOutput* output) {
 }
 
 void TestFunction3_2(const JobDescription& job, JobOutput* output) {
+  VLOG(1) << "\n\nTestFunction3_2";
+  ShowVariables(job.variables);
+
   output->indices = job.indices;
   output->variables = job.variables;
 }
@@ -199,6 +202,7 @@ int main(int argc, char** argv) {
       JobDescription job2;
       job2.command = "TestFunction3_2";
 
+      FLAGS_cesium_working_directory = "/tmp";
       MatlabMatrix partial_variable = instance->LoadInputVariable("output", 
 								  slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE);
       job2.variables["output"] = partial_variable;
