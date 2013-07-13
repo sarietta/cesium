@@ -104,7 +104,11 @@ void TestFunction3_2(const JobDescription& job, JobOutput* output) {
   ShowVariables(job.variables);
 
   output->indices = job.indices;
-  output->variables = job.variables;
+
+  MatlabMatrix matrix(slib::util::MATLAB_CELL_ARRAY, Pair<int>(3, 1));
+  matrix.SetCell(job.indices[0], job.GetInputByName("output").GetCell(job.indices[0]));
+
+  output->variables["output"] = matrix;
 }
 
 bool TEST_MATLAB_MATRIX_EQUAL(const MatlabMatrix& A, const MatlabMatrix& B) {
