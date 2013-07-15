@@ -354,6 +354,30 @@ namespace slib {
       
       output->variables = _instance->final_outputs;
 
+      // Save any partial variables that were not completed.
+      for (map<string, VariableType>::const_iterator iter = _instance->output_variable_types.begin();
+	   iter != _instance->output_variable_types.end(); iter++) {
+	const string name = (*iter).first;
+	const VariableType type = (*iter).second;
+
+	if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+	  if (_instance->partial_output_indices[name].size() > 0) {
+	    LOG(INFO) << "***********************************************";
+	    LOG(INFO) << "Saving chunk for partial variable: " << name;
+	    LOG(INFO) << "***********************************************";
+
+	    System::ExecuteSystemCommand("mkdir -p " + FLAGS_cesium_temporary_directory + "/" + name);
+	    SaveTemporaryOutput(StringUtils::StringPrintf("%s/%d", name.c_str(), 
+							  _instance->partial_output_unique_int), 
+				_instance->final_outputs[name]);
+
+	    _instance->partial_output_indices[name].clear();
+	    _instance->final_outputs[name] = MatlabMatrix();
+	    _instance->partial_output_unique_int++;
+	  }
+	}
+      }
+
       // This kills the current instance so that any modifications to
       // an "instance" will effectively create a new one.
       _instance.reset(NULL);
