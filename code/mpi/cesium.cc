@@ -303,8 +303,7 @@ namespace slib {
 	      // project. This needs to be made more general in the
 	      // near future.
 	      const int32 feature_dimensions = 
-		9;
-	      //Detector::GetFeatureDimensions(Detector::GetDefaultDetectionParameters());
+		Detector::GetFeatureDimensions(Detector::GetDefaultDetectionParameters());
 	      scoped_array<float> data(new float[feature_dimensions]);
 	      
 	      mutable_job.variables[name] = _instance->partial_variables[name].first;
