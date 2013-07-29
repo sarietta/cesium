@@ -166,6 +166,8 @@ namespace slib {
     void Cesium::InitializeInstance() {
       if (_instance.get() == NULL) {
 	_instance.reset(new CesiumExecutionInstance());
+	_instance->total_indices = 0;
+	_instance->partial_output_unique_int = 0;
       }
     }
     

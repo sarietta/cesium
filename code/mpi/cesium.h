@@ -47,7 +47,7 @@ namespace slib {
     };
 
     struct CesiumExecutionInstance {
-      int total_indices = 0;
+      int total_indices;
 
       // A list of available node ids.
       std::vector<int> available_processors;
@@ -61,7 +61,7 @@ namespace slib {
       // A list of processors that have completed at least one job.
       std::map<int, bool> processors_completed_one;
       
-      int partial_output_unique_int = 0;
+      int partial_output_unique_int;
       // Keeps track of partial outputs.
       std::map<std::string, std::vector<int> > partial_output_indices;
       

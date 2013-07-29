@@ -23,6 +23,18 @@ set(CMAKE_MODULE_PATH ./cmake)
 
 # Required libraries
 
+## Boost
+find_package(Boost COMPONENTS program_options REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+
+## X11 (not required)
+find_package(X11)
+if (X11_FOUND)
+  include_directories(${X11_INCLUDE_DIR})
+else ()
+  set_property (GLOBAL PROPERTY COMPILE_DEFINITIONS cimg_display=0)
+endif ()
+
 ## Eigen3
 if(DEFINED ENV{EIGEN3_INCLUDE_DIR})
   include_directories($ENV{EIGEN3_INCLUDE_DIR})
