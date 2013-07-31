@@ -1,0 +1,14 @@
+Cesium
+============================================
+
+Immediate
+
++ Start jobs in parallel. Currently jobs are scheduled in a serial fashion.
++ Trap MPI faults and simply flag nodes as "bad" so that jobs can be rescheduled automatically.
++ Implement cached variables. Should use checksums (boost has routines) to make this efficient and accurate.
+
+Longer Term
+
++ Implement node-aware variable transfers. If N nodes are running on the same machine, and they all receive the same variables, no need to transfer the entire variable to each node.
++ Implement index-aware variable transfers. Currently an entire variable ends up being transmitted to a node, but rarely (if ever) does the node need the entire thing. Usually just some subset of the variable is needed.
++ Implement load-balancing. This would require the ability to learn the running characteristics of each node to balance jobs effectively. Currently we get some load-balancing via batching, but it could be improved.
