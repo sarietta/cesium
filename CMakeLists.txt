@@ -14,6 +14,7 @@ else(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++0x")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -std=c++0x")
 add_definitions(-DSKIP_OPENCV)
 
 include_directories(./thirdparty/CImg)
