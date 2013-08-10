@@ -278,7 +278,7 @@ namespace slib {
 	      }
 	    }
 	    
-	    indices_list = StringUtils::StringPrintf("%s]", indices_list.c_str());
+	    indices_list = StringUtils::StringPrintf("%s]", indices_list.c_str());	  
 	    
 	    // In the case that the node is not assigned any indices,
 	    // push it to the bottom of the stack so the next node gets
@@ -308,6 +308,10 @@ namespace slib {
 	      
 	      mutable_job.variables[name] = _instance->partial_variables[name].first;
 	      FILE* fid = _instance->partial_variables[name].second;
+	      if (!fid) {
+		LOG(ERROR) << "Attempted to load a partial variable from a bad file descriptor: " + name;
+		continue;
+	      }
 	      fseek(fid, 0, SEEK_SET);
 	      
 	      long int seek = 0;	      
