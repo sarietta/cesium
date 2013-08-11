@@ -140,6 +140,8 @@ namespace slib {
       }
       
       if (_rank == MPI_ROOT_NODE) {	
+	// Create directories as needed.
+	System::ExecuteSystemCommand("mkdir -p " + FLAGS_cesium_temporary_directory);
 	return CesiumMasterNode;
       } else {
 	ComputeNodeLoop();
