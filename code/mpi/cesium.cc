@@ -56,7 +56,8 @@ namespace slib {
       , _size(-1)
       , _hostname("")
       , _batch_size(5)
-      , _checkpoint_interval(-1) {}
+      , _checkpoint_interval(-1)
+      , _stripped_feature_dimensions(-1) {}
     
     Cesium* Cesium::GetInstance() {
       if (_singleton.get() == NULL) {
@@ -140,6 +141,8 @@ namespace slib {
       }
       
       if (_rank == MPI_ROOT_NODE) {	
+	// Create directories as needed.
+	System::ExecuteSystemCommand("mkdir -p " + FLAGS_cesium_temporary_directory);
 	return CesiumMasterNode;
       } else {
 	ComputeNodeLoop();
@@ -166,6 +169,8 @@ namespace slib {
     void Cesium::InitializeInstance() {
       if (_instance.get() == NULL) {
 	_instance.reset(new CesiumExecutionInstance());
+	_instance->total_indices = 0;
+	_instance->partial_output_unique_int = 0;
       }
     }
     
@@ -179,8 +184,18 @@ namespace slib {
       JobDescription mutable_job = job;
 
       InitializeInstance();
-      _instance->input_variable_types = job.variable_types;
-      _instance->output_variable_types = output->variable_types;
+      for (map<string, VariableType>::const_iterator iter = job.variable_types.begin(); 
+	   iter != job.variable_types.end(); iter++) {
+	const string name = (*iter).first;
+	const VariableType type = (*iter).second;
+	_instance->input_variable_types[name] = type;
+      }
+      for (map<string, VariableType>::const_iterator iter = output->variable_types.begin(); 
+	   iter != output->variable_types.end(); iter++) {
+	const string name = (*iter).first;
+	const VariableType type = (*iter).second;
+	_instance->output_variable_types[name] = type;
+      }
             
       const int pid = getpid();
       if (FLAGS_logtostderr) {
@@ -278,7 +293,7 @@ namespace slib {
 	      }
 	    }
 	    
-	    indices_list = StringUtils::StringPrintf("%s]", indices_list.c_str());
+	    indices_list = StringUtils::StringPrintf("%s]", indices_list.c_str());	  
 	    
 	    // In the case that the node is not assigned any indices,
 	    // push it to the bottom of the stack so the next node gets
@@ -298,39 +313,76 @@ namespace slib {
 	    for (map<string, pair<MatlabMatrix, FILE*> >::const_iterator iter = _instance->partial_variables.begin();
 		 iter != _instance->partial_variables.end(); iter++) {
 	      const string name = (*iter).first;
-
-	      // TODO(sean): This is WAY too specific to the silicon
-	      // project. This needs to be made more general in the
-	      // near future.
-	      const int32 feature_dimensions = 
-		Detector::GetFeatureDimensions(Detector::GetDefaultDetectionParameters());
-	      scoped_array<float> data(new float[feature_dimensions]);
-	      
-	      mutable_job.variables[name] = _instance->partial_variables[name].first;
-	      FILE* fid = _instance->partial_variables[name].second;
-	      fseek(fid, 0, SEEK_SET);
-	      
-	      long int seek = 0;	      
-	      if (FLAGS_v >= 1) {
-		  Timer::Start();
+	      const map<string, VariableType>::const_iterator type_iter = _instance->input_variable_types.find(name);
+	      if (type_iter == _instance->input_variable_types.end()) {
+		LOG(ERROR) << "Special variable does not have a type defined: " << name;
+		continue;
 	      }
-	      for (int k = 0; k < (int) indices.size(); k++) {
-		const int row = indices[k];
-		for (int col = 0; col < (int) mutable_job.variables[name].GetDimensions().y; col++) {
-		  MatlabMatrix cell;
-		  mutable_job.variables[name].GetMutableCell(row, col, &cell);
-		  for (int kk = 0; kk < cell.GetNumberOfElements(); kk++) {
-		    const long int feature_index = (long int) cell.GetStructField("features", kk).GetScalar();
-		    fseek(fid, (feature_index - seek) * sizeof(float) * feature_dimensions, SEEK_CUR);
-		    fread(data.get(), sizeof(float), feature_dimensions, fid);
-		    
-		    cell.SetStructField("features", kk, MatlabMatrix(data.get(), 1, feature_dimensions));
-		    seek = feature_index + 1;
+
+	      const VariableType type = (*type_iter).second;
+
+	      if (FLAGS_v >= 1) {
+		Timer::Start();
+	      }
+
+	      if (type == PARTIAL_VARIABLE_ROWS) {
+		const MatlabMatrix& variable = _instance->partial_variables[name].first;
+		const Pair<int> dimensions = variable.GetDimensions();
+		if (dimensions.x <= 1) {
+		  LOG(WARNING) << "You specfied variable [" << name << "] as a partial row variable "
+			       << "but it has <= 1 rows";
+		}
+
+		MatlabMatrix partial(variable.GetMatrixType(), dimensions);
+		for (int k = 0; k < (int) indices.size(); k++) {
+		  const int index = indices[k];
+		  for (int kk = 0; kk < dimensions.y; kk++) {
+		    partial.Set(index, kk, variable.Get(index, kk));
+		  }
+		}
+
+		mutable_job.variables[name] = partial;
+	      } else if (type == FEATURE_STRIPPED_ROW_VARIABLE) {
+		// TODO(sean): This is WAY too specific to the silicon
+		// project. This needs to be made more general in the
+		// near future.
+		const int32 feature_dimensions = _stripped_feature_dimensions;
+		if (feature_dimensions < 0) {
+		  LOG(ERROR) << "You specified a FEATURE_STRIPPED_* variable but did not call "
+			     << "SetStrippedFeatureDimensions(). You MUST call this function in order "
+			     << "to use this variable type.";
+		  continue;
+		}
+		scoped_array<float> data(new float[feature_dimensions]);
+		
+		mutable_job.variables[name] = _instance->partial_variables[name].first;
+		FILE* fid = _instance->partial_variables[name].second;
+		if (!fid) {
+		  LOG(ERROR) << "Attempted to load a partial variable from a bad file descriptor: " + name;
+		  continue;
+		}
+		fseek(fid, 0, SEEK_SET);
+		
+		long int seek = 0;	      
+		for (int k = 0; k < (int) indices.size(); k++) {
+		  const int row = indices[k];
+		  for (int col = 0; col < (int) mutable_job.variables[name].GetDimensions().y; col++) {
+		    MatlabMatrix cell;
+		    mutable_job.variables[name].GetMutableCell(row, col, &cell);
+		    for (int kk = 0; kk < cell.GetNumberOfElements(); kk++) {
+		      const long int feature_index = (long int) cell.GetStructField("features", kk).GetScalar();
+		      fseek(fid, (feature_index - seek) * sizeof(float) * feature_dimensions, SEEK_CUR);
+		      fread(data.get(), sizeof(float), feature_dimensions, fid);
+		      
+		      cell.SetStructField("features", kk, MatlabMatrix(data.get(), 1, feature_dimensions));
+		      seek = feature_index + 1;
+		    }
 		  }
 		}
 	      }
+
 	      VLOG(1) << "Elapsed time to load partial input [" << name << "]: " << Timer::Stop();
-	    }
+	    }	  
 	    
 	    // Run the job.
 	    LOG(INFO) << "Starting job " << mutable_job.command << " on node " << node << ": " << indices_list;
@@ -656,7 +708,10 @@ namespace slib {
       if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
 	const string feature_filename = StringUtils::Replace(".mat", filename, ".features.bin");
 	_instance->partial_variables[variable_name] = make_pair(input, fopen(feature_filename.c_str(),"rb"));
-	_instance->input_variable_types[variable_name] = slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE;
+	_instance->input_variable_types[variable_name] = type;
+      } else if (type == slib::mpi::PARTIAL_VARIABLE_ROWS) {
+	_instance->partial_variables[variable_name] = make_pair(input, (FILE*) NULL);
+	_instance->input_variable_types[variable_name] = type;
       }
 
       return input;

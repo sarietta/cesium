@@ -11,27 +11,32 @@ namespace slib {
 
     bool System::ExecuteSystemCommand(const string& cmd, string* result) {
       VLOG(2) << "System Command Executing: " << cmd;
-      FILE* pipe = popen(cmd.c_str(), "r");
-      if (!pipe) {
-	string error(strerror(errno));
-	fprintf(stderr, "%s", error.c_str());
-	LOG(ERROR) << error; 
-	return false;
-      }
-      char buffer[128];
-      string output = "";
-      while(!feof(pipe)) {
-	if(fgets(buffer, 128, pipe) != NULL) {
-	  output += buffer;
+      // If result is NULL then we can just use system.
+      if (result == NULL) {
+	return (system(cmd.c_str()) != -1);
+      } else {
+	FILE* pipe = popen(cmd.c_str(), "r");
+	if (!pipe) {
+	  string error(strerror(errno));
+	  fprintf(stderr, "%s", error.c_str());
+	  LOG(ERROR) << error; 
+	  return false;
 	}
+	char buffer[128];
+	string output = "";
+	while(!feof(pipe)) {
+	  if(fgets(buffer, 128, pipe) != NULL) {
+	    output += buffer;
+	  }
+	}
+	pclose(pipe);
+	
+	if (result != NULL) {
+	  result->swap(output);
+	}
+	
+	return true;
       }
-      pclose(pipe);
-
-      if (result != NULL) {
-	result->swap(output);
-      }
-
-      return true;
     }
     
   }  // namespace util

@@ -111,6 +111,19 @@ void TestFunction3_2(const JobDescription& job, JobOutput* output) {
   output->variables["output"] = matrix;
 }
 
+void TestFunction4(const JobDescription& job, JobOutput* output) {
+  VLOG(1) << "\n\nTestFunction4";
+  ShowVariables(job.variables);
+
+  output->indices = job.indices;
+  
+  MatlabMatrix matrix(slib::util::MATLAB_CELL_ARRAY, Pair<int>(4, 1));
+  const float value = job.GetInputByName("partial").GetCell(job.indices[0]).GetScalar() * 2.0f;
+  matrix.SetCell(job.indices[0], MatlabMatrix(value));
+
+  output->variables["output"] = matrix;
+}
+
 bool TEST_MATLAB_MATRIX_EQUAL(const MatlabMatrix& A, const MatlabMatrix& B) {
   return (A.Serialize() == B.Serialize());
 }
@@ -132,11 +145,12 @@ int main(int argc, char** argv) {
   CESIUM_REGISTER_COMMAND(TestFunction2);
   CESIUM_REGISTER_COMMAND(TestFunction3_1);
   CESIUM_REGISTER_COMMAND(TestFunction3_2);
+  CESIUM_REGISTER_COMMAND(TestFunction4);
 
   Cesium* instance = Cesium::GetInstance();
   if (instance->Start() == slib::mpi::CesiumMasterNode) {
     FLAGS_logtostderr = true;
-#if 0
+#if 1
     {
       JobDescription job;
       job.command = "TestFunction1";
@@ -169,6 +183,7 @@ int main(int argc, char** argv) {
       ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output_variable4"], MakeCellMatrix(4.0f)));
     }
 #endif
+#if 1
     {
       JobDescription job;
       job.command = "TestFunction3_1";
@@ -209,6 +224,7 @@ int main(int argc, char** argv) {
       FLAGS_cesium_working_directory = "/tmp";
       MatlabMatrix partial_variable = instance->LoadInputVariable("output", 
 								  slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE);
+      instance->SetStrippedFeatureDimensions(9);
       job2.variables["output"] = partial_variable;
       job2.indices.push_back(0);
       job2.indices.push_back(1);
@@ -226,6 +242,42 @@ int main(int argc, char** argv) {
 					   MakeFeatureStruct(test_feature2)));
       ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output2.variables["output"].GetCell(2), 
 					   MakeFeatureStruct(test_feature3)));
+    }
+#endif
+    {
+      JobDescription job;
+      job.command = "TestFunction4";
+      job.indices.push_back(0);
+      job.indices.push_back(1);
+      job.indices.push_back(2);
+      job.indices.push_back(3);
+      
+      MatlabMatrix partial(slib::util::MATLAB_CELL_ARRAY, Pair<int>(4, 1));
+      partial.SetCell(0, 0, MatlabMatrix(0.0f));
+      partial.SetCell(1, 0, MatlabMatrix(1.0f));
+      partial.SetCell(2, 0, MatlabMatrix(2.0f));
+      partial.SetCell(3, 0, MatlabMatrix(3.0f));
+      partial.SaveToFile("/tmp/partial.mat");
+      
+      FLAGS_cesium_working_directory = "/tmp";
+      MatlabMatrix partial_load = instance->LoadInputVariable("partial", slib::mpi::PARTIAL_VARIABLE_ROWS);
+      job.variables["partial"] = partial_load;
+      
+      FLAGS_cesium_intelligent_parameters = false;
+      instance->SetBatchSize(1);
+      
+      JobOutput output;
+      instance->ExecuteJob(job, &output);
+      VLOG(1) << "\n\nOUTPUT :: TestFunction4";
+      ShowVariables(output.variables);    
+
+      MatlabMatrix golden(slib::util::MATLAB_CELL_ARRAY, Pair<int>(4, 1));
+      golden.SetCell(0, 0, MatlabMatrix(0.0f));
+      golden.SetCell(1, 0, MatlabMatrix(2.0f));
+      golden.SetCell(2, 0, MatlabMatrix(4.0f));
+      golden.SetCell(3, 0, MatlabMatrix(6.0f));
+
+      ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(output.variables["output"], golden));      
     }
 
     instance->Finish();

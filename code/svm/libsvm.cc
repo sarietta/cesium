@@ -1,3 +1,4 @@
+#include <glog/logging.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -589,7 +590,12 @@ void Solver::Solve(int l, const QMatrix& Q, const double *p_, const schar *y_,
 		++iter;
 
 		// update alpha[i] and alpha[j], handle bounds carefully
-		
+		if (j == -1) {
+		  LOG(ERROR) << "You have hit a bug in LibSVM. We do not know how to recover correctly "
+		    "from this bug at the moment so we are going to abandon this method call "
+		    "and hope things work out for you.";
+		  return;
+		}
 		const Qfloat *Q_i = Q.get_Q(i,active_size);
 		const Qfloat *Q_j = Q.get_Q(j,active_size);
 

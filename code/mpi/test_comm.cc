@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include <util/matlab.h>
 
+DEFINE_string(matrix_file, "", "If you want to see if a particular file can be sent, specify it here.");
+
 using Eigen::MatrixXf;
 using slib::mpi::JobController;
 using slib::mpi::JobDescription;
@@ -66,13 +68,21 @@ int main(int argc, char** argv) {
     MatlabMatrix string_matrix(slib::util::MATLAB_STRING, Pair<int>(1,1));
     string_matrix.SetStringContents("!@#$%^&*()_+~QWERTYUIOP{}|ASDFGHJKL:\"ZXCVBNM<>?");
 
+    // Test other file
+    if (FLAGS_matrix_file != "") {
+      MatlabMatrix other = MatlabMatrix::LoadFromFile(FLAGS_matrix_file);
+      job.variables["other"] = other;
+    }
+
     job.variables["matrix"] = matrix;
     job.variables["cell"] = cell_matrix;
     job.variables["struct"] = struct_matrix;
     job.variables["string"] = string_matrix;
 
     JobController controller;
-    controller.StartJobOnNode(job, 1);
+    for (int i = 1; i < size; i++) {
+      controller.StartJobOnNode(job, i);
+    }
   } else {
     JobDescription job = slib::mpi::JobNode::WaitForJobData();
     LOG(INFO) << "Command: " << job.command;
@@ -82,7 +92,11 @@ int main(int argc, char** argv) {
 	 it++) {
       const string name = (*it).first;
       const MatlabMatrix matrix = (*it).second;
-      LOG(INFO) << "Input: \n==============\n" << name << "\n==============\n" << matrix << "\n\n";
+      if (name != "other") {
+	LOG(INFO) << "Input: \n==============\n" << name << "\n==============\n" << matrix << "\n\n";
+      } else {
+	LOG(INFO) << "Input: \n==============\n" << name << "\n==============\n" << matrix.GetNumberOfElements() << "\n\n";
+      }
     }
   }
 

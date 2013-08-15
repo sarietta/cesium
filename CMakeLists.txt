@@ -14,6 +14,7 @@ else(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++0x")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -std=c++0x")
 add_definitions(-DSKIP_OPENCV)
 
 include_directories(./thirdparty/CImg)
@@ -22,6 +23,18 @@ include_directories(./code)
 set(CMAKE_MODULE_PATH ./cmake)
 
 # Required libraries
+
+## Boost
+find_package(Boost COMPONENTS program_options REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+
+## X11 (not required)
+find_package(X11)
+if (X11_FOUND)
+  include_directories(${X11_INCLUDE_DIR})
+else ()
+  set_property (GLOBAL PROPERTY COMPILE_DEFINITIONS cimg_display=0)
+endif ()
 
 ## Eigen3
 if(DEFINED ENV{EIGEN3_INCLUDE_DIR})
