@@ -133,6 +133,18 @@ namespace slib {
 								 const std::string& filename, 
 								 const VariableType& type = COMPLETE_VARIABLE);
 
+      // This is kind of an odd method that you should not use at all
+      // unless you understand the FEATURE_STRIPPED_ROW_VARIABLE
+      // variable type. If you use that variable type, you MUST call
+      // this with the total number of dimensions in your features so
+      // that the system can load them correctly.
+      //
+      // TODO(sean): Implement a way for users to implement a callback
+      // for an arbitrary variable type.
+      inline void SetStrippedFeatureDimensions(const int& dimensions) {
+	_stripped_feature_dimensions = dimensions;
+      }
+
       bool ExecuteJob(const JobDescription& job, JobOutput* output);
 #if 0
       void ExecuteKernel(const Kernel& kernel, const JobDescription& job, JobOutput* output);
@@ -191,6 +203,8 @@ namespace slib {
 
       int _batch_size;
       int _checkpoint_interval;
+
+      int _stripped_feature_dimensions;
 
       static scoped_ptr<Cesium> _singleton;
       static std::map<std::string, Function> _available_commands;
