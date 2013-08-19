@@ -385,6 +385,16 @@ namespace slib {
 	}
       }
 
+      // Close the partial variables.
+      for (map<string, pair<MatlabMatrix, FILE*> >::const_iterator iter = _instance->partial_variables.begin();
+	   iter != _instance->partial_variables.end(); iter++) {
+	const string name = (*iter).first;
+	FILE* fid = _instance->partial_variables[name].second;
+	if (fid != NULL) {
+	  fclose(fid);
+	}
+      }
+
       // This kills the current instance so that any modifications to
       // an "instance" will effectively create a new one.
       _instance.reset(NULL);
