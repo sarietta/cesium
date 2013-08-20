@@ -521,10 +521,10 @@ namespace slib {
 	if (mxGetString(_matrix, characters.get(), length+1) == 0) {
 	  contents.assign(characters.get());
 	} else {
-	  LOG(WARNING) << "Couldn't find string";
+	  VLOG(1) << "Couldn't find string";
 	}
       } else {
-	LOG(WARNING) << "Attempted to access non-string matrix";
+	VLOG(1) << "Attempted to access non-string matrix";
       }
 
       return contents;
