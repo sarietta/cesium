@@ -342,6 +342,23 @@ namespace slib {
 		}
 
 		mutable_job.variables[name] = partial;
+	      } else if (type == PARTIAL_VARIABLE_COLS) {
+		const MatlabMatrix& variable = _instance->partial_variables[name].first;
+		const Pair<int> dimensions = variable.GetDimensions();
+		if (dimensions.y <= 1) {
+		  LOG(WARNING) << "You specfied variable [" << name << "] as a partial column variable "
+			       << "but it has <= 1 columns";
+		}
+
+		MatlabMatrix partial(variable.GetMatrixType(), dimensions);
+		for (int k = 0; k < (int) indices.size(); k++) {
+		  const int index = indices[k];
+		  for (int kk = 0; kk < dimensions.x; kk++) {
+		    partial.Set(kk, index, variable.Get(kk, index));
+		  }
+		}
+
+		mutable_job.variables[name] = partial;
 	      } else if (type == FEATURE_STRIPPED_ROW_VARIABLE) {
 		// TODO(sean): This is WAY too specific to the silicon
 		// project. This needs to be made more general in the
@@ -426,6 +443,16 @@ namespace slib {
 	    _instance->final_outputs[name] = MatlabMatrix();
 	    _instance->partial_output_unique_int++;
 	  }
+	}
+      }
+
+      // Close the partial variables.
+      for (map<string, pair<MatlabMatrix, FILE*> >::const_iterator iter = _instance->partial_variables.begin();
+	   iter != _instance->partial_variables.end(); iter++) {
+	const string name = (*iter).first;
+	FILE* fid = _instance->partial_variables[name].second;
+	if (fid != NULL) {
+	  fclose(fid);
 	}
       }
 
@@ -687,7 +714,7 @@ namespace slib {
 						       type);
     }
 
-    MatlabMatrix Cesium::LoadInputVariableWithAbsolutePath(const std::string& variable_name, 
+    MatlabMatrix Cesium::LoadInputVariableWithAbsolutePath(const string& variable_name, 
 							   const string& filename, 
 							   const VariableType& type) {
       InitializeInstance();
@@ -709,12 +736,29 @@ namespace slib {
 	const string feature_filename = StringUtils::Replace(".mat", filename, ".features.bin");
 	_instance->partial_variables[variable_name] = make_pair(input, fopen(feature_filename.c_str(),"rb"));
 	_instance->input_variable_types[variable_name] = type;
-      } else if (type == slib::mpi::PARTIAL_VARIABLE_ROWS) {
+      } else if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
 	_instance->partial_variables[variable_name] = make_pair(input, (FILE*) NULL);
 	_instance->input_variable_types[variable_name] = type;
       }
 
       return input;
+    }
+
+    void Cesium::SetVariableType(const string& variable_name, const MatlabMatrix& input, 
+				 const VariableType& type) {
+      InitializeInstance();
+
+      if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+	_instance->partial_variables[variable_name] = make_pair(input, (FILE*) NULL);
+	_instance->input_variable_types[variable_name] = type;
+      } else if (type == slib::mpi::COMPLETE_VARIABLE) {
+	LOG(INFO) << "You don't need to set the type for complete variables (" << variable_name << ")";
+      } else if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
+	LOG(WARNING) << "Use the method LoadInputVariable* for variable type FEATURE_STRIPPED_ROW_VARIABLE "
+		     << "(" << variable_name << ")";
+      } else {
+	LOG(WARNING) << "Don't know how to set the type for variable: " << variable_name;
+      }
     }
     
   }  // namespace mpi

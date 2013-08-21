@@ -279,6 +279,7 @@ namespace slib {
       }
 
       scoped_array<MPI_Request> request_handlers(new MPI_Request[num_variables]);
+      VLOG(1) << "Sending " << num_variables << " variables to node: " << node;
       // Allocate a buffer big enough for all of the variables.
       byte_offset = 0;
       for (int i = 0; i < num_variables; i++) {
@@ -291,6 +292,7 @@ namespace slib {
       scoped_array<MPI_Status> request_statuses(new MPI_Status[num_variables]);
       for (int i = 0; i < num_variables; i++) {
 	MPI_Wait(&request_handlers[i], &request_statuses[i]);
+	VLOG(1) << "Variable " << i << " of " << num_variables << " sent to node: " << node;
       }
     }
 
