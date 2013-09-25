@@ -100,6 +100,12 @@ namespace slib {
       // matrix will be given priority.
       MatlabMatrix& Merge(const MatlabMatrix& other);
 
+      // This is a useful function for assignment. You should really
+      // avoid using the operator= method as it tends to produce
+      // inconsistent results across different platforms. This method
+      // is much safer.
+      void Assign(const MatlabMatrix& other);
+
       static MatlabMatrix LoadFromFile(const std::string& filename, const bool& multivariable = false);
       static MatlabMatrix LoadFromBinaryFile(const std::string& filename);
       bool SaveToFile(const std::string& filename, const bool& struct_format = false) const;

@@ -135,18 +135,22 @@ namespace slib {
     }
 
     const MatlabMatrix& MatlabMatrix::operator=(const MatlabMatrix& right) {
+      Assign(right);
+      return (*this);
+    }
+
+    void MatlabMatrix::Assign(const MatlabMatrix& other) {
       if (_matrix != NULL) {
 	mxDestroyArray(_matrix);
+	_matrix = NULL;
       }
-      if (right._matrix != NULL) {
-	_matrix = mxDuplicateArray(right._matrix);
+      if (other._matrix != NULL) {
+	_matrix = mxDuplicateArray(other._matrix);
       } else {
 	_matrix = NULL;
       }
-      _type = right._type;
+      _type = other._type;
       _shared = false;
-
-      return (*this);
     }
 
     MatlabMatrix& MatlabMatrix::Merge(const MatlabMatrix& other) {
