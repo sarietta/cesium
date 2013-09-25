@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <CImg.h>
 #include <common/types.h>
+#ifndef SKIP_FFTW
 #include <fftw3.h>
+#endif
 #include <glog/logging.h>
 #include "cimgutils.h"
 
@@ -50,6 +52,7 @@ namespace slib {
     return k+1;
   }
   
+#ifndef SKIP_FFTW
   FloatImage CImgUtils::FastFilter(const FloatImage& image, const FloatImage& kernel) {    
     FloatImage filtered(image.width(), image.height());
     filtered.fill(0.0f);
@@ -217,6 +220,7 @@ namespace slib {
     
     return filtered;
   }
+#endif
   
   /**
    * Draws a line between two points p1(p1x,p1y) and p2(p2x,p2y).

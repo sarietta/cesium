@@ -69,6 +69,7 @@ namespace slib {
     typedef JobData JobDescription;
     typedef JobData JobOutput;
     typedef void (*CompletionHandler)(const slib::mpi::JobOutput&, const int&);
+    typedef void (*CommunicationErrorHandler)(const int& error_code);
 
     typedef std::map<int, MPI_Request>::iterator RequestIterator;
 
@@ -85,6 +86,10 @@ namespace slib {
       // void CompletionHandler(const slib::mpi::JobOutput&, const int&);
       void SetCompletionHandler(CompletionHandler handler);
 
+      // Set a new error handler if you want to do anything other than
+      // just print errors.
+      void SetCommunicationErrorHandler(CommunicationErrorHandler handler);
+
       // Starts a job on the specified node. Non-blocking. 
       void StartJobOnNode(const JobDescription& description, const int& node,
 			  const std::map<std::string, VariableType>& variable_types);
@@ -100,15 +105,17 @@ namespace slib {
       // TODO(sarietta): This shouldn't be necessary, but without
       // spawning a new thread to poll MPI it must remain this way.
       void CheckForCompletion();
-      static void PrintMPICommunicationError(const int& state);
 
       void CancelPendingRequests();
 
     private:
       CompletionHandler _completion_handler;
+      static CommunicationErrorHandler _error_handler;
       std::map<int, MPI_Request> _request_handlers;
       int _completion_status;
-      MPI_Errhandler _error_handler;
+      MPI_Errhandler _error_handler_mpi;
+
+      static void PrintMPICommunicationError(const int& state);
 
       // When a node completes, it should send a completion message
       // via SendCompletionMessage. The master receives this message
@@ -132,6 +139,8 @@ namespace slib {
       // Node: Execution Continues
       // Master: <>
       void SendCompletionResponse(const int& node);
+
+      friend void MPIErrorHandler(MPI_Comm* comm, int* err, ...);
     };
 
     class JobNode {

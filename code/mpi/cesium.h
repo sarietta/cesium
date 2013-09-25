@@ -217,6 +217,9 @@ namespace slib {
 
       static scoped_ptr<Cesium> _singleton;
       static std::map<std::string, Function> _available_commands;
+
+      std::vector<int> _alive_nodes;
+      std::vector<int> _dead_nodes;      
     };  // class Cesium
 
   }  // namespace mpi

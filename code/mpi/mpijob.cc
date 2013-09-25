@@ -19,6 +19,7 @@ namespace slib {
   namespace mpi {
 
     bool JobNode::_initialized = false;
+    CommunicationErrorHandler JobController::_error_handler = NULL;
 
     MatlabMatrix empty_matrix;
     const MatlabMatrix& JobData::GetInputByName(const string& name) const {
@@ -53,7 +54,11 @@ namespace slib {
     }
 
     void MPIErrorHandler (MPI_Comm* comm, int* err, ...) {
-      JobController::PrintMPICommunicationError(*err);
+      if (JobController::_error_handler != NULL) {
+	(*JobController::_error_handler)(*err);
+      } else {
+	JobController::PrintMPICommunicationError(*err);
+      }
     }
     
     JobController::JobController() : _completion_handler(NULL) {
@@ -62,10 +67,13 @@ namespace slib {
       if (!flag) {
 	LOG(ERROR) << "You tried to create a JobController before calling MPI_Init. Shame on you. Fix it!";
       }
-      //MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
-      MPI_Comm_create_errhandler(MPIErrorHandler, &_error_handler);
-      MPI_Comm_set_errhandler(MPI_COMM_WORLD, _error_handler);
+      MPI_Comm_create_errhandler(MPIErrorHandler, &_error_handler_mpi);
+      MPI_Comm_set_errhandler(MPI_COMM_WORLD, _error_handler_mpi);
+    }
+
+    void JobController::SetCommunicationErrorHandler(CommunicationErrorHandler handler) {
+      _error_handler = handler;
     }
 
     void JobController::SetCompletionHandler(CompletionHandler handler) {
