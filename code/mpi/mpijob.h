@@ -69,7 +69,7 @@ namespace slib {
     typedef JobData JobDescription;
     typedef JobData JobOutput;
     typedef void (*CompletionHandler)(const slib::mpi::JobOutput&, const int&);
-    typedef void (*CommunicationErrorHandler)(const int& error_code);
+    typedef void (*CommunicationErrorHandler)(const int& error_code, const int& node);
 
     typedef std::map<int, MPI_Request>::iterator RequestIterator;
 
@@ -114,6 +114,13 @@ namespace slib {
       std::map<int, MPI_Request> _request_handlers;
       int _completion_status;
       MPI_Errhandler _error_handler_mpi;
+
+      static int _communicating_node;
+
+      static void UpdateCommunicatingNode(const int& node);
+      inline static int GetCommunicatingNode() {
+	return _communicating_node;
+      }
 
       static void PrintMPICommunicationError(const int& state);
 

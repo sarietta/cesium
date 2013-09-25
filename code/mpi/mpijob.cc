@@ -3,11 +3,11 @@
 #include <common/scoped_ptr.h>
 #include <glog/logging.h>
 #include <map>
-#include <util/matlab.h>
 #include <map>
 #include <mpi.h>
 #include <string>
 #include <string.h>
+#include <util/matlab.h>
 #include <vector>
 
 using slib::util::MatlabMatrix;
@@ -20,7 +20,9 @@ namespace slib {
 
     bool JobNode::_initialized = false;
     CommunicationErrorHandler JobController::_error_handler = NULL;
+    int JobController::_communicating_node = -1;
 
+    // ******* JobData Methods ****** //
     MatlabMatrix empty_matrix;
     const MatlabMatrix& JobData::GetInputByName(const string& name) const {
       map<string, MatlabMatrix>::const_iterator iter = variables.find(name);
@@ -53,9 +55,10 @@ namespace slib {
       variable_types[variable_name] = type;
     }
 
+    // ******* JobController Methods ****** //
     void MPIErrorHandler (MPI_Comm* comm, int* err, ...) {
       if (JobController::_error_handler != NULL) {
-	(*JobController::_error_handler)(*err);
+	(*JobController::_error_handler)(*err, JobController::GetCommunicatingNode());
       } else {
 	JobController::PrintMPICommunicationError(*err);
       }
@@ -80,15 +83,14 @@ namespace slib {
       _completion_handler = handler;
     }
 
-    void JobController::SendCompletionResponse(const int& node) {
-      int message = 1;
-      MPI_Send(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD);
+    void JobController::UpdateCommunicatingNode(const int& node) {
+      _communicating_node = node;
     }
 
-    void JobNode::WaitForCompletionResponse(const int& node) {
-      CheckInitialized();
-      int message;
-      MPI_Recv(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    void JobController::SendCompletionResponse(const int& node) {
+      int message = 1;
+      UpdateCommunicatingNode(node);
+      MPI_Send(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD);
     }
 
     void JobController::PrintMPICommunicationError(const int& state) {
@@ -130,6 +132,7 @@ namespace slib {
 
 	if (state != MPI_SUCCESS) {
 	  const int node = iter->first;
+	  UpdateCommunicatingNode(node);
 	  LOG(ERROR) << "Communication error with node: " << node;
 	  PrintMPICommunicationError(state);
 	  continue;
@@ -137,6 +140,7 @@ namespace slib {
 
 	if (flag == true) {
 	  const int node = iter->first;
+	  UpdateCommunicatingNode(node);
 	  VLOG(1) << "Received a completion response from node: " << node;
 	  SendCompletionResponse(node);
 
@@ -150,6 +154,7 @@ namespace slib {
 
     void JobController::StartJobOnNode(const JobDescription& description, const int& node,
 				       const map<string, VariableType>& variable_types) {
+      UpdateCommunicatingNode(node);
       // Send the job description over.
       JobNode::SendJobDataToNode(description, node, variable_types);
 
@@ -174,6 +179,13 @@ namespace slib {
 	MPI_Irecv(&_completion_status, 1, MPI_INT, 
 		  node, MPI_COMPLETION_TAG, MPI_COMM_WORLD, &_request_handlers[node]);
       }
+    }
+
+    // ******* JobNode Methods ****** //
+    void JobNode::WaitForCompletionResponse(const int& node) {
+      CheckInitialized();
+      int message;
+      MPI_Recv(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
     void JobNode::SendStringToNode(const string& message, const int& node) {
