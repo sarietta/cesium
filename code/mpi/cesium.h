@@ -51,10 +51,14 @@ namespace slib {
 
       // A list of available node ids.
       std::vector<int> available_processors;
+      // A list of nodes that have died.
+      std::map<int, bool> dead_processors;
       // A list of indices that have been completed.
       std::map<int, bool> completed_indices;
       // A list of indices that are currently being processed.
       std::map<int, bool> pending_indices;
+      // A mapping from node to currently processing indices.
+      std::map<int, std::vector<int> > node_indices;
       // A list of outputs that will be saved.
       std::map<std::string, slib::util::MatlabMatrix> final_outputs;
       
@@ -89,7 +93,7 @@ namespace slib {
 
       static Cesium* GetInstance();
 
-      static void RegisterCommand(const std::string& command, const Function& function);
+      static void RegisterCommand(const std::string& command, const Function& function);     
       
       // This MUST be called before any other operations. It starts up
       // the framework across the available nodes (automatically
@@ -167,6 +171,13 @@ namespace slib {
       // been executed.
       void ComputeNodeLoop();
 
+      // This allows us to disable nodes that have died. It is called
+      // via the __HandleCommunicationErrorWrapper__ method which is
+      // set as the error handler for MPI errors via
+      // JobController::SetCommunicationErrorHandler.
+      void HandleDeadNode(const int& node);
+      friend void __HandleCommunicationErrorWrapper__(const int& error_code, const int& node);
+
       // This is a very important function. It handles all of the
       // merging, etc of job outputs as they complete. This function
       // is handed to the JobController that is created each time you
@@ -218,8 +229,7 @@ namespace slib {
       static scoped_ptr<Cesium> _singleton;
       static std::map<std::string, Function> _available_commands;
 
-      std::vector<int> _alive_nodes;
-      std::vector<int> _dead_nodes;      
+      friend class TestCesiumCommunication;
     };  // class Cesium
 
   }  // namespace mpi

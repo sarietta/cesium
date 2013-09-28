@@ -1,3 +1,4 @@
+#include "cesium.h"
 #include <common/types.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
@@ -14,6 +15,7 @@
 #include <util/assert.h>
 #include <util/matlab.h>
 
+using slib::mpi::Cesium;
 using slib::mpi::JobController;
 using slib::mpi::JobDescription;
 using slib::mpi::JobNode;
@@ -26,8 +28,38 @@ using std::stringstream;
 
 DEFINE_bool(use_handler, false, "If true, will use the error handler below.");
 
+void TestFunction(const JobDescription& job, JobOutput* output) {
+  output->indices.push_back(job.indices[0]);
+}
+
 void HandleError(const int& error_code, const int& node) {
   LOG(INFO) << "There was an error communicating with node: " << node;
+}
+
+namespace slib {
+  namespace mpi {
+    class TestCesiumCommunication {
+    public:
+      void Run() {
+	Cesium* instance = Cesium::GetInstance();
+	if (instance->Start() == slib::mpi::CesiumMasterNode) {
+	  //instance->_size = instance->_size + 1;
+	  FLAGS_logtostderr = true;
+	  
+	  JobDescription job;
+	  job.command = "TestFunction";
+	  job.variables["variable"] = MatlabMatrix("1");
+	  job.indices.push_back(0);
+	  job.indices.push_back(1);
+	  job.indices.push_back(2);
+	  
+	  JobOutput output;
+	  instance->ExecuteJob(job, &output);
+	} 
+	instance->Finish();
+      }
+    };
+  }
 }
 
 int main(int argc, char** argv) {
@@ -57,6 +89,11 @@ int main(int argc, char** argv) {
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  CESIUM_REGISTER_COMMAND(TestFunction);
+  slib::mpi::TestCesiumCommunication tester;
+  tester.Run();
+
   MPI_Finalize();
   
   return 0;
