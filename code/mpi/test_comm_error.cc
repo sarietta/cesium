@@ -43,7 +43,9 @@ namespace slib {
       void Run() {
 	Cesium* instance = Cesium::GetInstance();
 	if (instance->Start() == slib::mpi::CesiumMasterNode) {
-	  //instance->_size = instance->_size + 1;
+	  // Inject error by tricking the framework into thinking
+	  // there are more nodes than there are.
+	  instance->_size = instance->_size + 1;
 	  FLAGS_logtostderr = true;
 	  
 	  JobDescription job;

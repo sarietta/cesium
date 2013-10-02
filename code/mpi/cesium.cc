@@ -151,6 +151,9 @@ namespace slib {
     }
     
     void Cesium::Finish() {
+      if (_rank != MPI_ROOT_NODE) {
+	return;
+      }
       JobController controller;
       
       JobDescription finish;
@@ -181,7 +184,7 @@ namespace slib {
       if (_instance.get() != NULL) {
 	_instance->job_completion_mutex.lock(); {
 	  if (_instance->dead_processors.find(node) == _instance->dead_processors.end()) {
-	    LOG(WARNING) << "Removing dead node from processor pool: " << node;
+	    LOG(WARNING) << "*** Removing dead node from processor pool: " << node;
 	    // Add it to the list of dead processors.
 	    _instance->dead_processors[node] = true;
 	    // Remove it from the list of available processors.

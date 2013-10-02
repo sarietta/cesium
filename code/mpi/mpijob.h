@@ -110,19 +110,13 @@ namespace slib {
 
     private:
       CompletionHandler _completion_handler;
-      static CommunicationErrorHandler _error_handler;
+      CommunicationErrorHandler _error_handler;
       std::map<int, MPI_Request> _request_handlers;
       int _completion_status;
       MPI_Errhandler _error_handler_mpi;
 
-      static int _communicating_node;
-
-      static void UpdateCommunicatingNode(const int& node);
-      inline static int GetCommunicatingNode() {
-	return _communicating_node;
-      }
-
       static void PrintMPICommunicationError(const int& state);
+      void HandleError(const int& error, const int& node);
 
       // When a node completes, it should send a completion message
       // via SendCompletionMessage. The master receives this message
@@ -155,19 +149,19 @@ namespace slib {
       static JobData WaitForJobData(const int& node = MPI_ROOT_NODE);   
       static std::string WaitForString(const int& node = MPI_ROOT_NODE);
 
-      static void SendJobDataToNode(const JobData& data, const int& node,
-				    const std::map<std::string, VariableType>& variable_types);
-      inline static void SendJobDataToNode(const JobData& data, const int& node) {
-	SendJobDataToNode(data, node, std::map<std::string, VariableType>());
+      static int SendJobDataToNode(const JobData& data, const int& node,
+				   const std::map<std::string, VariableType>& variable_types);
+      inline static int SendJobDataToNode(const JobData& data, const int& node) {
+	return SendJobDataToNode(data, node, std::map<std::string, VariableType>());
       }
-      static void SendStringToNode(const std::string& message, const int& node);
+      static int SendStringToNode(const std::string& message, const int& node);
 
       // Alert the master that this node is done with an operation.
-      static void SendCompletionMessage(const int& node);
+      static int SendCompletionMessage(const int& node);
       // Blocking call to wait for the master to acknowledge the
       // previous method's message. Almost always call this directly
       // after previous method.
-      static void WaitForCompletionResponse(const int& node);
+      static int WaitForCompletionResponse(const int& node);
 
     private:
       static bool _initialized;

@@ -19,8 +19,6 @@ namespace slib {
   namespace mpi {
 
     bool JobNode::_initialized = false;
-    CommunicationErrorHandler JobController::_error_handler = NULL;
-    int JobController::_communicating_node = -1;
 
     // ******* JobData Methods ****** //
     MatlabMatrix empty_matrix;
@@ -57,14 +55,10 @@ namespace slib {
 
     // ******* JobController Methods ****** //
     void MPIErrorHandler (MPI_Comm* comm, int* err, ...) {
-      if (JobController::_error_handler != NULL) {
-	(*JobController::_error_handler)(*err, JobController::GetCommunicatingNode());
-      } else {
-	JobController::PrintMPICommunicationError(*err);
-      }
+      JobController::PrintMPICommunicationError(*err);
     }
     
-    JobController::JobController() : _completion_handler(NULL) {
+    JobController::JobController() : _completion_handler(NULL), _error_handler(NULL) {
       int flag;
       MPI_Initialized(&flag);
       if (!flag) {
@@ -83,14 +77,18 @@ namespace slib {
       _completion_handler = handler;
     }
 
-    void JobController::UpdateCommunicatingNode(const int& node) {
-      _communicating_node = node;
+    void JobController::HandleError(const int& error, const int& node) {
+      if (_error_handler != NULL) {
+	(*_error_handler)(error, node);
+      }
     }
 
     void JobController::SendCompletionResponse(const int& node) {
       int message = 1;
-      UpdateCommunicatingNode(node);
-      MPI_Send(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD);
+      const int error = MPI_Send(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD);
+      if (error != MPI_SUCCESS) {
+	HandleError(error, node);
+      }
     }
 
     void JobController::PrintMPICommunicationError(const int& state) {
@@ -132,15 +130,14 @@ namespace slib {
 
 	if (state != MPI_SUCCESS) {
 	  const int node = iter->first;
-	  UpdateCommunicatingNode(node);
 	  LOG(ERROR) << "Communication error with node: " << node;
 	  PrintMPICommunicationError(state);
+	  HandleError(state, node);
 	  continue;
 	}
 
 	if (flag == true) {
 	  const int node = iter->first;
-	  UpdateCommunicatingNode(node);
 	  VLOG(1) << "Received a completion response from node: " << node;
 	  SendCompletionResponse(node);
 
@@ -154,9 +151,12 @@ namespace slib {
 
     void JobController::StartJobOnNode(const JobDescription& description, const int& node,
 				       const map<string, VariableType>& variable_types) {
-      UpdateCommunicatingNode(node);
       // Send the job description over.
-      JobNode::SendJobDataToNode(description, node, variable_types);
+      const int error = JobNode::SendJobDataToNode(description, node, variable_types);
+      if (error != MPI_SUCCESS) {
+	HandleError(error, node);
+	return;
+      }
 
       // Setup the handler
       if (_completion_handler != NULL) {
@@ -176,25 +176,34 @@ namespace slib {
 	}
 
 	// Asynchronously receive a completion response from the node.
-	MPI_Irecv(&_completion_status, 1, MPI_INT, 
-		  node, MPI_COMPLETION_TAG, MPI_COMM_WORLD, &_request_handlers[node]);
+	const int error = MPI_Irecv(&_completion_status, 1, MPI_INT, 
+				    node, MPI_COMPLETION_TAG, MPI_COMM_WORLD, &_request_handlers[node]);
+	if (error != MPI_SUCCESS) {
+	  HandleError(error, node);
+	}
       }
     }
 
-    // ******* JobNode Methods ****** //
-    void JobNode::WaitForCompletionResponse(const int& node) {
+    /********************
+       JobNode Methods 
+    *********************/
+
+    int JobNode::WaitForCompletionResponse(const int& node) {
       CheckInitialized();
       int message;
-      MPI_Recv(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      return MPI_Recv(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG + 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
-    void JobNode::SendStringToNode(const string& message, const int& node) {
+    int JobNode::SendStringToNode(const string& message, const int& node) {
       VLOG(3) << "Sending string: " << message << " (receiver node: " << node << ")";
       int length = message.length() + 1;
       scoped_array<char> message_c(new char[length]);
       memcpy(message_c.get(), message.c_str(), sizeof(char) * length);
-      MPI_Send(&length, 1, MPI_INT, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD);
-      MPI_Send(message_c.get(), length, MPI_CHAR, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD);
+      const int error = MPI_Send(&length, 1, MPI_INT, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD);
+      if (error != MPI_SUCCESS) {
+	return error;
+      }
+      return MPI_Send(message_c.get(), length, MPI_CHAR, node, MPI_STRING_MESSAGE_TAG, MPI_COMM_WORLD);
     }
 
     string JobNode::WaitForString(const int& node) {
@@ -210,11 +219,14 @@ namespace slib {
       return string(message_c.get());
     }
 
-    void JobNode::SendJobDataToNode(const JobData& data, const int& node,
-				    const map<string, VariableType>& variable_types) {
+    int JobNode::SendJobDataToNode(const JobData& data, const int& node,
+				   const map<string, VariableType>& variable_types) {
       CheckInitialized();
       // Send the command.
-      SendStringToNode(data.command, node);
+      int error = SendStringToNode(data.command, node);
+      if (error != MPI_SUCCESS) {
+	return error;
+      }
 
       // Send information about the number of indices and then send
       // over the actual indices.
@@ -224,8 +236,14 @@ namespace slib {
 	for (int i = 0; i < num_indices; i++) {
 	  indices[i] = data.indices[i];
 	}
-	MPI_Send(&num_indices, 1, MPI_INT, node, 0, MPI_COMM_WORLD);
-	MPI_Send(indices.get(), num_indices, MPI_INT, node, 0, MPI_COMM_WORLD);
+	error = MPI_Send(&num_indices, 1, MPI_INT, node, 0, MPI_COMM_WORLD);
+	if (error != MPI_SUCCESS) {
+	  return error;
+	}
+	error = MPI_Send(indices.get(), num_indices, MPI_INT, node, 0, MPI_COMM_WORLD);
+	if (error != MPI_SUCCESS) {
+	  return error;
+	}
       }
 
       // Now we send num_variables worth of string.length information for
@@ -235,12 +253,19 @@ namespace slib {
       int num_variables = data.variables.size();
       vector<string> serialized_variables;
       int total_bytes = 0;
-      MPI_Send(&num_variables, 1, MPI_INT, node, 0, MPI_COMM_WORLD);
+      error = MPI_Send(&num_variables, 1, MPI_INT, node, 0, MPI_COMM_WORLD);
+      if (error != MPI_SUCCESS) {
+	return error;
+      }
+
       for (map<string, MatlabMatrix>::const_iterator it = data.variables.begin(); 
 	   it != data.variables.end(); 
 	   it++) {
 	const string input_name = (*it).first;
-	SendStringToNode(input_name, node);
+	error = SendStringToNode(input_name, node);
+	if (error != MPI_SUCCESS) {
+	  return error;
+	}
 
 	const MatlabMatrix& matrix = (*it).second;
 	string serialized = "";
@@ -277,7 +302,10 @@ namespace slib {
 	  serialized = matrix.Serialize();
 	}
 	int byte_length = serialized.length();
-	MPI_Send(&byte_length, 1, MPI_INT, node, 0, MPI_COMM_WORLD);
+	error = MPI_Send(&byte_length, 1, MPI_INT, node, 0, MPI_COMM_WORLD);
+	if (error != MPI_SUCCESS) {
+	  return error;
+	}
 	
 	serialized_variables.push_back(serialized);
 	total_bytes += byte_length;
@@ -304,16 +332,24 @@ namespace slib {
       byte_offset = 0;
       for (int i = 0; i < num_variables; i++) {
 	const int byte_length = serialized_variables[i].length();
-	MPI_Isend(serialized_variables_cstr.get() + byte_offset, byte_length, MPI_CHAR, 
-		  node, i, MPI_COMM_WORLD, &request_handlers[i]);
+	error = MPI_Isend(serialized_variables_cstr.get() + byte_offset, byte_length, MPI_CHAR, 
+			  node, i, MPI_COMM_WORLD, &request_handlers[i]);
+	if (error != MPI_SUCCESS) {
+	  return error;
+	}
 	byte_offset += byte_length;
       }
       // Wait for them all to finish.
       scoped_array<MPI_Status> request_statuses(new MPI_Status[num_variables]);
       for (int i = 0; i < num_variables; i++) {
-	MPI_Wait(&request_handlers[i], &request_statuses[i]);
+	error = MPI_Wait(&request_handlers[i], &request_statuses[i]);
+	if (error != MPI_SUCCESS) {
+	  return error;
+	}
 	VLOG(1) << "Variable " << i << " of " << num_variables << " sent to node: " << node;
       }
+
+      return MPI_SUCCESS;
     }
 
     JobData JobNode::WaitForJobData(const int& node) {
@@ -390,10 +426,10 @@ namespace slib {
       return data;
     }
 
-    void JobNode::SendCompletionMessage(const int& node) {
+    int JobNode::SendCompletionMessage(const int& node) {
       CheckInitialized();
       int message = 1;
-      MPI_Send(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG, MPI_COMM_WORLD);
+      return MPI_Send(&message, 1, MPI_INT, node, MPI_COMPLETION_TAG, MPI_COMM_WORLD);
     }
 
     bool JobNode::CheckInitialized() {
