@@ -49,6 +49,8 @@ namespace slib {
       int32 interpolation_type;
       bool sampleBig;
 
+      bool uniqueDetectionImages;
+
       bool projectFeatures;
       std::string featurePCFile;
     };

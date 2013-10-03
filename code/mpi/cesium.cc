@@ -402,9 +402,6 @@ namespace slib {
 
 		mutable_job.variables[name] = partial;
 	      } else if (type == FEATURE_STRIPPED_ROW_VARIABLE) {
-		// TODO(sean): This is WAY too specific to the silicon
-		// project. This needs to be made more general in the
-		// near future.
 		const int32 feature_dimensions = _stripped_feature_dimensions;
 		if (feature_dimensions < 0) {
 		  LOG(ERROR) << "You specified a FEATURE_STRIPPED_* variable but did not call "

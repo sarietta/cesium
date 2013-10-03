@@ -182,6 +182,9 @@ namespace slib {
       if ((field = mxGetField(params, 0, "sampleBig"))) {
 	parameters.sampleBig = (bool) mxGetScalar(field);
       }
+      if ((field = mxGetField(params, 0, "uniqueDetectionImages"))) {
+	parameters.uniqueDetectionImages = (bool) mxGetScalar(field);
+      }
       if ((field = mxGetField(params, 0, "selectTopN"))) {
 	parameters.selectTopN = (bool) mxGetScalar(field);
       }
@@ -789,7 +792,7 @@ namespace slib {
       
       return (patch_size.x * patch_size.y * patch_channels + extra_dimensions);
     }
-    
+#if 0
     DetectionParameters Detector::GetDefaultDetectionParameters() {
       DetectionParameters parameters;
       
@@ -820,8 +823,8 @@ namespace slib {
       parameters.overlap = parameters.overlapThreshold;
       parameters.fixedDecisionThresh = -1.002;
       parameters.removeFeatures = false;
-      parameters.sampleBig = false;
-      
+      parameters.sampleBig = false;      
+
       parameters.gradientSumThreshold = 9.0f;
       
       // See:
@@ -836,7 +839,7 @@ namespace slib {
 
       return parameters;
     }
-    
+#endif    
     FeaturePyramid Detector::ComputeFeaturePyramid(const FloatImage& image, 
 						   const vector<int32>& levels) {
       return Detector::ComputeFeaturePyramid(image, _parameters, levels);
