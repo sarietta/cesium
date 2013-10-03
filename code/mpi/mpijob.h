@@ -69,6 +69,7 @@ namespace slib {
     typedef JobData JobDescription;
     typedef JobData JobOutput;
     typedef void (*CompletionHandler)(const slib::mpi::JobOutput&, const int&);
+    typedef void (*CommunicationErrorHandler)(const int& error_code, const int& node);
 
     typedef std::map<int, MPI_Request>::iterator RequestIterator;
 
@@ -85,6 +86,10 @@ namespace slib {
       // void CompletionHandler(const slib::mpi::JobOutput&, const int&);
       void SetCompletionHandler(CompletionHandler handler);
 
+      // Set a new error handler if you want to do anything other than
+      // just print errors.
+      void SetCommunicationErrorHandler(CommunicationErrorHandler handler);
+
       // Starts a job on the specified node. Non-blocking. 
       void StartJobOnNode(const JobDescription& description, const int& node,
 			  const std::map<std::string, VariableType>& variable_types);
@@ -100,15 +105,18 @@ namespace slib {
       // TODO(sarietta): This shouldn't be necessary, but without
       // spawning a new thread to poll MPI it must remain this way.
       void CheckForCompletion();
-      static void PrintMPICommunicationError(const int& state);
 
       void CancelPendingRequests();
 
     private:
       CompletionHandler _completion_handler;
+      CommunicationErrorHandler _error_handler;
       std::map<int, MPI_Request> _request_handlers;
       int _completion_status;
-      MPI_Errhandler _error_handler;
+      MPI_Errhandler _error_handler_mpi;
+
+      static void PrintMPICommunicationError(const int& state);
+      void HandleError(const int& error, const int& node);
 
       // When a node completes, it should send a completion message
       // via SendCompletionMessage. The master receives this message
@@ -132,6 +140,8 @@ namespace slib {
       // Node: Execution Continues
       // Master: <>
       void SendCompletionResponse(const int& node);
+
+      friend void MPIErrorHandler(MPI_Comm* comm, int* err, ...);
     };
 
     class JobNode {
@@ -139,19 +149,19 @@ namespace slib {
       static JobData WaitForJobData(const int& node = MPI_ROOT_NODE);   
       static std::string WaitForString(const int& node = MPI_ROOT_NODE);
 
-      static void SendJobDataToNode(const JobData& data, const int& node,
-				    const std::map<std::string, VariableType>& variable_types);
-      inline static void SendJobDataToNode(const JobData& data, const int& node) {
-	SendJobDataToNode(data, node, std::map<std::string, VariableType>());
+      static int SendJobDataToNode(const JobData& data, const int& node,
+				   const std::map<std::string, VariableType>& variable_types);
+      inline static int SendJobDataToNode(const JobData& data, const int& node) {
+	return SendJobDataToNode(data, node, std::map<std::string, VariableType>());
       }
-      static void SendStringToNode(const std::string& message, const int& node);
+      static int SendStringToNode(const std::string& message, const int& node);
 
       // Alert the master that this node is done with an operation.
-      static void SendCompletionMessage(const int& node);
+      static int SendCompletionMessage(const int& node);
       // Blocking call to wait for the master to acknowledge the
       // previous method's message. Almost always call this directly
       // after previous method.
-      static void WaitForCompletionResponse(const int& node);
+      static int WaitForCompletionResponse(const int& node);
 
     private:
       static bool _initialized;

@@ -151,6 +151,9 @@ namespace slib {
     }
     
     void Cesium::Finish() {
+      if (_rank != MPI_ROOT_NODE) {
+	return;
+      }
       JobController controller;
       
       JobDescription finish;
@@ -164,6 +167,43 @@ namespace slib {
     // function to JobController's HandleJobCompleted routine.
     void __HandleJobCompletedWrapper__(const JobOutput& output, const int& node) {
       Cesium::GetInstance()->HandleJobCompleted(output, node);
+    }
+
+    void __HandleCommunicationErrorWrapper__(const int& error_code, const int& node) {
+      int eclass;
+      MPI_Error_class(error_code, &eclass);
+      if (eclass != MPI_ERR_ACCESS) {
+	Cesium::GetInstance()->HandleDeadNode(node);
+      }
+    }
+
+    void Cesium::HandleDeadNode(const int& node) {
+      // Usually the mutex will be locked when we get here.
+      _instance->job_completion_mutex.unlock();
+
+      if (_instance.get() != NULL) {
+	_instance->job_completion_mutex.lock(); {
+	  if (_instance->dead_processors.find(node) == _instance->dead_processors.end()) {
+	    LOG(WARNING) << "*** Removing dead node from processor pool: " << node;
+	    // Add it to the list of dead processors.
+	    _instance->dead_processors[node] = true;
+	    // Remove it from the list of available processors.
+	    for (int i = 0; i < (int) _instance->available_processors.size(); i++) {
+	      if (_instance->available_processors[i] == node) {
+		_instance->available_processors.erase(_instance->available_processors.begin() + i);
+		break;
+	      }
+	    }
+	    // Requeue all of the indices that the node was processing.
+	    const vector<int>& indices = _instance->node_indices[node];
+	    for (int i = 0; i < (int) indices.size(); i++) {
+	      _instance->pending_indices.erase(indices[i]);
+	    }
+	    _instance->node_indices.erase(node);
+	  }
+	}
+	_instance->job_completion_mutex.unlock();
+      }
     }
 
     void Cesium::InitializeInstance() {
@@ -219,7 +259,8 @@ namespace slib {
       // corresponding jobs on each of the nodes.
       JobController controller;
       controller.SetCompletionHandler(&__HandleJobCompletedWrapper__);
-      
+      controller.SetCommunicationErrorHandler(&__HandleCommunicationErrorWrapper__);
+
       // Setup the available processors information. Do in reverse order
       // in case the job size is less than the number of nodes.
       for (int node = _size - 1; node >= 1; node--) {
@@ -307,6 +348,7 @@ namespace slib {
 	    }
 	    
 	    mutable_job.indices = indices;
+	    _instance->node_indices[node] = indices;
 
 	    // Handle partial variables that were loaded via the
 	    // LoadInputVariable method.
@@ -360,9 +402,6 @@ namespace slib {
 
 		mutable_job.variables[name] = partial;
 	      } else if (type == FEATURE_STRIPPED_ROW_VARIABLE) {
-		// TODO(sean): This is WAY too specific to the silicon
-		// project. This needs to be made more general in the
-		// near future.
 		const int32 feature_dimensions = _stripped_feature_dimensions;
 		if (feature_dimensions < 0) {
 		  LOG(ERROR) << "You specified a FEATURE_STRIPPED_* variable but did not call "
@@ -531,14 +570,15 @@ namespace slib {
     }
 
     void Cesium::ShowProgress(const string& command) const {
-      const int running = _size - 1 - (int) _instance->available_processors.size();
+      const int alive = _size - 1 - (int) _instance->dead_processors.size();
+      const int running = alive - (int) _instance->available_processors.size();
       const int total_indices = _instance->total_indices;
 
       LOG(INFO) << "\nRunning Command: " << command 
 		<< "\n\tNumber Pending: " << _instance->pending_indices.size()
 		<< "\n\tNumber Completed: " << _instance->completed_indices.size() << " of " << total_indices
-		<< "\n\tAvailable Processors: " << _instance->available_processors.size() << " of " << (_size-1)
-		<< "\n\tRunning Processors: " << running << " of " << (_size - 1);
+		<< "\n\tAvailable Processors: " << _instance->available_processors.size() << " of " << alive
+		<< "\n\tRunning Processors: " << running << " of " << alive;
       google::FlushLogFiles(google::GLOG_INFO);
     }
 
