@@ -80,124 +80,6 @@ namespace slib {
       , _model_offsets(NULL)
       , _model_labels(NULL) {}
     
-    // Helper function for the next method. Not in the class spec.
-    DetectionParameters LoadParametersFromMatlabMatrix(const mxArray* params) {
-      DetectionParameters parameters = Detector::GetDefaultDetectionParameters();
-      mxArray* field = NULL;
-      if ((field = mxGetField(params, 0, "basePatchSize"))) {
-	if (mxIsDouble(field)) {
-	  double* vals = mxGetPr(field);
-	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else if (mxIsSingle(field)) {
-	  float* vals = (float*) mxGetData(field);
-	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else {
-	  LOG(WARNING) << "Unknown data type for field: basePatchSize";
-	}
-      }
-      if ((field = mxGetField(params, 0, "category"))) {
-	if (mxIsCell(field)) {
-	  const int num_cells = mxGetN(field) * mxGetM(field);
-	  for (int i = 0; i < num_cells; i++) {
-	    mxArray* cell = mxGetCell(mxGetCell(field, i), 0);
-	    parameters.category.push_back(string(mxArrayToString((cell))));
-	  }
-	} else {
-	  parameters.category.push_back(string(mxArrayToString((field))));
-	}
-      }
-      if ((field = mxGetField(params, 0, "imageCanonicalSize"))) {
-	parameters.imageCanonicalSize = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "levelFactor"))) {
-	parameters.levelFactor = (float) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "maxClusterSize"))) {
-	parameters.maxClusterSize = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "maxLevels"))) {
-	parameters.maxLevels = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "minClusterSize"))) {
-	parameters.minClusterSize = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "nThNeg"))) {
-	parameters.nThNeg = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "numPatchClusters"))) {
-	parameters.numPatchClusters = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "overlapThreshold"))) {
-	parameters.overlapThreshold = (float) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "patchCanonicalSize"))) {
-	if (mxIsDouble(field)) {
-	  double* vals = mxGetPr(field);
-	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else if (mxIsSingle(field)) {
-	  float* vals = (float*) mxGetData(field);
-	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else {
-	  LOG(WARNING) << "Unknown data type for field: patchCanonicalSize";
-	}
-      }
-      if ((field = mxGetField(params, 0, "patchOverlapThreshold"))) {
-	parameters.patchOverlapThreshold = (float) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "patchScaleIntervals"))) {
-	parameters.patchScaleIntervals = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "patchSize"))) {
-	if (mxIsDouble(field)) {
-	  double* vals = mxGetPr(field);
-	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else if (mxIsSingle(field)) {
-	  float* vals = (float*) mxGetData(field);
-	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else {
-	  LOG(WARNING) << "Unknown data type for field: patchSize";
-	}
-      }
-      if ((field = mxGetField(params, 0, "sBins"))) {
-	parameters.sBins = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "scaleIntervals"))) {
-	parameters.scaleIntervals = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "svmflags"))) {
-	parameters.svmflags = string(mxArrayToString((field)));
-      }
-      if ((field = mxGetField(params, 0, "topNOverlapThresh"))) {
-	parameters.topNOverlapThresh = (float) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "useColor"))) {
-	parameters.useColor = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "useColorHists"))) {
-	parameters.useColorHists = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "patchOnly"))) {
-	parameters.patchOnly = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "sampleBig"))) {
-	parameters.sampleBig = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "uniqueDetectionImages"))) {
-	parameters.uniqueDetectionImages = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "selectTopN"))) {
-	parameters.selectTopN = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "numToSelect"))) {
-	parameters.numToSelect = (int) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "gradientSumThreshold"))) {
-	parameters.gradientSumThreshold = (float) mxGetScalar(field);
-      }
-      
-      return parameters;
-    }
-
     void Detector::SaveParametersToMatlabMatrix(mxArray** matrix) const {
       MatlabMatrix params(slib::util::MATLAB_STRUCT, Pair<int>(1,1));
 
@@ -245,140 +127,14 @@ namespace slib {
       params.SetStructField("removeFeatures", MatlabMatrix(static_cast<float>(_parameters.removeFeatures)));
       params.SetStructField("gradientSumThreshold", 
 			    MatlabMatrix(static_cast<float>(_parameters.gradientSumThreshold)));
+      params.SetStructField("sampleBig", 
+			    MatlabMatrix(static_cast<float>(_parameters.sampleBig)));
+      params.SetStructField("uniqueDetectionImages", 
+			    MatlabMatrix(static_cast<float>(_parameters.uniqueDetectionImages)));
 
       (*matrix) = mxDuplicateArray(&params.GetMatlabArray());
     }
-    
-    Detector DetectorFactory::LoadFromMatlabFile(const string& filename) {  
-      /* open mat file and read it's content */
-      MATFile* pmat = matOpen(filename.c_str(), "r");
-      if (pmat == NULL) {
-	LOG(ERROR) << "Error Opening MAT File: " << filename;
-	return Detector();
-      }
-      
-      // Should only have one entry.
-      const char* name = NULL;
-      mxArray* pa = matGetNextVariable(pmat, &name);
-
-      Detector detector = InitializeFromMatlabArray(*pa);
-      mxDestroyArray(pa);
-      matClose(pmat);
-
-      return detector;
-    }
-
-    Detector DetectorFactory::InitializeFromMatlabArray(const mxArray& array) {
-      Detector detector;
-      // WARNING: This method assumes that you have a struct containing
-      // the relevant fields. The normal output of the pipeline originally
-      // was a MATLAB object of typed VisualEntityDetector. There is a
-      // file in this directory called ConvertMatlabDetectorToStruct.m
-      // that can be used to convert the MATLAB object to a struct. The
-      // MATLAB routines for reading in the MATLAB object directly are
-      // broken.
-      
-      // Get the "level" data.
-      mxArray* levels = mxGetField(&array, 0, "firstLevModels");
-      if (!levels) {
-	LOG(ERROR) << "No field \"firstLevModels\" in matrix";
-	return detector;
-      }
-      // Unroll and store in the detector's fields. Assuming these fields
-      // are in there and foregoing error checking.
-      mxArray* weights_mat = mxGetField(levels, 0, "w");
-      mxArray* offsets_mat = mxGetField(levels, 0, "rho");
-      mxArray* labels_mat = mxGetField(levels, 0, "firstLabel");
-      
-      mxArray* infos_mat = mxGetField(levels, 0, "info");
-      
-      mxArray* thresholds_mat = mxGetField(levels, 0, "threshold");
-      
-      mxArray* type_mat = mxGetField(levels, 0, "type");
-      if (string(mxArrayToString(type_mat)) != "composite") {
-	LOG(ERROR) << "Detector type was not composite: " << mxArrayToString(type_mat);
-	return detector;
-      }
-      
-      const int32 num_models = mxGetNumberOfElements(offsets_mat);
-      const int32 num_weights = mxGetN(weights_mat);
-
-      if (mxIsDouble(weights_mat) && mxIsDouble(offsets_mat) 
-	  && mxIsDouble(labels_mat) && mxIsDouble(thresholds_mat)) {
-	double* weights_pr = mxGetPr(weights_mat);
-	double* offsets_pr = mxGetPr(offsets_mat);
-	double* labels_pr = mxGetPr(labels_mat);
-	double* thresholds_pr = mxGetPr(thresholds_mat);
-	
-	for (int i = 0; i < num_models; i++) {
-	  vector<float> weights;
-	  for (int j = 0; j < num_weights; j++) {
-	    // Row-major order.
-	    weights.push_back((float) weights_pr[i + j * num_models]);
-	  }
-	  
-	  const float rho = (float) offsets_pr[i];
-	  const float first_label = (float) labels_pr[i];
-	  const float threshold = (float) thresholds_pr[i];
-	  
-	  Model model(weights, rho, first_label, threshold);
-
-	  int num_positives = 0;
-	  int num_negatives = 0;
-	  if (infos_mat != NULL && mxIsCell(infos_mat)) {
-	    mxArray* cell = mxGetCell(infos_mat, i);
-	    if (cell != NULL && mxIsStruct(cell)) {
-	      mxArray* positives_mat = mxGetField(cell, 0, "numPositives");
-	      if (positives_mat != NULL && mxIsNumeric(positives_mat)) {
-		num_positives = (int) mxGetScalar(positives_mat);
-	      }
-	      mxArray* negatives_mat = mxGetField(cell, 0, "numNegatives");
-	      if (negatives_mat != NULL && mxIsNumeric(negatives_mat)) {
-		num_negatives = (int) mxGetScalar(negatives_mat);
-	      }
-	    }
-	  }
-
-	  model.num_positives = num_positives;
-	  model.num_negatives = num_negatives;
-
-	  detector.AddModel(model);
-	}
-      } else if (mxIsSingle(weights_mat) && mxIsSingle(offsets_mat) 
-	  && mxIsSingle(labels_mat) && mxIsSingle(thresholds_mat)) {
-	float* weights_pr = (float*) mxGetData(weights_mat);
-	float* offsets_pr = (float*) mxGetData(offsets_mat);
-	float* labels_pr = (float*) mxGetData(labels_mat);
-	float* thresholds_pr = (float*) mxGetData(thresholds_mat);
-	
-	for (int i = 0; i < num_models; i++) {
-	  vector<float> weights;
-	  for (int j = 0; j < num_weights; j++) {
-	    // Row-major order.
-	    weights.push_back(weights_pr[i + j * num_models]);
-	  }
-	  
-	  const float rho = offsets_pr[i];
-	  const float first_label = labels_pr[i];
-	  const float threshold = thresholds_pr[i];
-	  
-	  Model model(weights, rho, first_label, threshold);
-	  detector.AddModel(model);
-	}
-      } else {
-	LOG(ERROR) << "All matrices must be the same type and either float or double.";
-	return detector;
-      }
-      
-      // Get the parameters of execution.
-      mxArray* parameters = mxGetField(&array, 0, "params");
-      if (parameters) {
-	detector.SetParameters(LoadParametersFromMatlabMatrix(parameters));
-      }
-      
-      return detector;
-    }
-    
+        
     void Detector::UpdateModel(const int32& index, const Model& model) {
       // Invalidate the pre-build matrices.
       if (_weight_matrix.get()) {
@@ -520,7 +276,7 @@ namespace slib {
       
       return metadata;
     }
-    
+
     vector<int32> Detector::SelectViaNonMaxSuppression(const vector<DetectionMetadata>& metadata, 
 						       const vector<int32>& selected_indices,
 						       const VectorXf& scores, 
@@ -792,7 +548,7 @@ namespace slib {
       
       return (patch_size.x * patch_size.y * patch_channels + extra_dimensions);
     }
-#if 0
+
     DetectionParameters Detector::GetDefaultDetectionParameters() {
       DetectionParameters parameters;
       
@@ -824,6 +580,7 @@ namespace slib {
       parameters.fixedDecisionThresh = -1.002;
       parameters.removeFeatures = false;
       parameters.sampleBig = false;      
+      parameters.uniqueDetectionImages = false;
 
       parameters.gradientSumThreshold = 9.0f;
       
@@ -839,7 +596,7 @@ namespace slib {
 
       return parameters;
     }
-#endif    
+
     FeaturePyramid Detector::ComputeFeaturePyramid(const FloatImage& image, 
 						   const vector<int32>& levels) {
       return Detector::ComputeFeaturePyramid(image, _parameters, levels);
@@ -1064,5 +821,253 @@ namespace slib {
       return pyramid;
     }
     
+    Detector DetectorFactory::LoadFromMatlabFile(const string& filename) {  
+      /* open mat file and read it's content */
+      MATFile* pmat = matOpen(filename.c_str(), "r");
+      if (pmat == NULL) {
+	LOG(ERROR) << "Error Opening MAT File: " << filename;
+	return Detector();
+      }
+      
+      // Should only have one entry.
+      const char* name = NULL;
+      mxArray* pa = matGetNextVariable(pmat, &name);
+
+      Detector detector = InitializeFromMatlabArray(*pa);
+      mxDestroyArray(pa);
+      matClose(pmat);
+
+      return detector;
+    }
+
+    // Helper function for the next method.
+    DetectionParameters DetectorFactory::LoadParametersFromMatlabMatrix(const mxArray* params) {
+      DetectionParameters parameters = Detector::GetDefaultDetectionParameters();
+      mxArray* field = NULL;
+      if ((field = mxGetField(params, 0, "basePatchSize"))) {
+	if (mxIsDouble(field)) {
+	  double* vals = mxGetPr(field);
+	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else if (mxIsSingle(field)) {
+	  float* vals = (float*) mxGetData(field);
+	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else {
+	  LOG(WARNING) << "Unknown data type for field: basePatchSize";
+	}
+      }
+      if ((field = mxGetField(params, 0, "category"))) {
+	if (mxIsCell(field)) {
+	  const int num_cells = mxGetN(field) * mxGetM(field);
+	  for (int i = 0; i < num_cells; i++) {
+	    mxArray* cell = mxGetCell(mxGetCell(field, i), 0);
+	    parameters.category.push_back(string(mxArrayToString((cell))));
+	  }
+	} else {
+	  parameters.category.push_back(string(mxArrayToString((field))));
+	}
+      }
+      if ((field = mxGetField(params, 0, "imageCanonicalSize"))) {
+	parameters.imageCanonicalSize = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "levelFactor"))) {
+	parameters.levelFactor = (float) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "maxClusterSize"))) {
+	parameters.maxClusterSize = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "maxLevels"))) {
+	parameters.maxLevels = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "minClusterSize"))) {
+	parameters.minClusterSize = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "nThNeg"))) {
+	parameters.nThNeg = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "numPatchClusters"))) {
+	parameters.numPatchClusters = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "overlapThreshold"))) {
+	parameters.overlapThreshold = (float) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "patchCanonicalSize"))) {
+	if (mxIsDouble(field)) {
+	  double* vals = mxGetPr(field);
+	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else if (mxIsSingle(field)) {
+	  float* vals = (float*) mxGetData(field);
+	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else {
+	  LOG(WARNING) << "Unknown data type for field: patchCanonicalSize";
+	}
+      }
+      if ((field = mxGetField(params, 0, "patchOverlapThreshold"))) {
+	parameters.patchOverlapThreshold = (float) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "patchScaleIntervals"))) {
+	parameters.patchScaleIntervals = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "patchSize"))) {
+	if (mxIsDouble(field)) {
+	  double* vals = mxGetPr(field);
+	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else if (mxIsSingle(field)) {
+	  float* vals = (float*) mxGetData(field);
+	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else {
+	  LOG(WARNING) << "Unknown data type for field: patchSize";
+	}
+      }
+      if ((field = mxGetField(params, 0, "sBins"))) {
+	parameters.sBins = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "scaleIntervals"))) {
+	parameters.scaleIntervals = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "svmflags"))) {
+	parameters.svmflags = string(mxArrayToString((field)));
+      }
+      if ((field = mxGetField(params, 0, "topNOverlapThresh"))) {
+	parameters.topNOverlapThresh = (float) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "useColor"))) {
+	parameters.useColor = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "useColorHists"))) {
+	parameters.useColorHists = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "patchOnly"))) {
+	parameters.patchOnly = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "sampleBig"))) {
+	parameters.sampleBig = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "selectTopN"))) {
+	parameters.selectTopN = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "numToSelect"))) {
+	parameters.numToSelect = (int) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "gradientSumThreshold"))) {
+	parameters.gradientSumThreshold = (float) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "uniqueDetectionImages"))) {
+	parameters.uniqueDetectionImages = (bool) mxGetScalar(field);
+      }
+      
+      return parameters;
+    }
+
+    Detector DetectorFactory::InitializeFromMatlabArray(const mxArray& array) {
+      Detector detector;
+      // WARNING: This method assumes that you have a struct containing
+      // the relevant fields. The normal output of the pipeline originally
+      // was a MATLAB object of typed VisualEntityDetector. There is a
+      // file in this directory called ConvertMatlabDetectorToStruct.m
+      // that can be used to convert the MATLAB object to a struct. The
+      // MATLAB routines for reading in the MATLAB object directly are
+      // broken.
+      
+      // Get the "level" data.
+      mxArray* levels = mxGetField(&array, 0, "firstLevModels");
+      if (!levels) {
+	LOG(ERROR) << "No field \"firstLevModels\" in matrix";
+	return detector;
+      }
+      // Unroll and store in the detector's fields. Assuming these fields
+      // are in there and foregoing error checking.
+      mxArray* weights_mat = mxGetField(levels, 0, "w");
+      mxArray* offsets_mat = mxGetField(levels, 0, "rho");
+      mxArray* labels_mat = mxGetField(levels, 0, "firstLabel");
+      
+      mxArray* infos_mat = mxGetField(levels, 0, "info");
+      
+      mxArray* thresholds_mat = mxGetField(levels, 0, "threshold");
+      
+      mxArray* type_mat = mxGetField(levels, 0, "type");
+      if (string(mxArrayToString(type_mat)) != "composite") {
+	LOG(ERROR) << "Detector type was not composite: " << mxArrayToString(type_mat);
+	return detector;
+      }
+      
+      const int32 num_models = mxGetNumberOfElements(offsets_mat);
+      const int32 num_weights = mxGetN(weights_mat);
+
+      if (mxIsDouble(weights_mat) && mxIsDouble(offsets_mat) 
+	  && mxIsDouble(labels_mat) && mxIsDouble(thresholds_mat)) {
+	double* weights_pr = mxGetPr(weights_mat);
+	double* offsets_pr = mxGetPr(offsets_mat);
+	double* labels_pr = mxGetPr(labels_mat);
+	double* thresholds_pr = mxGetPr(thresholds_mat);
+	
+	for (int i = 0; i < num_models; i++) {
+	  vector<float> weights;
+	  for (int j = 0; j < num_weights; j++) {
+	    // Row-major order.
+	    weights.push_back((float) weights_pr[i + j * num_models]);
+	  }
+	  
+	  const float rho = (float) offsets_pr[i];
+	  const float first_label = (float) labels_pr[i];
+	  const float threshold = (float) thresholds_pr[i];
+	  
+	  Model model(weights, rho, first_label, threshold);
+
+	  int num_positives = 0;
+	  int num_negatives = 0;
+	  if (infos_mat != NULL && mxIsCell(infos_mat)) {
+	    mxArray* cell = mxGetCell(infos_mat, i);
+	    if (cell != NULL && mxIsStruct(cell)) {
+	      mxArray* positives_mat = mxGetField(cell, 0, "numPositives");
+	      if (positives_mat != NULL && mxIsNumeric(positives_mat)) {
+		num_positives = (int) mxGetScalar(positives_mat);
+	      }
+	      mxArray* negatives_mat = mxGetField(cell, 0, "numNegatives");
+	      if (negatives_mat != NULL && mxIsNumeric(negatives_mat)) {
+		num_negatives = (int) mxGetScalar(negatives_mat);
+	      }
+	    }
+	  }
+
+	  model.num_positives = num_positives;
+	  model.num_negatives = num_negatives;
+
+	  detector.AddModel(model);
+	}
+      } else if (mxIsSingle(weights_mat) && mxIsSingle(offsets_mat) 
+	  && mxIsSingle(labels_mat) && mxIsSingle(thresholds_mat)) {
+	float* weights_pr = (float*) mxGetData(weights_mat);
+	float* offsets_pr = (float*) mxGetData(offsets_mat);
+	float* labels_pr = (float*) mxGetData(labels_mat);
+	float* thresholds_pr = (float*) mxGetData(thresholds_mat);
+	
+	for (int i = 0; i < num_models; i++) {
+	  vector<float> weights;
+	  for (int j = 0; j < num_weights; j++) {
+	    // Row-major order.
+	    weights.push_back(weights_pr[i + j * num_models]);
+	  }
+	  
+	  const float rho = offsets_pr[i];
+	  const float first_label = labels_pr[i];
+	  const float threshold = thresholds_pr[i];
+	  
+	  Model model(weights, rho, first_label, threshold);
+	  detector.AddModel(model);
+	}
+      } else {
+	LOG(ERROR) << "All matrices must be the same type and either float or double.";
+	return detector;
+      }
+      
+      // Get the parameters of execution.
+      mxArray* parameters = mxGetField(&array, 0, "params");
+      if (parameters) {
+	detector.SetParameters(LoadParametersFromMatlabMatrix(parameters));
+      }
+      
+      return detector;
+    }
+
   }  // namespace svm
 }  // namespace slib
