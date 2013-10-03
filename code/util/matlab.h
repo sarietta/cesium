@@ -253,6 +253,7 @@ namespace slib {
       void AssignData(mxArray* data);
 
       friend class MatlabConverter;
+      friend class MatlabFunction;
     };
 
     class MatlabConverter {

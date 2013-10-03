@@ -32,7 +32,7 @@ all: $(OBJS) lib
 tests: $(TESTS)
 
 $(TESTS): $(OBJS) $(TOBJS) $(EXT_OBJS)
-	$(CC) $(LD_FLAGS) $(OBJS) $(filter $@.o, $(TOBJS)) $(EXT_OBJS) $(LIBS) -o $@
+	$(CC) $(LD_FLAGS) $(OBJS) $(filter $@.o, $(TOBJS)) $(EXT_OBJS) $(LIBS) ../mpi/matlabfunc/distrib/matlabfunc.so -o $@
 
 lib: $(filter-out test%, $(OBJS))
 	@ar rcs $(LIBNAME) $?
