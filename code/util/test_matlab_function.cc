@@ -1,4 +1,4 @@
-#include "../mpi/matlabfunc/distrib/matlabfunc.h"
+#include "./matlabfunc/distrib/matlabfunc.h"
 #include "matlab_function.h"
 
 #include <common/types.h>
@@ -20,10 +20,13 @@ int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 
-  MatlabMatrix A(MatrixXf::Random(3,3));
-  MatlabMatrix B;
+  MatlabMatrix* A = new MatlabMatrix(MatrixXf::Random(3,3));
+  MatlabMatrix* B = new MatlabMatrix();
 
-  CREATE_MATLAB_FUNCTION(function, Matlabfunc);
-  function.Run(A, &B);
-  LOG(INFO) << "matlabfunc:\n" << B;
+  CREATE_MATLAB_FUNCTION(function, matlabfunc);
+  function.Run(*A, B);
+  LOG(INFO) << "A:\n" << *A;
+  LOG(INFO) << "matlabfunc(A):\n" << *B;
+
+  mclTerminateApplication();
 }

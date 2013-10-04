@@ -38,64 +38,85 @@
 
 #include <mat.h>
 #include "matlab.h"
+#include <mclmcrrt.h>
 #include <string>
 
 #define CREATE_MATLAB_FUNCTION(variable, name)			\
   MatlabFunction variable  = MatlabFunction::Create();		\
-  variable.SetHandle(mlf ## name);				
-
-namespace slib {
-  namespace util {
-    class UndefinedFunction;
-  }
-}
+  variable.SetHandle(name);					\
+  variable.SetInitializer(name ## Initialize);			\
+  variable.SetTerminator(name ## Terminate);
 
 typedef bool (*MatlabFunctionHandle)(int nargout, mxArray** B, mxArray* A);
+typedef bool (*MatlabInitializer)(void);
+typedef void (*MatlabTerminator)(void);
 
 namespace slib {
   namespace util {
     class MatlabFunction {
     public:    
+      ~MatlabFunction() {
+	if (_terminator) {
+	  (*_terminator)();
+	}
+      }
+
       static MatlabFunction Create() {
+	if (!_initialized) {
+	  if (!mclInitializeApplication(NULL, 0)) {
+	    _undefined._exists = false;
+	    return _undefined;
+	  }
+	}
+
 	MatlabFunction function;
 	return function;
       }
 
-      //bool Exists() const;
-      void Run(MatlabMatrix& A, MatlabMatrix* B) const {
-	if (_handle) {
-	  mxArray* data;
-	  (*_handle)(1, &data, A._matrix);
-	  B->AssignData(data);
+      virtual bool Exists() const {
+	return _exists;
+      }
+
+      bool Run(MatlabMatrix& A, MatlabMatrix* B) const {
+	if (!_handle) {
+	  return false;
 	}
+	if (!_initializer || !(*_initializer)()) {
+	  return false;
+	}
+	
+	mxArray* data;
+	(*_handle)(1, &data, A._matrix);
+	B->AssignData(data);
+	return true;
       }
 
       void SetHandle(MatlabFunctionHandle handle) {
 	_handle = handle;
       }
 
+      void SetInitializer(MatlabInitializer handle) {
+	_initializer = handle;
+      }
+
+      void SetTerminator(MatlabTerminator handle) {
+	_terminator = handle;
+      }
+
     protected:
-      MatlabFunction() : _handle(NULL) {}
+      MatlabFunction() : _handle(NULL), _initializer(NULL), _terminator(NULL), _exists(true) {}
       MatlabFunctionHandle _handle;
+      MatlabInitializer _initializer;
+      MatlabTerminator _terminator;
+      bool _exists;
 
       static bool _initialized;
-      static UndefinedFunction _undefined;
+      static MatlabFunction _undefined;
     };
-#if 0
+
     bool MatlabFunction::_initialized = false;
-    UndefinedFunction MatlabFunction::_undefined;
+    MatlabFunction MatlabFunction::_undefined;
 
-    class UndefinedFunction : public MatlabFunction {
-    public:      
-      virtual bool Exists() {
-	return false;
-      }
-
-      virtual bool RunFunction(const mxArray& A, mxArray* B) const {
-	return false;
-      }
-    };
-#endif
   }  // namespace util
 }  // namespace slib
 
