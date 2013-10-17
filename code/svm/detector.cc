@@ -81,7 +81,7 @@ namespace slib {
       , _model_labels(NULL) {}
     
     // Helper function for the next method. Not in the class spec.
-    DetectionParameters LoadParametersFromMatlabMatrix(const mxArray* params) {
+    DetectionParameters DetectorFactory::LoadParametersFromMatlabMatrix(const mxArray* params) {
       DetectionParameters parameters = Detector::GetDefaultDetectionParameters();
       mxArray* field = NULL;
       if ((field = mxGetField(params, 0, "basePatchSize"))) {
