@@ -59,6 +59,7 @@ namespace slib {
       cvReleaseImage(&ipluint8);
       return cimage;
     }
+#endif
 
     static unsigned char* GetRowMajorByteArray(const UInt8Image& image) {
       const int32 width = image.width();
@@ -72,7 +73,6 @@ namespace slib {
       
       return data;
     }
-#endif
   };
 }  // namespace slib
 #endif
