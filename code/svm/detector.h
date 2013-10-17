@@ -57,6 +57,8 @@ namespace slib {
       int32 interpolation_type;
       bool sampleBig;
 
+      bool uniqueDetectionImages;
+
       bool projectFeatures;
       std::string featurePCFile;
     };
@@ -104,7 +106,9 @@ namespace slib {
     // A Detector is effectively a collection of Models.
     class Detector {
     public:
-      Detector();
+      // Try to avoid this function!
+      static DetectionParameters GetDefaultDetectionParameters();
+
       virtual ~Detector() {}
       Detector(const Detector& detector);
       Detector(const DetectionParameters& parameters);
@@ -116,7 +120,6 @@ namespace slib {
       // the levels of the feature pyramid.
       static int32 GetFeatureDimensions(const DetectionParameters& parameters,
 					Pair<int32>* patch_size_out = NULL);
-      static DetectionParameters GetDefaultDetectionParameters();
       // We allocate the memory via a deep copy. You are in charge of destroying the pointer.
       void SaveParametersToMatlabMatrix(mxArray** matrix) const;
       
@@ -141,6 +144,11 @@ namespace slib {
       
       // Outputs one DetectionResultSet per model.
       DetectionResultSet DetectInImage(const FloatImage& image);
+
+      // Helper function to remove any detections that from the same image.
+      static std::vector<int32> SelectUniqueDetectionImages(const std::vector<DetectionMetadata>& metadata, 
+							    const std::vector<int32>& selected_indices,
+							    const Eigen::VectorXf& score);
 
       // A helper function that can perform the non-maximum
       // suppression required to cull a DetectionResultSet.
@@ -250,9 +258,13 @@ namespace slib {
       scoped_ptr<FloatMatrix> _model_offsets;
       scoped_ptr<FloatMatrix> _model_labels;
       
+      Detector();
+      
       const FloatMatrix& GetWeightMatrixInit();
       const FloatMatrix& GetModelOffsetsInit();
       const FloatMatrix& GetModelLabelsInit();
+
+      friend class DetectorFactory;
     };
     
     class DetectorFactory {
@@ -262,6 +274,8 @@ namespace slib {
       // Detectors.
       static Detector LoadFromMatlabFile(const std::string& filename);
       static Detector InitializeFromMatlabArray(const mxArray& array);
+
+      static DetectionParameters LoadParametersFromMatlabMatrix(const mxArray* params);
     };
     
   }  // namespace svm

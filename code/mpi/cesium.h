@@ -51,10 +51,14 @@ namespace slib {
 
       // A list of available node ids.
       std::vector<int> available_processors;
+      // A list of nodes that have died.
+      std::map<int, bool> dead_processors;
       // A list of indices that have been completed.
       std::map<int, bool> completed_indices;
       // A list of indices that are currently being processed.
       std::map<int, bool> pending_indices;
+      // A mapping from node to currently processing indices.
+      std::map<int, std::vector<int> > node_indices;
       // A list of outputs that will be saved.
       std::map<std::string, slib::util::MatlabMatrix> final_outputs;
       
@@ -89,7 +93,7 @@ namespace slib {
 
       static Cesium* GetInstance();
 
-      static void RegisterCommand(const std::string& command, const Function& function);
+      static void RegisterCommand(const std::string& command, const Function& function);     
       
       // This MUST be called before any other operations. It starts up
       // the framework across the available nodes (automatically
@@ -133,6 +137,27 @@ namespace slib {
 								 const std::string& filename, 
 								 const VariableType& type = COMPLETE_VARIABLE);
 
+      // This is similar to the above functions, except that it does
+      // not load the variable from disk, it simply marks the variable
+      // as being partial so that it can be handled correctly at
+      // execution time. You should not use this with non-complete
+      // variable types that rely on being able to fseek into files
+      // such as the FEATURE_STRIPPED_* variables.
+      void SetVariableType(const std::string& variable_name, const slib::util::MatlabMatrix& matrix, 
+			   const VariableType& type);
+
+      // This is kind of an odd method that you should not use at all
+      // unless you understand the FEATURE_STRIPPED_ROW_VARIABLE
+      // variable type. If you use that variable type, you MUST call
+      // this with the total number of dimensions in your features so
+      // that the system can load them correctly.
+      //
+      // TODO(sean): Implement a way for users to implement a callback
+      // for an arbitrary variable type.
+      inline void SetStrippedFeatureDimensions(const int& dimensions) {
+	_stripped_feature_dimensions = dimensions;
+      }
+
       bool ExecuteJob(const JobDescription& job, JobOutput* output);
 #if 0
       void ExecuteKernel(const Kernel& kernel, const JobDescription& job, JobOutput* output);
@@ -145,6 +170,13 @@ namespace slib {
       // This is the function the compute nodes enter once Start() has
       // been executed.
       void ComputeNodeLoop();
+
+      // This allows us to disable nodes that have died. It is called
+      // via the __HandleCommunicationErrorWrapper__ method which is
+      // set as the error handler for MPI errors via
+      // JobController::SetCommunicationErrorHandler.
+      void HandleDeadNode(const int& node);
+      friend void __HandleCommunicationErrorWrapper__(const int& error_code, const int& node);
 
       // This is a very important function. It handles all of the
       // merging, etc of job outputs as they complete. This function
@@ -192,8 +224,12 @@ namespace slib {
       int _batch_size;
       int _checkpoint_interval;
 
+      int _stripped_feature_dimensions;
+
       static scoped_ptr<Cesium> _singleton;
       static std::map<std::string, Function> _available_commands;
+
+      friend class TestCesiumCommunication;
     };  // class Cesium
 
   }  // namespace mpi

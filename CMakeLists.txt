@@ -80,8 +80,13 @@ else(DEFINED ENV{GLOG_INCLUDE_DIR})
 endif(DEFINED ENV{GLOG_INCLUDE_DIR})
 
 ## FFTW3
-find_package(FFTW3 REQUIRED)
-include_directories(${FFTW3_INCLUDE_DIRS})
+find_package(FFTW3 QUIET)
+if (FFTW3_FOUND)
+  include_directories(${FFTW3_INCLUDE_DIRS})
+else ()
+  message(WARNING "\nCould not find FFTW3 library. FFTW support will be disabled.")
+  add_definitions(-DSKIP_FFTW)
+endif()
 
 ## BLAS
 #if(INTEL_CC MATCHES INTEL_CC-NOTFOUND)

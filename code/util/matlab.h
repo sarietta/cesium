@@ -6,6 +6,7 @@
 #include <common/types.h>
 #undef Success
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 #include <map>
 #include <mat.h>
 #include <iostream>
@@ -25,7 +26,8 @@ namespace slib {
   namespace util {
 
     enum MatlabMatrixType {
-      MATLAB_STRUCT, MATLAB_CELL_ARRAY, MATLAB_MATRIX, MATLAB_STRING, MATLAB_NO_TYPE
+      MATLAB_STRUCT, MATLAB_CELL_ARRAY, MATLAB_MATRIX, 
+      MATLAB_STRING, MATLAB_NO_TYPE, MATLAB_MATRIX_SPARSE
     };
 
     /**
@@ -100,6 +102,12 @@ namespace slib {
       // matrix will be given priority.
       MatlabMatrix& Merge(const MatlabMatrix& other);
 
+      // This is a useful function for assignment. You should really
+      // avoid using the operator= method as it tends to produce
+      // inconsistent results across different platforms. This method
+      // is much safer.
+      void Assign(const MatlabMatrix& other);
+
       static MatlabMatrix LoadFromFile(const std::string& filename, const bool& multivariable = false);
       static MatlabMatrix LoadFromBinaryFile(const std::string& filename);
       bool SaveToFile(const std::string& filename, const bool& struct_format = false) const;
@@ -116,6 +124,7 @@ namespace slib {
       MatlabMatrix GetCopiedCell(const int& row, const int& col) const;
       MatlabMatrix GetCopiedCell(const int& index) const;
       FloatMatrix GetCopiedContents() const;
+      SparseFloatMatrix GetCopiedSparseContents() const;
 
       // Non-mutator access. Should be faster and more memory efficient.
       const MatlabMatrix GetStructField(const std::string& field, const int& index = 0) const;

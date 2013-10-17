@@ -53,6 +53,8 @@ namespace slib {
 	const int length = dimensions.x > dimensions.y ? dimensions.x : dimensions.y;
 	const string str(length, '\0');
 	_matrix = mxCreateString(str.c_str());
+      } else if (_type == MATLAB_MATRIX_SPARSE) {
+	_matrix = mxCreateSparse(dimensions.x, dimensions.y, 0, mxREAL);
       }
     }
 
@@ -135,18 +137,22 @@ namespace slib {
     }
 
     const MatlabMatrix& MatlabMatrix::operator=(const MatlabMatrix& right) {
+      Assign(right);
+      return (*this);
+    }
+
+    void MatlabMatrix::Assign(const MatlabMatrix& other) {
       if (_matrix != NULL) {
 	mxDestroyArray(_matrix);
+	_matrix = NULL;
       }
-      if (right._matrix != NULL) {
-	_matrix = mxDuplicateArray(right._matrix);
+      if (other._matrix != NULL) {
+	_matrix = mxDuplicateArray(other._matrix);
       } else {
 	_matrix = NULL;
       }
-      _type = right._type;
+      _type = other._type;
       _shared = false;
-
-      return (*this);
     }
 
     MatlabMatrix& MatlabMatrix::Merge(const MatlabMatrix& other) {
@@ -212,7 +218,9 @@ namespace slib {
       if (data == NULL) {
 	return MATLAB_NO_TYPE;
       }
-      if (mxIsNumeric(data)) {
+      if (mxIsSparse(data)) {
+	return MATLAB_MATRIX_SPARSE;
+      } else if (mxIsNumeric(data)) {
 	return MATLAB_MATRIX;
       } else if (mxIsStruct(data)) {
 	return MATLAB_STRUCT;
@@ -486,6 +494,45 @@ namespace slib {
       return matrix;
     }
 
+    SparseFloatMatrix MatlabMatrix::GetCopiedSparseContents() const {
+      SparseFloatMatrix matrix;
+      if (_matrix != NULL && _type == MATLAB_MATRIX_SPARSE) {
+	const int dimensions = mxGetNumberOfDimensions(_matrix);
+	if (dimensions > 2) {
+	  LOG(ERROR) << "Only 2D matrices are supported";
+	  return matrix;
+	}
+	const int rows = mxGetM(_matrix);
+	const int cols = mxGetN(_matrix);
+	matrix.resize(rows, cols);
+
+	// All sparse matrices can be assumed to be double (I think).
+	const mwSize nnz = mxGetNzmax(_matrix);
+	VLOG(2) << "Number of non-zero sparse entries: " << nnz;
+	const mwIndex* row_indices = mxGetIr(_matrix);
+	const mwIndex* col_indices = mxGetJc(_matrix);
+	const double* data = (double*) mxGetData(_matrix);
+
+	matrix.reserve(nnz);
+	vector<Eigen::Triplet<float> > entries(nnz);
+	for (int col = 0; col < cols; col++) {
+	  const int start_index = col_indices[col];
+	  const int end_index = col_indices[col + 1];
+	  for (int index = start_index; index < end_index; index++) {
+	    const int row = row_indices[index];
+	    const float value = data[index];
+
+	    entries[index] = Eigen::Triplet<float>(row, col, value);
+	  }
+	}
+	matrix.setFromTriplets(entries.begin(), entries.end());
+      } else {
+	VLOG(2) << "Attempted to access non-matrix";
+      }
+
+      return matrix;
+    }
+
     const float* MatlabMatrix::GetContents() const {
       if (_matrix != NULL && _type == MATLAB_MATRIX) {
 	const int dimensions = mxGetNumberOfDimensions(_matrix);
@@ -521,10 +568,10 @@ namespace slib {
 	if (mxGetString(_matrix, characters.get(), length+1) == 0) {
 	  contents.assign(characters.get());
 	} else {
-	  LOG(WARNING) << "Couldn't find string";
+	  VLOG(1) << "Couldn't find string";
 	}
       } else {
-	LOG(WARNING) << "Attempted to access non-string matrix";
+	VLOG(1) << "Attempted to access non-string matrix";
       }
 
       return contents;

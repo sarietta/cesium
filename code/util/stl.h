@@ -93,6 +93,16 @@ namespace slib {
       V->erase(V->begin(), V->begin() + previous_index);
     }
 
+    // Quick initialization from a pointer array.
+    template <typename T>
+    vector<T> PointerToVector(const T* array, const int& entries) {
+      vector<T> V(entries);
+      for (int i = 0; i < entries; i++) {
+	V[i] = array[i];
+      }
+      return V;
+    }
+
   }  // namespace util
 }  // namespace slib
 

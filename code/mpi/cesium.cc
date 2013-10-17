@@ -56,7 +56,8 @@ namespace slib {
       , _size(-1)
       , _hostname("")
       , _batch_size(5)
-      , _checkpoint_interval(-1) {}
+      , _checkpoint_interval(-1)
+      , _stripped_feature_dimensions(-1) {}
     
     Cesium* Cesium::GetInstance() {
       if (_singleton.get() == NULL) {
@@ -150,6 +151,9 @@ namespace slib {
     }
     
     void Cesium::Finish() {
+      if (_rank != MPI_ROOT_NODE) {
+	return;
+      }
       JobController controller;
       
       JobDescription finish;
@@ -163,6 +167,43 @@ namespace slib {
     // function to JobController's HandleJobCompleted routine.
     void __HandleJobCompletedWrapper__(const JobOutput& output, const int& node) {
       Cesium::GetInstance()->HandleJobCompleted(output, node);
+    }
+
+    void __HandleCommunicationErrorWrapper__(const int& error_code, const int& node) {
+      int eclass;
+      MPI_Error_class(error_code, &eclass);
+      if (eclass != MPI_ERR_ACCESS) {
+	Cesium::GetInstance()->HandleDeadNode(node);
+      }
+    }
+
+    void Cesium::HandleDeadNode(const int& node) {
+      // Usually the mutex will be locked when we get here.
+      _instance->job_completion_mutex.unlock();
+
+      if (_instance.get() != NULL) {
+	_instance->job_completion_mutex.lock(); {
+	  if (_instance->dead_processors.find(node) == _instance->dead_processors.end()) {
+	    LOG(WARNING) << "*** Removing dead node from processor pool: " << node;
+	    // Add it to the list of dead processors.
+	    _instance->dead_processors[node] = true;
+	    // Remove it from the list of available processors.
+	    for (int i = 0; i < (int) _instance->available_processors.size(); i++) {
+	      if (_instance->available_processors[i] == node) {
+		_instance->available_processors.erase(_instance->available_processors.begin() + i);
+		break;
+	      }
+	    }
+	    // Requeue all of the indices that the node was processing.
+	    const vector<int>& indices = _instance->node_indices[node];
+	    for (int i = 0; i < (int) indices.size(); i++) {
+	      _instance->pending_indices.erase(indices[i]);
+	    }
+	    _instance->node_indices.erase(node);
+	  }
+	}
+	_instance->job_completion_mutex.unlock();
+      }
     }
 
     void Cesium::InitializeInstance() {
@@ -183,8 +224,18 @@ namespace slib {
       JobDescription mutable_job = job;
 
       InitializeInstance();
-      _instance->input_variable_types = job.variable_types;
-      _instance->output_variable_types = output->variable_types;
+      for (map<string, VariableType>::const_iterator iter = job.variable_types.begin(); 
+	   iter != job.variable_types.end(); iter++) {
+	const string name = (*iter).first;
+	const VariableType type = (*iter).second;
+	_instance->input_variable_types[name] = type;
+      }
+      for (map<string, VariableType>::const_iterator iter = output->variable_types.begin(); 
+	   iter != output->variable_types.end(); iter++) {
+	const string name = (*iter).first;
+	const VariableType type = (*iter).second;
+	_instance->output_variable_types[name] = type;
+      }
             
       const int pid = getpid();
       if (FLAGS_logtostderr) {
@@ -208,7 +259,8 @@ namespace slib {
       // corresponding jobs on each of the nodes.
       JobController controller;
       controller.SetCompletionHandler(&__HandleJobCompletedWrapper__);
-      
+      controller.SetCommunicationErrorHandler(&__HandleCommunicationErrorWrapper__);
+
       // Setup the available processors information. Do in reverse order
       // in case the job size is less than the number of nodes.
       for (int node = _size - 1; node >= 1; node--) {
@@ -296,49 +348,97 @@ namespace slib {
 	    }
 	    
 	    mutable_job.indices = indices;
+	    _instance->node_indices[node] = indices;
 
 	    // Handle partial variables that were loaded via the
 	    // LoadInputVariable method.
 	    for (map<string, pair<MatlabMatrix, FILE*> >::const_iterator iter = _instance->partial_variables.begin();
 		 iter != _instance->partial_variables.end(); iter++) {
 	      const string name = (*iter).first;
-
-	      // TODO(sean): This is WAY too specific to the silicon
-	      // project. This needs to be made more general in the
-	      // near future.
-	      const int32 feature_dimensions = 
-		Detector::GetFeatureDimensions(Detector::GetDefaultDetectionParameters());
-	      scoped_array<float> data(new float[feature_dimensions]);
-	      
-	      mutable_job.variables[name] = _instance->partial_variables[name].first;
-	      FILE* fid = _instance->partial_variables[name].second;
-	      if (!fid) {
-		LOG(ERROR) << "Attempted to load a partial variable from a bad file descriptor: " + name;
+	      const map<string, VariableType>::const_iterator type_iter = _instance->input_variable_types.find(name);
+	      if (type_iter == _instance->input_variable_types.end()) {
+		LOG(ERROR) << "Special variable does not have a type defined: " << name;
 		continue;
 	      }
-	      fseek(fid, 0, SEEK_SET);
-	      
-	      long int seek = 0;	      
+
+	      const VariableType type = (*type_iter).second;
+
 	      if (FLAGS_v >= 1) {
-		  Timer::Start();
+		Timer::Start();
 	      }
-	      for (int k = 0; k < (int) indices.size(); k++) {
-		const int row = indices[k];
-		for (int col = 0; col < (int) mutable_job.variables[name].GetDimensions().y; col++) {
-		  MatlabMatrix cell;
-		  mutable_job.variables[name].GetMutableCell(row, col, &cell);
-		  for (int kk = 0; kk < cell.GetNumberOfElements(); kk++) {
-		    const long int feature_index = (long int) cell.GetStructField("features", kk).GetScalar();
-		    fseek(fid, (feature_index - seek) * sizeof(float) * feature_dimensions, SEEK_CUR);
-		    fread(data.get(), sizeof(float), feature_dimensions, fid);
-		    
-		    cell.SetStructField("features", kk, MatlabMatrix(data.get(), 1, feature_dimensions));
-		    seek = feature_index + 1;
+
+	      if (type == PARTIAL_VARIABLE_ROWS) {
+		const MatlabMatrix& variable = _instance->partial_variables[name].first;
+		const Pair<int> dimensions = variable.GetDimensions();
+		if (dimensions.x <= 1) {
+		  LOG(WARNING) << "You specfied variable [" << name << "] as a partial row variable "
+			       << "but it has <= 1 rows";
+		}
+
+		MatlabMatrix partial(variable.GetMatrixType(), dimensions);
+		for (int k = 0; k < (int) indices.size(); k++) {
+		  const int index = indices[k];
+		  for (int kk = 0; kk < dimensions.y; kk++) {
+		    partial.Set(index, kk, variable.Get(index, kk));
+		  }
+		}
+
+		mutable_job.variables[name] = partial;
+	      } else if (type == PARTIAL_VARIABLE_COLS) {
+		const MatlabMatrix& variable = _instance->partial_variables[name].first;
+		const Pair<int> dimensions = variable.GetDimensions();
+		if (dimensions.y <= 1) {
+		  LOG(WARNING) << "You specfied variable [" << name << "] as a partial column variable "
+			       << "but it has <= 1 columns";
+		}
+
+		MatlabMatrix partial(variable.GetMatrixType(), dimensions);
+		for (int k = 0; k < (int) indices.size(); k++) {
+		  const int index = indices[k];
+		  for (int kk = 0; kk < dimensions.x; kk++) {
+		    partial.Set(kk, index, variable.Get(kk, index));
+		  }
+		}
+
+		mutable_job.variables[name] = partial;
+	      } else if (type == FEATURE_STRIPPED_ROW_VARIABLE) {
+		const int32 feature_dimensions = _stripped_feature_dimensions;
+		if (feature_dimensions < 0) {
+		  LOG(ERROR) << "You specified a FEATURE_STRIPPED_* variable but did not call "
+			     << "SetStrippedFeatureDimensions(). You MUST call this function in order "
+			     << "to use this variable type.";
+		  continue;
+		}
+		scoped_array<float> data(new float[feature_dimensions]);
+		
+		mutable_job.variables[name] = _instance->partial_variables[name].first;
+		FILE* fid = _instance->partial_variables[name].second;
+		if (!fid) {
+		  LOG(ERROR) << "Attempted to load a partial variable from a bad file descriptor: " + name;
+		  continue;
+		}
+		fseek(fid, 0, SEEK_SET);
+		
+		long int seek = 0;	      
+		for (int k = 0; k < (int) indices.size(); k++) {
+		  const int row = indices[k];
+		  for (int col = 0; col < (int) mutable_job.variables[name].GetDimensions().y; col++) {
+		    MatlabMatrix cell;
+		    mutable_job.variables[name].GetMutableCell(row, col, &cell);
+		    for (int kk = 0; kk < cell.GetNumberOfElements(); kk++) {
+		      const long int feature_index = (long int) cell.GetStructField("features", kk).GetScalar();
+		      fseek(fid, (feature_index - seek) * sizeof(float) * feature_dimensions, SEEK_CUR);
+		      fread(data.get(), sizeof(float), feature_dimensions, fid);
+		      
+		      cell.SetStructField("features", kk, MatlabMatrix(data.get(), 1, feature_dimensions));
+		      seek = feature_index + 1;
+		    }
 		  }
 		}
 	      }
+
 	      VLOG(1) << "Elapsed time to load partial input [" << name << "]: " << Timer::Stop();
-	    }
+	    }	  
 	    
 	    // Run the job.
 	    LOG(INFO) << "Starting job " << mutable_job.command << " on node " << node << ": " << indices_list;
@@ -382,6 +482,16 @@ namespace slib {
 	    _instance->final_outputs[name] = MatlabMatrix();
 	    _instance->partial_output_unique_int++;
 	  }
+	}
+      }
+
+      // Close the partial variables.
+      for (map<string, pair<MatlabMatrix, FILE*> >::const_iterator iter = _instance->partial_variables.begin();
+	   iter != _instance->partial_variables.end(); iter++) {
+	const string name = (*iter).first;
+	FILE* fid = _instance->partial_variables[name].second;
+	if (fid != NULL) {
+	  fclose(fid);
 	}
       }
 
@@ -460,14 +570,15 @@ namespace slib {
     }
 
     void Cesium::ShowProgress(const string& command) const {
-      const int running = _size - 1 - (int) _instance->available_processors.size();
+      const int alive = _size - 1 - (int) _instance->dead_processors.size();
+      const int running = alive - (int) _instance->available_processors.size();
       const int total_indices = _instance->total_indices;
 
       LOG(INFO) << "\nRunning Command: " << command 
 		<< "\n\tNumber Pending: " << _instance->pending_indices.size()
 		<< "\n\tNumber Completed: " << _instance->completed_indices.size() << " of " << total_indices
-		<< "\n\tAvailable Processors: " << _instance->available_processors.size() << " of " << (_size-1)
-		<< "\n\tRunning Processors: " << running << " of " << (_size - 1);
+		<< "\n\tAvailable Processors: " << _instance->available_processors.size() << " of " << alive
+		<< "\n\tRunning Processors: " << running << " of " << alive;
       google::FlushLogFiles(google::GLOG_INFO);
     }
 
@@ -643,7 +754,7 @@ namespace slib {
 						       type);
     }
 
-    MatlabMatrix Cesium::LoadInputVariableWithAbsolutePath(const std::string& variable_name, 
+    MatlabMatrix Cesium::LoadInputVariableWithAbsolutePath(const string& variable_name, 
 							   const string& filename, 
 							   const VariableType& type) {
       InitializeInstance();
@@ -664,10 +775,30 @@ namespace slib {
       if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
 	const string feature_filename = StringUtils::Replace(".mat", filename, ".features.bin");
 	_instance->partial_variables[variable_name] = make_pair(input, fopen(feature_filename.c_str(),"rb"));
-	_instance->input_variable_types[variable_name] = slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE;
+	_instance->input_variable_types[variable_name] = type;
+      } else if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+	_instance->partial_variables[variable_name] = make_pair(input, (FILE*) NULL);
+	_instance->input_variable_types[variable_name] = type;
       }
 
       return input;
+    }
+
+    void Cesium::SetVariableType(const string& variable_name, const MatlabMatrix& input, 
+				 const VariableType& type) {
+      InitializeInstance();
+
+      if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+	_instance->partial_variables[variable_name] = make_pair(input, (FILE*) NULL);
+	_instance->input_variable_types[variable_name] = type;
+      } else if (type == slib::mpi::COMPLETE_VARIABLE) {
+	LOG(INFO) << "You don't need to set the type for complete variables (" << variable_name << ")";
+      } else if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
+	LOG(WARNING) << "Use the method LoadInputVariable* for variable type FEATURE_STRIPPED_ROW_VARIABLE "
+		     << "(" << variable_name << ")";
+      } else {
+	LOG(WARNING) << "Don't know how to set the type for variable: " << variable_name;
+      }
     }
     
   }  // namespace mpi
