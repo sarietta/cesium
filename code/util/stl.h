@@ -45,6 +45,19 @@ namespace slib {
       return indices;
     }
 
+    // Create a vector of values from [start, end) with a stride of
+    // step. The templated type must be well-defined for the operators
+    // < and ++, and must be able to cast the value 1 appropriately if
+    // you want to use the default argument list.
+    template <typename T>
+    vector<T> Range(const T& start, const T& end, const T& step = 1) {
+      vector<T> values(end - start);
+      for (T value = start; value < end; value++) {
+	values(i) = value;
+      }
+      return values;
+    }
+
     template <typename T>
     vector<int> Sort(vector<T>* V) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
