@@ -359,6 +359,52 @@ namespace slib {
       }
     };
     
+    Pair<int> Detector::ImagePointToPyramidPoint(const FeaturePyramid& pyramid, 
+						 const Pair<int>& point, const int& level, 
+						 const DetectionParameters& parameters) {
+      const float canonical_scale = pyramid.GetCanonicalScale();
+
+      Pair<int32> patch_size;
+      Detector::GetFeatureDimensions(parameters, &patch_size);
+      
+      const int32 sbins = parameters.sBins;
+      const Pair<Pair<float> > levelPatch = pyramid.GetPatchSizeInLevel(patch_size, level, sbins);
+	
+      const float level_scale = pyramid.GetScales()[level];
+
+      const float xoffset = point.x - levelPatch.first().x;
+      const float yoffset = point.y - levelPatch.first().y;
+      
+      const float x1 = xoffset * canonical_scale / (level_scale * ((float) sbins));
+      const float y1 = yoffset * canonical_scale / (level_scale * ((float) sbins));
+
+      return Pair<int>(x1, y1);
+    }
+
+    Pair<int> Detector::PyramidPointToImagePoint(const FeaturePyramid& pyramid, 
+						 const Pair<int>& point, const int& level, 
+						 const DetectionParameters& parameters) {
+      const float canonical_scale = pyramid.GetCanonicalScale();
+
+      Pair<int32> patch_size;
+      Detector::GetFeatureDimensions(parameters, &patch_size);
+      
+      const int32 sbins = parameters.sBins;
+      const Pair<Pair<float> > levelPatch = pyramid.GetPatchSizeInLevel(patch_size, level, sbins);
+	
+      const float level_scale = pyramid.GetScales()[level];
+      const float x1 = point.x;
+      const float y1 = point.y;
+      const float xoffset = floor(x1 * ((float) sbins) * level_scale / canonical_scale);
+      const float yoffset = floor(y1 * ((float) sbins) * level_scale / canonical_scale);
+      
+      Pair<int> image_point;
+      image_point.x = levelPatch.first().x + xoffset;
+      image_point.y = levelPatch.first().y + yoffset;
+
+      return image_point;
+    }
+    
     vector<DetectionMetadata> Detector::GetDetectionMetadata(const FeaturePyramid& pyramid, 
 							     const vector<Pair<int32> >& indices,
 							     const vector<int32>& selected_indices,

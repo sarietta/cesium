@@ -184,6 +184,15 @@ namespace slib {
 	return _type;
       }
 
+      // These two functions are useful for converting between points
+      // in an image (origin size) and points in the pyramid. They are
+      // NOT bijective because of the floor operation in the second.
+      static Pair<int> ImagePointToPyramidPoint(const slib::image::FeaturePyramid& pyramid, 
+						const Pair<int>& point, const int& level, 
+						const DetectionParameters& parameters);
+      static Pair<int> PyramidPointToImagePoint(const slib::image::FeaturePyramid& pyramid, 
+						const Pair<int>& point, const int& level, 
+						const DetectionParameters& parameters);
       
       // These actually construct the associated matrices that are
       // normally stored in this class. Useful if you need to
