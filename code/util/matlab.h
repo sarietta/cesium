@@ -265,23 +265,6 @@ namespace slib {
       friend class MatlabFunction;
     };
 
-    // Specialization of constructor for strings.
-    template <>
-    MatlabMatrix::MatlabMatrix(const std::vector<std::string>& values, const bool& col) 
-      : _matrix(NULL), _type(MATLAB_CELL_ARRAY) {
-      if (col) {
-	Initialize(_type, Pair<int>(values.size(), 1));
-	for (int i = 0; i < values.size(); i++) {
-	  SetCell(i, 0, MatlabMatrix(values[i]));
-	}
-      } else {
-	Initialize(_type, Pair<int>(1, values.size()));
-	for (int i = 0; i < values.size(); i++) {
-	  SetCell(0, i, MatlabMatrix(values[i]));
-	}
-      }
-    }
-
     class MatlabConverter {
     public:
       static MatlabMatrix ConvertModelToMatrix(const slib::svm::Model& model);
