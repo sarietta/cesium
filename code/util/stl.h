@@ -53,7 +53,7 @@ namespace slib {
     vector<T> Range(const T& start, const T& end, const T& step = 1) {
       vector<T> values(end - start);
       for (T value = start; value < end; value++) {
-	values(i) = value;
+	values(value - start) = value;
       }
       return values;
     }
