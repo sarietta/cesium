@@ -273,6 +273,10 @@ namespace slib {
 	
 	if (ido == -1 || ido == 1) {
 	  // Perform matrix vector multiplication 
+
+	  // TODO(sean): This is BAD. Assumes you always have a
+	  // symmetric matrix... Must be leftover from previous
+	  // implementation. Needs to be fixed.
 #if 0
 	  cblas_dgemv(CblasRowMajor, CblasNoTrans, N, N, 
 		      1.0f, A, N, workd.get()+ipntr[0]-1, 1, 
