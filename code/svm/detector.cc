@@ -80,6 +80,130 @@ namespace slib {
       , _model_offsets(NULL)
       , _model_labels(NULL) {}
     
+    // Helper function for the next method. Not in the class spec.
+    DetectionParameters DetectorFactory::LoadParametersFromMatlabMatrix(const mxArray* params) {
+      DetectionParameters parameters = Detector::GetDefaultDetectionParameters();
+      mxArray* field = NULL;
+      if ((field = mxGetField(params, 0, "basePatchSize"))) {
+	if (mxIsDouble(field)) {
+	  double* vals = mxGetPr(field);
+	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else if (mxIsSingle(field)) {
+	  float* vals = (float*) mxGetData(field);
+	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else {
+	  LOG(WARNING) << "Unknown data type for field: basePatchSize";
+	}
+      }
+      if ((field = mxGetField(params, 0, "category"))) {
+	if (mxIsCell(field)) {
+	  const int num_cells = mxGetN(field) * mxGetM(field);
+	  for (int i = 0; i < num_cells; i++) {
+	    mxArray* cell = mxGetCell(mxGetCell(field, i), 0);
+	    parameters.category.push_back(string(mxArrayToString((cell))));
+	  }
+	} else {
+	  parameters.category.push_back(string(mxArrayToString((field))));
+	}
+      }
+      if ((field = mxGetField(params, 0, "imageCanonicalSize"))) {
+	parameters.imageCanonicalSize = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "levelFactor"))) {
+	parameters.levelFactor = (float) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "maxClusterSize"))) {
+	parameters.maxClusterSize = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "maxLevels"))) {
+	parameters.maxLevels = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "minClusterSize"))) {
+	parameters.minClusterSize = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "nThNeg"))) {
+	parameters.nThNeg = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "numPatchClusters"))) {
+	parameters.numPatchClusters = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "overlapThreshold"))) {
+	parameters.overlapThreshold = (float) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "patchCanonicalSize"))) {
+	if (mxIsDouble(field)) {
+	  double* vals = mxGetPr(field);
+	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else if (mxIsSingle(field)) {
+	  float* vals = (float*) mxGetData(field);
+	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else {
+	  LOG(WARNING) << "Unknown data type for field: patchCanonicalSize";
+	}
+      }
+      if ((field = mxGetField(params, 0, "patchOverlapThreshold"))) {
+	parameters.patchOverlapThreshold = (float) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "patchScaleIntervals"))) {
+	parameters.patchScaleIntervals = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "patchSize"))) {
+	if (mxIsDouble(field)) {
+	  double* vals = mxGetPr(field);
+	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else if (mxIsSingle(field)) {
+	  float* vals = (float*) mxGetData(field);
+	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
+	} else {
+	  LOG(WARNING) << "Unknown data type for field: patchSize";
+	}
+      }
+      if ((field = mxGetField(params, 0, "sBins"))) {
+	parameters.sBins = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "scaleIntervals"))) {
+	parameters.scaleIntervals = (int32) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "svmflags"))) {
+	parameters.svmflags = string(mxArrayToString((field)));
+      }
+      if ((field = mxGetField(params, 0, "topNOverlapThresh"))) {
+	parameters.topNOverlapThresh = (float) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "featureTypePatchOnly"))) {
+	parameters.featureTypePatchOnly = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "featureTypeHOG"))) {
+	parameters.featureTypeHOG = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "featureTypeHistogram"))) {
+	parameters.featureTypeHistogram = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "featureTypeSparse"))) {
+	parameters.featureTypeSparse = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "featureTypeFisher"))) {
+	parameters.featureTypeFisher = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "useColor"))) {
+	parameters.useColor = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "sampleBig"))) {
+	parameters.sampleBig = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "selectTopN"))) {
+	parameters.selectTopN = (bool) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "numToSelect"))) {
+	parameters.numToSelect = (int) mxGetScalar(field);
+      }
+      if ((field = mxGetField(params, 0, "gradientSumThreshold"))) {
+	parameters.gradientSumThreshold = (float) mxGetScalar(field);
+      }
+      
+      return parameters;
+    }
+
     void Detector::SaveParametersToMatlabMatrix(mxArray** matrix) const {
       MatlabMatrix params(slib::util::MATLAB_STRUCT, Pair<int>(1,1));
 
@@ -115,9 +239,17 @@ namespace slib {
       params.SetStructField("svmflags", MatlabMatrix(_parameters.svmflags));
       params.SetStructField("topNOverlapThresh", 
 			    MatlabMatrix(static_cast<float>(_parameters.topNOverlapThresh)));
+      params.SetStructField("featureTypePatchOnly", 
+			    MatlabMatrix(static_cast<float>(_parameters.featureTypePatchOnly)));
+      params.SetStructField("featureTypeHOG", 
+			    MatlabMatrix(static_cast<float>(_parameters.featureTypeHOG)));
+      params.SetStructField("featureTypeSparse", 
+			    MatlabMatrix(static_cast<float>(_parameters.featureTypeSparse)));
+      params.SetStructField("featureTypeFisher", 
+			    MatlabMatrix(static_cast<float>(_parameters.featureTypeFisher)));
+      params.SetStructField("featureTypePatchOnly", 
+			    MatlabMatrix(static_cast<float>(_parameters.featureTypePatchOnly)));
       params.SetStructField("useColor", MatlabMatrix(static_cast<float>(_parameters.useColor)));
-      params.SetStructField("useColorHists", MatlabMatrix(static_cast<float>(_parameters.useColorHists)));
-      params.SetStructField("patchOnly", MatlabMatrix(static_cast<float>(_parameters.patchOnly)));
       params.SetStructField("selectTopN", MatlabMatrix(static_cast<float>(_parameters.selectTopN)));
       params.SetStructField("numToSelect", MatlabMatrix(static_cast<float>(_parameters.numToSelect)));
       params.SetStructField("useDecisionThresh", MatlabMatrix(static_cast<float>(_parameters.useDecisionThresh)));
@@ -226,6 +358,52 @@ namespace slib {
 	return (lhs.value > rhs.value);
       }
     };
+    
+    Pair<int> Detector::ImagePointToPyramidPoint(const FeaturePyramid& pyramid, 
+						 const Pair<int>& point, const int& level, 
+						 const DetectionParameters& parameters) {
+      const float canonical_scale = pyramid.GetCanonicalScale();
+
+      Pair<int32> patch_size;
+      Detector::GetFeatureDimensions(parameters, &patch_size);
+      
+      const int32 sbins = parameters.sBins;
+      const Pair<Pair<float> > levelPatch = pyramid.GetPatchSizeInLevel(patch_size, level, sbins);
+	
+      const float level_scale = pyramid.GetScales()[level];
+
+      const float xoffset = point.x - levelPatch.first().x;
+      const float yoffset = point.y - levelPatch.first().y;
+      
+      const float x1 = xoffset * canonical_scale / (level_scale * ((float) sbins));
+      const float y1 = yoffset * canonical_scale / (level_scale * ((float) sbins));
+
+      return Pair<int>(x1, y1);
+    }
+
+    Pair<int> Detector::PyramidPointToImagePoint(const FeaturePyramid& pyramid, 
+						 const Pair<int>& point, const int& level, 
+						 const DetectionParameters& parameters) {
+      const float canonical_scale = pyramid.GetCanonicalScale();
+
+      Pair<int32> patch_size;
+      Detector::GetFeatureDimensions(parameters, &patch_size);
+      
+      const int32 sbins = parameters.sBins;
+      const Pair<Pair<float> > levelPatch = pyramid.GetPatchSizeInLevel(patch_size, level, sbins);
+	
+      const float level_scale = pyramid.GetScales()[level];
+      const float x1 = point.x;
+      const float y1 = point.y;
+      const float xoffset = floor(x1 * ((float) sbins) * level_scale / canonical_scale);
+      const float yoffset = floor(y1 * ((float) sbins) * level_scale / canonical_scale);
+      
+      Pair<int> image_point;
+      image_point.x = levelPatch.first().x + xoffset;
+      image_point.y = levelPatch.first().y + yoffset;
+
+      return image_point;
+    }
     
     vector<DetectionMetadata> Detector::GetDetectionMetadata(const FeaturePyramid& pyramid, 
 							     const vector<Pair<int32> >& indices,
@@ -529,16 +707,22 @@ namespace slib {
       patch_size.y = round(((float) parameters.patchCanonicalSize.y) / ((float) parameters.sBins)) - 2;
       
       int32 extra_dimensions = 0;
-      int32 patch_channels = 1;
-      if (parameters.useColor) {
-	patch_channels = 33;
-      } else if (parameters.patchOnly) {
-	patch_channels = 1;
-      } else {
-	if (parameters.useColorHists) {
-	  extra_dimensions = 20;
-	}
+      int32 patch_channels = 0;
+
+      if (parameters.featureTypeHOG) {
 	patch_channels = 31;
+      } else if (parameters.featureTypeHistogram) {
+	// TODO(sean): IMPLEMENT ME
+      } else if (parameters.featureTypeSparse) {
+	// TODO(sean): IMPLEMENT ME
+      } else if (parameters.featureTypeFisher) {
+	// TODO(sean): IMPLEMENT ME
+      } else if (parameters.featureTypePatchOnly) {
+	patch_channels = 1;
+      }
+
+      if (parameters.useColor) {
+	patch_channels += 2;
       }
       
       if (patch_size_out) {
@@ -570,9 +754,12 @@ namespace slib {
       parameters.scaleIntervals = 8;
       parameters.svmflags = string("-s 0 -t 0 -c 0.1");
       parameters.topNOverlapThresh = 0.5000;
+      parameters.featureTypePatchOnly = false;
+      parameters.featureTypeHOG = true;
+      parameters.featureTypeHistogram = false;
+      parameters.featureTypeSparse = false;
+      parameters.featureTypeFisher = false;
       parameters.useColor = true;
-      parameters.useColorHists = false;
-      parameters.patchOnly = false;
       parameters.selectTopN = false;
       parameters.numToSelect = 0;
       parameters.useDecisionThresh = true;
@@ -613,23 +800,7 @@ namespace slib {
 	return FeaturePyramid(0);
       }
 #endif
-      
-      // Convert the image to the correct color space depending on
-      // parameters.
-      FloatImage transformed_image(image * 255);  // Conversions expect [0, 255]
-      if (parameters.useColor) {
-	transformed_image.RGBtoLab();
-	// There is an odd multiply here. Guessing it is to "normalize"
-	// the color coordinates.
-	transformed_image *= 0.0025; 
-      } else if (parameters.useColorHists) {
-	transformed_image.RGBtoLab();
-      } else if (parameters.patchOnly) {
-	transformed_image.RGBtoHSL();
-	FloatImage copy(transformed_image);
-	transformed_image = copy.get_channel(2);
-      }
-      
+            
       // Determine number of pyramid levels for the image.
       const float canonical_size = static_cast<float>(parameters.imageCanonicalSize);
       float scale = 0.0f;
@@ -677,10 +848,17 @@ namespace slib {
       }
       
       ASSERT_LTE((int32) levels_to_compute.size(), num_levels);
+
+      // Convert the image to the Lab color space so it can be used as
+      // necessary.
+      FloatImage lab_image(image * 255);  // Conversions expect [0, 255]
+      lab_image.RGBtoLab();
+      lab_image *= 0.0025; 
       
       FeaturePyramid pyramid(num_levels);
       int32 numx;
       int32 numy;
+      // Compute feature for each level in the feature pyramid.
       for (uint32 i = 0; i < levels_to_compute.size(); i++) {
 	const int32 level = levels_to_compute[i];
 	const float level_scale = scale / scales[level];
@@ -701,85 +879,39 @@ namespace slib {
 	  VLOG(1) << "Cropping to: " << image_level.width() << " x " << image_level.height();
 	}
 	
+	/***************************************************
+	  BEGIN -- Feature Computation for Current Level
+	****************************************************/
 	FloatImage features;
-	if (!parameters.patchOnly) {
+	if (parameters.featureTypeHOG) {
 	  features.assign(slib::image::FeatureComputer::ComputeHOGFeatures(image_level, parameters.sBins));
-	  if (FLAGS_v >= 2) {
-	    features.get_channels(0,2).display();
-	  }
-	  numx = features.width();
-	  numy = features.height();
-	} else {
-	  numx = transformed_image.width() / parameters.sBins;
-	  numy = transformed_image.height() / parameters.sBins;
-	}
+	} else if (parameters.featureTypePatchOnly) {	  
+	  FloatImage lab_image_level = 
+	    lab_image.get_resize(image_level.width(), image_level.height(), -100, -100, 3);
+	  features = lab_image_level.get_channel(0);  // Extract the L channel.
+	} 
+
+	numx = features.width();
+	numy = features.height();
+
 	if (parameters.useColor) {
 	  FloatImage concatenated_features(features.width(), features.height(), 1, 31 + 1 + 1);
+	  // First C dimensions are from the already-computed features.
 	  cimg_forXYC(features, x, y, c) {
 	    concatenated_features(x, y, c) = features(x, y, c);
 	  }
-	  // Bilinear interpolation
-	  FloatImage resized_transformed_image = transformed_image.get_resize(numx, numy, -100, -100, 3);
-	  cimg_forXYC(resized_transformed_image, x, y, c) {
+	  // The two additional dimensions are the ab channels from
+	  // the original image in Lab coordinates resized to a
+	  // constant size equal to the (x,y) dimensions of the HOG
+	  // features.
+	  FloatImage resized_lab_image = lab_image.get_resize(numx, numy, -100, -100, 3);
+	  cimg_forXYC(resized_lab_image, x, y, c) {
 	    if (c >= 1) {
-	      concatenated_features(x, y, features.spectrum() + c - 1) = resized_transformed_image(x, y, c);
+	      concatenated_features(x, y, features.spectrum() + c - 1) = resized_lab_image(x, y, c);
 	    }
 	  }
 	  features.assign(concatenated_features);
-	} else if (parameters.useColorHists) {
-	  FloatImage resized_transformed_image = transformed_image.get_resize(numx * parameters.sBins, 
-									      numy * parameters.sBins, 
-									      -100, -100, 3);
-	  
-	  FloatImage concatenated_features(features.width(), features.height(), 1, 31 + 1 + 1);
-	  cimg_forXYC(features, x, y, c) {
-	    concatenated_features(x, y, c) = features(x, y, c);
-	  }
-	  
-	  for (int c = 1; c < resized_transformed_image.spectrum(); c++) {
-	    FloatImage histogram(numx, numy, 1, num_bins);
-	    // No overlap on the patch sampling.
-	    for (int x = 0; x < resized_transformed_image.width(); x += parameters.sBins) {
-	      for (int y = 0; y < resized_transformed_image.height(); y += parameters.sBins) {
-		FloatImage patch(parameters.sBins, parameters.sBins, 1, 1);
-		for (int px = 0; px < parameters.sBins; px++) {
-		  for (int py = 0; py < parameters.sBins; py++) {
-		    patch(px, py) = resized_transformed_image(x + px, y + py, 1, c);
-		  }
-		}
-		// Compute histogram of the patch.
-		scoped_array<int32> patch_histogram(new int32[num_bins]);
-		for (int32 i = 0; i < num_bins; i++) {
-		  patch_histogram[i] = 0;
-		  for (int px = 0; px < parameters.sBins; px++) {
-		    for (int py = 0; py < parameters.sBins; py++) {
-		      if (patch(px, py) >= bins[i] && patch(px, py) < bins[i+1]) {
-			patch_histogram[i]++;
-		      }
-		    }
-		  }
-		}
-		
-		cimg_forC(histogram, i) {
-		  histogram(x / parameters.sBins, y / parameters.sBins, 1, i) 
-		    = static_cast<float>(patch_histogram[i]) * 0.0006f;
-		}
-	      }
-	    }
-	    cimg_forXYC(features, x, y, c) {
-	      concatenated_features(x, y, features.spectrum() + c - 1) = histogram(x, y, c-1);
-	    }
-	  }      
-	  features.assign(concatenated_features);
-	} else if (parameters.patchOnly) {           
-	  features.assign(transformed_image.get_resize(numx, numy, -100, -100, 3));  // Bilinear
-	} else {
-	  FloatImage truncated_features(features.width(), features.height(), 1, 32);
-	  cimg_forXYC(truncated_features, x, y, c) {
-	    truncated_features(x, y, c) = features(x, y, c);
-	  }
-	  features.assign(truncated_features);
-	}
+	} 
 	
 	// Compute the gradient of this level's image. For options to this
 	// method see:
@@ -838,124 +970,6 @@ namespace slib {
       matClose(pmat);
 
       return detector;
-    }
-
-    // Helper function for the next method.
-    DetectionParameters DetectorFactory::LoadParametersFromMatlabMatrix(const mxArray* params) {
-      DetectionParameters parameters = Detector::GetDefaultDetectionParameters();
-      mxArray* field = NULL;
-      if ((field = mxGetField(params, 0, "basePatchSize"))) {
-	if (mxIsDouble(field)) {
-	  double* vals = mxGetPr(field);
-	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else if (mxIsSingle(field)) {
-	  float* vals = (float*) mxGetData(field);
-	  parameters.basePatchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else {
-	  LOG(WARNING) << "Unknown data type for field: basePatchSize";
-	}
-      }
-      if ((field = mxGetField(params, 0, "category"))) {
-	if (mxIsCell(field)) {
-	  const int num_cells = mxGetN(field) * mxGetM(field);
-	  for (int i = 0; i < num_cells; i++) {
-	    mxArray* cell = mxGetCell(mxGetCell(field, i), 0);
-	    parameters.category.push_back(string(mxArrayToString((cell))));
-	  }
-	} else {
-	  parameters.category.push_back(string(mxArrayToString((field))));
-	}
-      }
-      if ((field = mxGetField(params, 0, "imageCanonicalSize"))) {
-	parameters.imageCanonicalSize = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "levelFactor"))) {
-	parameters.levelFactor = (float) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "maxClusterSize"))) {
-	parameters.maxClusterSize = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "maxLevels"))) {
-	parameters.maxLevels = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "minClusterSize"))) {
-	parameters.minClusterSize = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "nThNeg"))) {
-	parameters.nThNeg = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "numPatchClusters"))) {
-	parameters.numPatchClusters = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "overlapThreshold"))) {
-	parameters.overlapThreshold = (float) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "patchCanonicalSize"))) {
-	if (mxIsDouble(field)) {
-	  double* vals = mxGetPr(field);
-	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else if (mxIsSingle(field)) {
-	  float* vals = (float*) mxGetData(field);
-	  parameters.patchCanonicalSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else {
-	  LOG(WARNING) << "Unknown data type for field: patchCanonicalSize";
-	}
-      }
-      if ((field = mxGetField(params, 0, "patchOverlapThreshold"))) {
-	parameters.patchOverlapThreshold = (float) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "patchScaleIntervals"))) {
-	parameters.patchScaleIntervals = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "patchSize"))) {
-	if (mxIsDouble(field)) {
-	  double* vals = mxGetPr(field);
-	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else if (mxIsSingle(field)) {
-	  float* vals = (float*) mxGetData(field);
-	  parameters.patchSize = Pair<int32>((int32) vals[0], (int32) vals[1]);
-	} else {
-	  LOG(WARNING) << "Unknown data type for field: patchSize";
-	}
-      }
-      if ((field = mxGetField(params, 0, "sBins"))) {
-	parameters.sBins = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "scaleIntervals"))) {
-	parameters.scaleIntervals = (int32) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "svmflags"))) {
-	parameters.svmflags = string(mxArrayToString((field)));
-      }
-      if ((field = mxGetField(params, 0, "topNOverlapThresh"))) {
-	parameters.topNOverlapThresh = (float) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "useColor"))) {
-	parameters.useColor = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "useColorHists"))) {
-	parameters.useColorHists = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "patchOnly"))) {
-	parameters.patchOnly = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "sampleBig"))) {
-	parameters.sampleBig = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "selectTopN"))) {
-	parameters.selectTopN = (bool) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "numToSelect"))) {
-	parameters.numToSelect = (int) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "gradientSumThreshold"))) {
-	parameters.gradientSumThreshold = (float) mxGetScalar(field);
-      }
-      if ((field = mxGetField(params, 0, "uniqueDetectionImages"))) {
-	parameters.uniqueDetectionImages = (bool) mxGetScalar(field);
-      }
-      
-      return parameters;
     }
 
     Detector DetectorFactory::InitializeFromMatlabArray(const mxArray& array) {

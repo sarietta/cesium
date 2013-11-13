@@ -2,12 +2,30 @@
 #define __SLIB_SVM_MODEL_H__
 
 #include <common/scoped_ptr.h>
+#include <common/types.h>
 #include <vector>
+
+namespace slib {
+  namespace util {
+    class MatlabMatrix;
+  }
+}
 
 namespace slib {
   namespace svm {
     
     struct Model {
+      // Size of this should mirror the response from Detector::GetFeatureDimensions.
+      scoped_array<float> weights;
+      int32 num_weights;
+      // The offset from the origin for the SVM.
+      float rho;
+      float first_label;  // Don't know what this is...
+      float threshold;
+      
+      int32 num_positives;
+      int32 num_negatives;
+      
       Model(const std::vector<float> weights_, const float rho_, 
 	    const float first_label_, const float threshold_) {
 	num_weights = weights_.size();
@@ -26,7 +44,9 @@ namespace slib {
       
       Model() : weights(NULL), num_weights(0), rho(0.0f), first_label(1.0f)
 	      , threshold(0.0f), num_positives(0), num_negatives(0) {}
-      
+
+      Model(const slib::util::MatlabMatrix& libsvm_model);
+
       Model& operator=(const Model& rhs) {
 	num_weights = rhs.num_weights;
 	weights.reset(new float[num_weights]);
@@ -42,19 +62,7 @@ namespace slib {
 	num_negatives = rhs.num_negatives;
 	
 	return *this;
-      }
-      
-      scoped_array<float> weights;  // Size of this should mirror the
-      // response from
-      // Detector::GetFeatureDimensions.
-      int32 num_weights;
-      // The offset from the origin for the SVM.
-      float rho;
-      float first_label;  // Don't know what this is...
-      float threshold;
-      
-      int32 num_positives;
-      int32 num_negatives;
+      }            
     };
     
   }  // namespace svm

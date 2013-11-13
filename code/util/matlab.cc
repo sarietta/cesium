@@ -40,6 +40,23 @@ namespace slib {
       Initialize(type, dimensions);
     }
 
+    // Specialization of constructor for strings.
+    template <>
+    MatlabMatrix::MatlabMatrix(const std::vector<std::string>& values, const bool& col) 
+      : _matrix(NULL), _type(MATLAB_CELL_ARRAY) {
+      if (col) {
+	Initialize(_type, Pair<int>(values.size(), 1));
+	for (int i = 0; i < values.size(); i++) {
+	  SetCell(i, 0, MatlabMatrix(values[i]));
+	}
+      } else {
+	Initialize(_type, Pair<int>(1, values.size()));
+	for (int i = 0; i < values.size(); i++) {
+	  SetCell(0, i, MatlabMatrix(values[i]));
+	}
+      }
+    }
+
     void MatlabMatrix::Initialize(const MatlabMatrixType& type, const Pair<int>& dimensions) {
       _shared = false;
       _type = type;
@@ -53,6 +70,8 @@ namespace slib {
 	const int length = dimensions.x > dimensions.y ? dimensions.x : dimensions.y;
 	const string str(length, '\0');
 	_matrix = mxCreateString(str.c_str());
+      } else if (_type == MATLAB_MATRIX_SPARSE) {
+	_matrix = mxCreateSparse(dimensions.x, dimensions.y, 0, mxREAL);
       }
     }
 
@@ -216,7 +235,9 @@ namespace slib {
       if (data == NULL) {
 	return MATLAB_NO_TYPE;
       }
-      if (mxIsNumeric(data)) {
+      if (mxIsSparse(data)) {
+	return MATLAB_MATRIX_SPARSE;
+      } else if (mxIsNumeric(data)) {
 	return MATLAB_MATRIX;
       } else if (mxIsStruct(data)) {
 	return MATLAB_STRUCT;
@@ -483,6 +504,45 @@ namespace slib {
 	} else {
 	  LOG(ERROR) << "Only float and double matrices are supported";
 	}
+      } else {
+	VLOG(2) << "Attempted to access non-matrix";
+      }
+
+      return matrix;
+    }
+
+    SparseFloatMatrix MatlabMatrix::GetCopiedSparseContents() const {
+      SparseFloatMatrix matrix;
+      if (_matrix != NULL && _type == MATLAB_MATRIX_SPARSE) {
+	const int dimensions = mxGetNumberOfDimensions(_matrix);
+	if (dimensions > 2) {
+	  LOG(ERROR) << "Only 2D matrices are supported";
+	  return matrix;
+	}
+	const int rows = mxGetM(_matrix);
+	const int cols = mxGetN(_matrix);
+	matrix.resize(rows, cols);
+
+	// All sparse matrices can be assumed to be double (I think).
+	const mwSize nnz = mxGetNzmax(_matrix);
+	VLOG(2) << "Number of non-zero sparse entries: " << nnz;
+	const mwIndex* row_indices = mxGetIr(_matrix);
+	const mwIndex* col_indices = mxGetJc(_matrix);
+	const double* data = (double*) mxGetData(_matrix);
+
+	matrix.reserve(nnz);
+	vector<Eigen::Triplet<float> > entries(nnz);
+	for (int col = 0; col < cols; col++) {
+	  const int start_index = col_indices[col];
+	  const int end_index = col_indices[col + 1];
+	  for (int index = start_index; index < end_index; index++) {
+	    const int row = row_indices[index];
+	    const float value = data[index];
+
+	    entries[index] = Eigen::Triplet<float>(row, col, value);
+	  }
+	}
+	matrix.setFromTriplets(entries.begin(), entries.end());
       } else {
 	VLOG(2) << "Attempted to access non-matrix";
       }

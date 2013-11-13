@@ -10,11 +10,11 @@ endif
 
 CC_FLAGS 	= 	$(OPT) -Wall -std=c++0x -wd2196 -wd2536 -wd780 \
 			-I/usr/local/include/eigen3 -I/opt/intel/mkl/include \
-			-I/usr/local/MATLAB/R2011b/extern/include -DSKIP_OPENCV \
+			-I./mcr/v716/extern/include -DSKIP_OPENCV \
 			-Qoption,cpp,--rvalue_ctor_is_not_copy_ctor
 
-LD_FLAGS 	= 	-L/usr/X11R6/lib -L/usr/local/MATLAB/R2011b/bin/${ARCH}
-LIBS 		= 	-lgflags -lglog -lX11 -lmat -lmx
+LD_FLAGS 	= 	-L/usr/X11R6/lib -L./mcr/v716/runtime/glnxa64/ -L./mcr/v716/bin/glnxa64/
+LIBS 		= 	-lgflags -lglog -lX11 -lmat -lmx -lmwmclmcrrt
 
 DIR	= `pwd | xargs -I @ basename @`
 LIBNAME	= lib$(DIR).a
@@ -31,8 +31,8 @@ all: $(OBJS) lib
 
 tests: $(TESTS)
 
-$(TESTS): $(OBJS) $(TOBJS) $(EXT_OBJS)
-	$(CC) $(LD_FLAGS) $(OBJS) $(filter $@.o, $(TOBJS)) $(EXT_OBJS) $(LIBS) -o $@
+$(TESTS): $(OBJS) $(TOBJS)
+	$(CC) $(LD_FLAGS) $(OBJS) $(filter $@.o, $(TOBJS)) $(EXT_OBJS) $(LIBS) ./matlabfunc/distrib/matlabfunc.so -o $@
 
 lib: $(filter-out test%, $(OBJS))
 	@ar rcs $(LIBNAME) $?

@@ -36,9 +36,17 @@ namespace slib {
       int32 scaleIntervals;
       std::string svmflags;
       float topNOverlapThresh;
-      bool useColor;
-      bool useColorHists;
-      bool patchOnly;
+      
+      // TODO(sean): Should not be bools. Should be able to parse from
+      // MATLAB matrix. Will remain this way for now to support legacy
+      // usage.
+      bool featureTypePatchOnly;
+      bool featureTypeHOG;
+      bool featureTypeHistogram;
+      bool featureTypeSparse;
+      bool featureTypeFisher;
+      bool useColor;  // Whether the color channels should be added to the feature.
+      
       bool selectTopN;
       int32 numToSelect;
       bool useDecisionThresh;
@@ -176,6 +184,15 @@ namespace slib {
 	return _type;
       }
 
+      // These two functions are useful for converting between points
+      // in an image (origin size) and points in the pyramid. They are
+      // NOT bijective because of the floor operation in the second.
+      static Pair<int> ImagePointToPyramidPoint(const slib::image::FeaturePyramid& pyramid, 
+						const Pair<int>& point, const int& level, 
+						const DetectionParameters& parameters);
+      static Pair<int> PyramidPointToImagePoint(const slib::image::FeaturePyramid& pyramid, 
+						const Pair<int>& point, const int& level, 
+						const DetectionParameters& parameters);
       
       // These actually construct the associated matrices that are
       // normally stored in this class. Useful if you need to

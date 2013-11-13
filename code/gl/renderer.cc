@@ -108,15 +108,7 @@ namespace slib {
 	PointerMotionMask 	|
 	KeymapStateMask		|
 	ExposureMask		|
-	VisibilityChangeMask	|
-	StructureNotifyMask	|
-	ResizeRedirectMask	|
-	SubstructureNotifyMask	|
-	SubstructureRedirectMask|
-	FocusChangeMask		|
-	PropertyChangeMask	|
-	ColormapChangeMask	|
-	OwnerGrabButtonMask;
+	StructureNotifyMask
 	;
       
       fullscreenMode_ = fullscreen;
@@ -153,6 +145,8 @@ namespace slib {
 	glXMakeCurrent(display_, window_, context_);
 	XMapWindow(display_, window_);
       }       
+
+      XSelectInput(display_, window_, attributes_.event_mask);
       XFree(modes);
 
       int x, y;
