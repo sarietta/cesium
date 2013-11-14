@@ -19,6 +19,8 @@ DEFINE_bool(cesium_export_log, true, "If true, will export the master's log to t
 DEFINE_int32(cesium_wait_interval, 5, "The number of seconds to wait between checking status of job.");
 
 DEFINE_bool(cesium_checkpoint_variables, true, "Set to false if you don't want to checkpoint variables.");
+DEFINE_bool(cesium_all_indices_at_once, false,
+	    "Whether the indices that are sent to the workers should be processed together or separately.");
 DEFINE_bool(cesium_intelligent_parameters, true, "Automatically sets batch size and checkpoint interval.");
 DEFINE_int32(cesium_partial_variable_chunk_size, 50, 
 	     "The size of each chunk of a partial variable. "
@@ -170,6 +172,7 @@ namespace slib {
     }
 
     void __HandleCommunicationErrorWrapper__(const int& error_code, const int& node) {
+      VLOG(1) << "Communication Error: " << error_code << " (node: " << node << ")";
       int eclass;
       MPI_Error_class(error_code, &eclass);
       if (eclass != MPI_ERR_ACCESS) {
@@ -224,6 +227,18 @@ namespace slib {
       JobDescription mutable_job = job;
 
       InitializeInstance();
+
+      // Determine the cached variables so we can indicate to the
+      // processors what they should cache.
+      vector<string> cached_variable_names;
+      for (map<string, VariableType>::const_iterator iter = _instance->input_variable_types.begin();
+	   iter != _instance->input_variable_types.end(); iter++) {
+	if ((*iter).second >> MPIJOB_CACHED_VARIABLE_BITMASK) {
+	  cached_variable_names.push_back((*iter).first);
+	}
+      }
+      mutable_job.variables[CESIUM_CACHED_VARIABLES_FIELD] = MatlabMatrix(cached_variable_names);
+
       for (map<string, VariableType>::const_iterator iter = job.variable_types.begin(); 
 	   iter != job.variable_types.end(); iter++) {
 	const string name = (*iter).first;
@@ -440,6 +455,19 @@ namespace slib {
 	      VLOG(1) << "Elapsed time to load partial input [" << name << "]: " << Timer::Stop();
 	    }	  
 	    
+	    // Remove any cached variables that have already been
+	    // transfered once to this node.
+	    if (_instance->processors_completed_one.find(node) != _instance->processors_completed_one.end()) {
+	      for (map<string, VariableType>::const_iterator iter = _instance->input_variable_types.begin();
+		   iter != _instance->input_variable_types.end(); iter++) {
+		if ((*iter).second >> MPIJOB_CACHED_VARIABLE_BITMASK) {
+		  const string& name = (*iter).first;
+		  VLOG(1) << "Cache hit on master for variable: " << name;
+		  mutable_job.variables[name] = MatlabMatrix();
+		}
+	      }
+	    }
+
 	    // Run the job.
 	    LOG(INFO) << "Starting job " << mutable_job.command << " on node " << node << ": " << indices_list;
 	    _instance->available_processors.pop_back();
@@ -511,6 +539,8 @@ namespace slib {
 #endif
     
     void Cesium::ComputeNodeLoop() {
+      map<string, MatlabMatrix> cached_variables;
+
       if (FLAGS_v >= 1) {
 	for (map<string, Function>::const_iterator iter = _available_commands.begin();
 	     iter != _available_commands.end();
@@ -528,6 +558,20 @@ namespace slib {
 
 	LOG(INFO) << "Received new job: " << job.command;
 
+	// Update or retreive from the cache as necessary.
+	if (job.HasInput(CESIUM_CACHED_VARIABLES_FIELD)) {
+	  MatlabMatrix cached_variable_names = job.GetInputByName(CESIUM_CACHED_VARIABLES_FIELD);
+	  for (int i = 0; i < cached_variable_names.GetNumberOfElements(); i++) {
+	    const string& name = cached_variable_names.GetCell(i).GetStringContents();
+	    if (cached_variables.find(name) == cached_variables.end()) {
+	      cached_variables[name] = job.GetInputByName(name);
+	    } else {
+	      VLOG(1) << "Cache hit on node for variable: " << name;
+	      job.variables[name] = cached_variables[name];
+	    }
+	  }
+	}
+
 	// Run the appropriate command.
 	JobOutput output;
 	output.command = job.command;
@@ -537,14 +581,19 @@ namespace slib {
 	} else {
 	  const Function& function = _available_commands[job.command];
 	  
-	  const vector<int> job_indices = job.indices;
-	  for (uint32 i = 0; i < job_indices.size(); i++) {
-	    job.indices.clear();
-	    job.indices.push_back(job_indices[i]);
-	    
-	    LOG(INFO) << "Running job at index: " << job_indices[i];
+	  if (FLAGS_cesium_all_indices_at_once) {
 	    (*function)(job, &output);
 	    google::FlushLogFiles(google::GLOG_INFO);
+	  } else {
+	    const vector<int> job_indices = job.indices;
+	    for (uint32 i = 0; i < job_indices.size(); i++) {
+	      job.indices.clear();
+	      job.indices.push_back(job_indices[i]);
+
+	      LOG(INFO) << "Running job at index: " << job_indices[i];
+	      (*function)(job, &output);
+	      google::FlushLogFiles(google::GLOG_INFO);
+	    }
 	  }
 	}
 	
@@ -784,6 +833,10 @@ namespace slib {
       return input;
     }
 
+    // TODO(sean): This method is not great. First of all, users
+    // shouldn't have to specify an input matrix necessarily. Second,
+    // this doesn't take advantage of the OR-able nature of variable
+    // types like it should.
     void Cesium::SetVariableType(const string& variable_name, const MatlabMatrix& input, 
 				 const VariableType& type) {
       InitializeInstance();
@@ -796,8 +849,13 @@ namespace slib {
       } else if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
 	LOG(WARNING) << "Use the method LoadInputVariable* for variable type FEATURE_STRIPPED_ROW_VARIABLE "
 		     << "(" << variable_name << ")";
-      } else {
+      } else if (!(type >> MPIJOB_CACHED_VARIABLE_BITMASK)) {
 	LOG(WARNING) << "Don't know how to set the type for variable: " << variable_name;
+      }
+
+      if (type >> MPIJOB_CACHED_VARIABLE_BITMASK) {
+	LOG(INFO) << "Found cachable variable: " << variable_name;
+	_instance->input_variable_types[variable_name] = type;
       }
     }
     

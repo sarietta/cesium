@@ -17,11 +17,14 @@
 #define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
 #define CESIUM_FINISH_JOB_STRING "__CESIUM_FINISH_JOB__"
 
+#define CESIUM_CACHED_VARIABLES_FIELD "__CESIUM_CACHED_VARIABLES__"
+
 DECLARE_string(cesium_working_directory);
 DECLARE_string(cesium_temporary_directory);
 DECLARE_bool(cesium_export_log);
 DECLARE_int32(cesium_wait_interval);
 DECLARE_bool(cesium_checkpoint_variables);
+DECLARE_bool(cesium_all_indices_at_once);
 DECLARE_bool(cesium_intelligent_parameters);
 DECLARE_int32(cesium_partial_variable_chunk_size);
 DECLARE_bool(cesium_debug_mode);
