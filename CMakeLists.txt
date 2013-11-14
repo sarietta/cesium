@@ -32,6 +32,7 @@ include_directories(${Boost_INCLUDE_DIR})
 find_package(X11)
 if (X11_FOUND)
   include_directories(${X11_INCLUDE_DIR})
+  list (APPEND TEST_LIBRARIES ${X11_LIBRARIES})
 else ()
   set_property (GLOBAL PROPERTY COMPILE_DEFINITIONS cimg_display=0)
 endif ()
@@ -104,6 +105,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./lib)
 
 # Compile each module
+set(TEST_FILES)
 foreach(MODULE ${MODULES}) 
 
   file(GLOB ALL_FILES 
@@ -114,6 +116,7 @@ foreach(MODULE ${MODULES})
   set(FILES)
   foreach(FILE ${ALL_FILES})
     if(${FILE} MATCHES "test")
+      list(APPEND TEST_FILES ${FILE})
     else(${FILE} MATCHES "test")
       list(APPEND FILES ${FILE})
     endif(${FILE} MATCHES "test")
@@ -123,3 +126,85 @@ foreach(MODULE ${MODULES})
   set_target_properties(${MODULE} PROPERTIES LINKER_LANGUAGE CXX)
 
 endforeach(MODULE) 
+
+# Build all the tests
+if(DEFINED ENV{MATLAB_LIB_DIR})
+  include_directories($ENV{MATLAB_INCLUDE_DIR})
+
+  string (REGEX REPLACE "bin" "sys/os" MATLAB_OS_DIR $ENV{MATLAB_LIB_DIR})
+  
+  set (MATLAB_MAT_LIB "$ENV{MATLAB_LIB_DIR}/libmat.so")
+  
+  add_library(matlab_mat SHARED IMPORTED)
+  set_property(TARGET matlab_mat PROPERTY
+    IMPORTED_LOCATION ${MATLAB_MAT_LIB})
+  list (APPEND TEST_LIBRARIES matlab_mat)  
+  
+  set (MATLAB_MX_LIB "$ENV{MATLAB_LIB_DIR}/libmx.so")
+  
+  add_library(matlab_mx SHARED IMPORTED)
+  set_property(TARGET matlab_mx PROPERTY
+    IMPORTED_LOCATION ${MATLAB_MX_LIB})
+  list (APPEND TEST_LIBRARIES matlab_mx)  
+
+else()
+  message(FATAL_ERROR "\nTo build tests, please set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}. You can skip this if you don't want to build any tests, but it is worth setting anyway when it comes time to build your own binaries.")
+endif()
+
+list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f stdc++ jpeg)
+add_library(slib_svm STATIC IMPORTED)
+set_property(TARGET slib_svm PROPERTY
+  IMPORTED_LOCATION lib/libsvm.a)
+add_library(slib_mpi STATIC IMPORTED)
+set_property(TARGET slib_mpi PROPERTY
+  IMPORTED_LOCATION lib/libmpi.a)
+add_library(slib_util STATIC IMPORTED)
+set_property(TARGET slib_util PROPERTY
+  IMPORTED_LOCATION lib/libutil.a)
+add_library(slib_string STATIC IMPORTED)
+set_property(TARGET slib_string PROPERTY
+  IMPORTED_LOCATION lib/libstring.a)
+add_library(slib_image STATIC IMPORTED)
+set_property(TARGET slib_image PROPERTY
+  IMPORTED_LOCATION lib/libimage.a)
+add_library(slib_kmeans STATIC IMPORTED)
+set_property(TARGET slib_kmeans PROPERTY
+  IMPORTED_LOCATION lib/libkmeans.a)
+add_library(slib_matrix STATIC IMPORTED)
+set_property(TARGET slib_matrix PROPERTY
+  IMPORTED_LOCATION lib/libmatrix.a)
+add_library(slib_interpolation STATIC IMPORTED)
+set_property(TARGET slib_interpolation PROPERTY
+  IMPORTED_LOCATION lib/libinterpolation.a)
+
+list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_mpi slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
+
+find_package(MPI REQUIRED CXX)
+include_directories(${MPI_CXX_INCLUDE_PATH})
+list (APPEND TEST_LIBRARIES ${MPI_CXX_LIBRARIES})
+add_definitions(${MPI_CXX_COMPILE_FLAGS})
+
+add_definitions(-DMPICH_SKIP_MPICXX)
+add_definitions(-DOMPI_SKIP_MPICXX)
+
+find_package(ARPACK REQUIRED)
+list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
+
+file(MAKE_DIRECTORY "tests")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tests")
+set(TEST_BINARIES)
+foreach(TEST_FILE ${TEST_FILES})
+
+  GET_FILENAME_COMPONENT(BINARY ${TEST_FILE} NAME_WE)
+
+  # Explicitly avoiding some troublesome binaries that need to be
+  # built with special care
+  if(${BINARY} STREQUAL "test_matlab_function")
+  else()
+    add_executable(${BINARY} EXCLUDE_FROM_ALL ${TEST_FILE} ${LINKED_SOURCES})
+    target_link_libraries (${BINARY} ${TEST_LIBRARIES})
+    list(APPEND TEST_BINARIES ${BINARY})
+  endif()
+endforeach()
+
+add_custom_target(tests DEPENDS ${TEST_BINARIES})
