@@ -27,6 +27,7 @@ using std::string;
 using std::stringstream;
 
 DEFINE_bool(use_handler, false, "If true, will use the error handler below.");
+DEFINE_bool(wait, false, "If true, will wait before doing anything so that you can debug.");
 
 void TestFunction(const JobDescription& job, JobOutput* output) {
   output->indices.push_back(job.indices[0]);
@@ -77,6 +78,11 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Processor " << rank << " reporting for duty";
 
   if (rank == 0) {
+    if (FLAGS_wait) {
+      string dummy;
+      std::cin >> dummy;
+    }
+
     JobDescription job;
     job.command = "TEST COMMAND";
     job.indices.push_back(1);
@@ -97,6 +103,8 @@ int main(int argc, char** argv) {
   tester.Run();
 
   MPI_Finalize();
+
+  LOG(INFO) << "ALL TESTS PASSED";
   
   return 0;
 }
