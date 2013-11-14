@@ -1,1 +1,8 @@
 *.o
+CMakeFiles/
+CMakeCache.txt
+lib/
+tests/
+Makefile
+*.mat
+*.a
