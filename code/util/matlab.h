@@ -63,6 +63,7 @@ namespace slib {
 
       explicit MatlabMatrix(const MatlabMatrixType& type);
       MatlabMatrix(const MatlabMatrixType& type, const Pair<int>& dimensions);
+      MatlabMatrix(const MatlabMatrixType& type, const int& rows, const int& cols);      
       virtual ~MatlabMatrix();
       // Creates a character array with the contents.
       explicit MatlabMatrix(const std::string& contents);
@@ -85,6 +86,11 @@ namespace slib {
 	  SetContents(matrix);
 	}
       }
+
+      // This is a pseudo-specialization of the above constructor
+      // vectors of strings. Note that we aren't actually specializing
+      // the template.
+      MatlabMatrix(const std::vector<std::string>& values, const bool& col = true);
 
       // For scalar values.
       explicit MatlabMatrix(const float& data);

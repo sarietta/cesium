@@ -40,8 +40,13 @@ namespace slib {
       Initialize(type, dimensions);
     }
 
-    // Specialization of constructor for strings.
-    template <>
+    MatlabMatrix::MatlabMatrix(const MatlabMatrixType& type, const int& rows, const int& cols) 
+      : _matrix(NULL)
+      , _shared(false)
+      , _type(type) {
+      Initialize(type, Pair<int>(rows, cols));
+    }
+
     MatlabMatrix::MatlabMatrix(const std::vector<std::string>& values, const bool& col) 
       : _matrix(NULL), _type(MATLAB_CELL_ARRAY) {
       if (col) {

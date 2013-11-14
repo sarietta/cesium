@@ -45,6 +45,8 @@ namespace slib {
       Model() : weights(NULL), num_weights(0), rho(0.0f), first_label(1.0f)
 	      , threshold(0.0f), num_positives(0), num_negatives(0) {}
 
+      // Converts from a LibSVM model generated in MATLAB to a model
+      // that is usable in slib.
       Model(const slib::util::MatlabMatrix& libsvm_model);
 
       Model& operator=(const Model& rhs) {

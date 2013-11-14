@@ -200,6 +200,9 @@ namespace slib {
       if ((field = mxGetField(params, 0, "gradientSumThreshold"))) {
 	parameters.gradientSumThreshold = (float) mxGetScalar(field);
       }
+
+      LOAD_PARAMETER(removeDuplicateImageDetections, bool);
+      LOAD_PARAMETER(removeDuplicatePanoramaDetections, bool);
       
       return parameters;
     }
@@ -261,8 +264,9 @@ namespace slib {
 			    MatlabMatrix(static_cast<float>(_parameters.gradientSumThreshold)));
       params.SetStructField("sampleBig", 
 			    MatlabMatrix(static_cast<float>(_parameters.sampleBig)));
-      params.SetStructField("uniqueDetectionImages", 
-			    MatlabMatrix(static_cast<float>(_parameters.uniqueDetectionImages)));
+
+      SAVE_PARAMETER(removeDuplicateImageDetections);
+      SAVE_PARAMETER(removeDuplicatePanoramaDetections);
 
       (*matrix) = mxDuplicateArray(&params.GetMatlabArray());
     }
@@ -767,7 +771,8 @@ namespace slib {
       parameters.fixedDecisionThresh = -1.002;
       parameters.removeFeatures = false;
       parameters.sampleBig = false;      
-      parameters.uniqueDetectionImages = false;
+      parameters.removeDuplicateImageDetections = false;
+      parameters.removeDuplicatePanoramaDetections = false;
 
       parameters.gradientSumThreshold = 9.0f;
       

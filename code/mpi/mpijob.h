@@ -12,6 +12,9 @@
 #define MPI_COMPLETION_TAG 1025
 #define MPI_STRING_MESSAGE_TAG 1026
 
+#define MPIJOB_COMPLETE_VARIABLE_BITMASK 3
+#define MPIJOB_CACHED_VARIABLE_BITMASK 10
+
 namespace slib {
   namespace util {
     class MatlabMatrix;
@@ -27,7 +30,7 @@ namespace slib {
       // Same as above s/rows/cols
       PARTIAL_VARIABLE_COLS = 1 << 2,  
       // A variable that needs all of its data sent (NORMAL)
-      COMPLETE_VARIABLE = 1 << 3,
+      COMPLETE_VARIABLE = 1 << MPIJOB_COMPLETE_VARIABLE_BITMASK,
       // A partial variable that has been stripped of features
       FEATURE_STRIPPED_ROW_VARIABLE = 1 << 4,
       // This variable will be saved directly to disk on output in the
@@ -36,7 +39,7 @@ namespace slib {
       DSWORK_COLUMN = 1 << 5,
       // Indicates that this variable should be cached. Can safely be
       // OR'ed with all other types.
-      CACHED_VARIABLE = 1 << 10
+      CACHED_VARIABLE = 1 << MPIJOB_CACHED_VARIABLE_BITMASK
     };
 
     struct JobData {

@@ -14,6 +14,14 @@
 #include <string>
 #include <vector>
 
+#define LOAD_PARAMETER(name, type)					\
+  if ((field = mxGetField(params, 0, #name))) {				\
+    parameters.name = (type) mxGetScalar(field);			\
+  }									
+
+#define SAVE_PARAMETER(name)						\
+  params.SetStructField(#name, MatlabMatrix(static_cast<float>(_parameters.name)));
+
 namespace slib {
   namespace svm {
     
@@ -57,10 +65,11 @@ namespace slib {
       int32 interpolation_type;
       bool sampleBig;
 
-      bool uniqueDetectionImages;
-
       bool projectFeatures;
       std::string featurePCFile;
+
+      bool removeDuplicateImageDetections;
+      bool removeDuplicatePanoramaDetections;
     };
     
     struct DetectionMetadata {
