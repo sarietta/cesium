@@ -181,6 +181,20 @@ namespace slib {
 	return (dimensions.x * dimensions.y);
       }
 
+      // Try to avoid this. It's more efficient to get them both via
+      // GetDimensions().
+      inline int cols() const {
+	const Pair<int> dimensions = GetDimensions();
+	return dimensions.x;
+      }
+
+      // Try to avoid this. It's more efficient to get them both via
+      // GetDimensions().
+      inline int rows() const {
+	const Pair<int> dimensions = GetDimensions();
+	return dimensions.y;
+      }
+
       inline MatlabMatrixType GetMatrixType() const {
 	return _type;
       }

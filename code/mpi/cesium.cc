@@ -57,7 +57,7 @@ namespace slib {
       : _rank(-1)
       , _size(-1)
       , _hostname("")
-      , _batch_size(5)
+      , _batch_size(-1)
       , _checkpoint_interval(-1)
       , _stripped_feature_dimensions(-1) {}
     
