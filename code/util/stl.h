@@ -52,7 +52,7 @@ namespace slib {
     template <typename T>
     vector<T> Range(const T& start, const T& end, const T& step = 1) {
       vector<T> values(end - start);
-      for (T value = start; value < end; value++) {
+      for (T value = start; value < end; value += step) {
 	values[value - start] = value;
       }
       return values;
@@ -66,7 +66,7 @@ namespace slib {
     }
 
     template <typename T>
-    vector<int> Sort(const vector<T>& V, const bool(&compare)(const T& left, const T& right)) {
+    vector<int> Sort(const vector<T>& V, bool(&compare)(const T& left, const T& right)) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
       sort(VI.begin(), VI.end(), compare);
       return UnwrapContainer<T>(VI, V);
