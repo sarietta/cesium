@@ -15,6 +15,8 @@ using std::vector;
 int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
+
+  FLAGS_logtostderr = true;
   
   vector<float> values;
   for (int i = 0; i < 10; i++) {
@@ -33,5 +35,14 @@ int main(int argc, char** argv) {
     LOG(INFO) << values[i] << " (" << indices[i] << ")";
   }
   
+  LOG(INFO) << "================ RANGES =================";
+  const vector<float> range_f = slib::util::Range<float>(0, 10);
+  const vector<int> range_i = slib::util::Range<int>(0, 6);
+  const vector<char> range_c = slib::util::Range<char>(65, 80);
+
+  LOG(INFO) << "Float range (0, 10): " << slib::util::PrintVector(range_f);
+  LOG(INFO) << "Integer range (0, 6): " << slib::util::PrintVector(range_i);
+  LOG(INFO) << "Char range (65, 80): " << slib::util::PrintVector(range_c);
+
   return 0;
 }
