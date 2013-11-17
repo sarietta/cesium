@@ -767,7 +767,7 @@ namespace slib {
 	  vector<int> rows;
 	  for (int row = 0; row < dimensions.x; row++) {
 	    if (output.indices[col] >= dimensions.y) {
-	      LOG(WARNING) << "No output data was found in column: " << output.indices[col];
+	      VLOG(1) << "No output data was found in column: " << output.indices[col];
 	      continue;
 	    }
 	    
