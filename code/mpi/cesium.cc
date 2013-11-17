@@ -787,7 +787,7 @@ namespace slib {
 	  const string filename = StringUtils::StringPrintf("%s/%s/%d.mat", 
 							    FLAGS_cesium_working_directory.c_str(),
 							    name.c_str(), output.indices[col]+1);
-	  if (!matrix.SaveToBinaryFile(filename)) {
+	  if (!column.SaveToBinaryFile(filename)) {
 	    LOG(ERROR) << "Could not save variable piece to file: " << filename;
 	  }
 	}
