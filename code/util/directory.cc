@@ -12,7 +12,7 @@ using std::vector;
 
 namespace slib {
   namespace util {
-    
+
     string Directory::GenerateTemporaryFilename(const string& root) {
       char buffer[L_tmpnam];
       tmpnam(buffer);
@@ -105,6 +105,15 @@ namespace slib {
     bool File::Exists(const string& path) {
       return (access(path.c_str(), F_OK) == 0);
     }
+
+    string File::GetDirectory(const string& path) {
+      const int position = path.rfind('/');
+      if (position != string::npos) {
+	return path.substr(0, position);
+      } else {
+	return "";
+      }
+    }    
     
   }  // namespace util
 }  // namespace slib

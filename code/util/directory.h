@@ -27,6 +27,9 @@ namespace util {
   public:
     // Determines if a file exists.
     static bool Exists(const std::string& path);
+    
+    // Get the directory from the path to the file.
+    static std::string GetDirectory(const std::string& path);
   };
 }  // namespace util
 }  // namespace slib

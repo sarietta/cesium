@@ -201,6 +201,8 @@ namespace slib {
 	parameters.gradientSumThreshold = (float) mxGetScalar(field);
       }
 
+      LOAD_PARAMETER(featureTypeDecaf, bool);
+
       LOAD_PARAMETER(removeDuplicateImageDetections, bool);
       LOAD_PARAMETER(removeDuplicatePanoramaDetections, bool);
       
@@ -264,6 +266,8 @@ namespace slib {
 			    MatlabMatrix(static_cast<float>(_parameters.gradientSumThreshold)));
       params.SetStructField("sampleBig", 
 			    MatlabMatrix(static_cast<float>(_parameters.sampleBig)));
+
+      SAVE_PARAMETER(featureTypeDecaf);
 
       SAVE_PARAMETER(removeDuplicateImageDetections);
       SAVE_PARAMETER(removeDuplicatePanoramaDetections);
@@ -723,6 +727,8 @@ namespace slib {
 	// TODO(sean): IMPLEMENT ME
       } else if (parameters.featureTypePatchOnly) {
 	patch_channels = 1;
+      } else if (parameters.featureTypeDecaf) {
+	
       }
 
       if (parameters.useColor) {
@@ -763,6 +769,7 @@ namespace slib {
       parameters.featureTypeHistogram = false;
       parameters.featureTypeSparse = false;
       parameters.featureTypeFisher = false;
+      parameters.featureTypeDecaf = false;
       parameters.useColor = true;
       parameters.selectTopN = false;
       parameters.numToSelect = 0;
