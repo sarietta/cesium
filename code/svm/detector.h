@@ -53,6 +53,7 @@ namespace slib {
       bool featureTypeHistogram;
       bool featureTypeSparse;
       bool featureTypeFisher;
+      bool featureTypeDecaf;
       bool useColor;  // Whether the color channels should be added to the feature.
       
       bool selectTopN;
