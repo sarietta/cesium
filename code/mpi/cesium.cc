@@ -160,8 +160,11 @@ namespace slib {
       
       JobDescription finish;
       finish.command = CESIUM_FINISH_JOB_STRING;
-      for (int i = 1; i < _size; i++) {
-	controller.StartJobOnNode(finish, i);
+      for (int node = 1; node < _size; node++) {
+	if (_instance->dead_processors.find(node) == _instance->dead_processors.end()) {
+	  controller.StartJobOnNode(finish, node);
+	  JobNode::WaitForCompletionResponse(node);
+	}
       }
     }
 
@@ -553,6 +556,7 @@ namespace slib {
 	JobDescription job = JobNode::WaitForJobData();
 	if (job.command == CESIUM_FINISH_JOB_STRING) {
 	  LOG(INFO) << "Node " << _rank << " finishing";
+	  JobNode::SendCompletionMessage(MPI_ROOT_NODE);
 	  break;
 	}
 
