@@ -232,6 +232,8 @@ namespace slib {
       static scoped_ptr<Cesium> _singleton;
       static std::map<std::string, Function> _available_commands;
 
+      static std::map<int, bool> _dead_processors;
+
       friend class TestCesiumCommunication;
     };  // class Cesium
 
