@@ -161,7 +161,7 @@ namespace slib {
       JobDescription finish;
       finish.command = CESIUM_FINISH_JOB_STRING;
       for (int node = 1; node < _size; node++) {
-	if (_instance->dead_processors.find(node) == _instance->dead_processors.end()) {
+	if (_dead_processors.find(node) == _dead_processors.end()) {
 	  controller.StartJobOnNode(finish, node);
 	  JobNode::WaitForCompletionResponse(node);
 	}
@@ -525,6 +525,10 @@ namespace slib {
 	  fclose(fid);
 	}
       }
+
+      // Before we kill the instance, save all of the nodes that died 
+      // so that we can finish jobs correctly.
+      _dead_processors.insert(_instance->dead_processors.begin(), _instance->dead_processors.end());
 
       // This kills the current instance so that any modifications to
       // an "instance" will effectively create a new one.
