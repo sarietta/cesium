@@ -52,6 +52,7 @@ namespace slib {
 
     scoped_ptr<Cesium> Cesium::_singleton;
     map<string, Function> Cesium::_available_commands;
+    map<int, bool> Cesium::_dead_processors;
     
     Cesium::Cesium() 
       : _rank(-1)
