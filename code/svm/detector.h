@@ -54,6 +54,7 @@ namespace slib {
       bool featureTypeSparse;
       bool featureTypeFisher;
       bool featureTypeDecaf;
+      int patchStride;
       bool useColor;  // Whether the color channels should be added to the feature.
       
       bool selectTopN;

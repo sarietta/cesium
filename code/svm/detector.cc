@@ -202,6 +202,7 @@ namespace slib {
       }
 
       LOAD_PARAMETER(featureTypeDecaf, bool);
+      LOAD_PARAMETER(patchStride, int);
 
       LOAD_PARAMETER(removeDuplicateImageDetections, bool);
       LOAD_PARAMETER(removeDuplicatePanoramaDetections, bool);
@@ -268,6 +269,7 @@ namespace slib {
 			    MatlabMatrix(static_cast<float>(_parameters.sampleBig)));
 
       SAVE_PARAMETER(featureTypeDecaf);
+      SAVE_PARAMETER(patchStride);
 
       SAVE_PARAMETER(removeDuplicateImageDetections);
       SAVE_PARAMETER(removeDuplicatePanoramaDetections);
@@ -770,6 +772,7 @@ namespace slib {
       parameters.featureTypeSparse = false;
       parameters.featureTypeFisher = false;
       parameters.featureTypeDecaf = false;
+      parameters.patchStride = parameters.basePatchSize.x / 5;
       parameters.useColor = true;
       parameters.selectTopN = false;
       parameters.numToSelect = 0;
