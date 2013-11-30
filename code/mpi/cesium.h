@@ -31,6 +31,9 @@ DECLARE_bool(cesium_debug_mode);
 DECLARE_int32(cesium_debug_mode_node);
 DECLARE_int32(cesium_debug_mode_process_single_index);
 
+#warning "Remove cesium_checkpointed_variables FLAG"
+DECLARE_string(cesium_checkpointed_variables);
+
 namespace slib {
   namespace mpi {
     class Kernel;
@@ -205,6 +208,9 @@ namespace slib {
       void SaveTemporaryOutput(const std::string& name, const slib::util::MatlabMatrix& matrix) const;
       // Checkpoints variables if checkpointing is enabled.
       void CheckpointOutputFiles(const JobOutput& output);
+      // Handles the loading of checkpointed variables passed in via the 
+      // flag cesium_checkpointed_variables.
+      void LoadCheckpoint(const std::vector<std::string>& variables, std::vector<int>* all_indices);
 
       // This function handles a non-COMPLETE_VARIABLE
       // VariableType. It returns a boolean indicating whether it was
