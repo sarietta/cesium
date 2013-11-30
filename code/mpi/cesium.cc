@@ -18,6 +18,10 @@ DEFINE_string(cesium_temporary_directory, "/tmp", "Directory to store temp files
 DEFINE_bool(cesium_export_log, true, "If true, will export the master's log to the working directory.");
 DEFINE_int32(cesium_wait_interval, 5, "The number of seconds to wait between checking status of job.");
 
+// TODO(sean): Remove me and use a VariableType like CACHED_VARIABLE
+DEFINE_string(cesium_checkpointed_variables, "", 
+	      "A comma-separated liste of variable names that should be loaded via checkpoints");
+
 DEFINE_bool(cesium_checkpoint_variables, true, "Set to false if you don't want to checkpoint variables.");
 DEFINE_bool(cesium_all_indices_at_once, false,
 	    "Whether the indices that are sent to the workers should be processed together or separately.");
@@ -221,6 +225,39 @@ namespace slib {
 	_instance->partial_output_unique_int = 0;
       }
     }
+
+    void Cesium::LoadCheckpoint(const vector<string>& variables, vector<int>* all_indices) {
+      for (int i = 0; i < (int) variables.size(); i++) {
+	const string name = variables[i];
+	const MatlabMatrix checkpoint 
+	  = MatlabMatrix::LoadFromFile(FLAGS_cesium_temporary_directory + "/" + name + "_checkpoint.mat");
+	const MatlabMatrix indices_M 
+	  = MatlabMatrix::LoadFromFile(FLAGS_cesium_temporary_directory + "/" + name + "_checkpoint_indices.mat");
+	
+	if (checkpoint.GetMatrixType() == slib::util::MATLAB_NO_TYPE
+	    || indices_M.GetMatrixType() == slib::util::MATLAB_NO_TYPE) {
+	  LOG(WARNING) << "Could not load checkpointing information for variable: " << name;
+	  return;
+	}
+	
+	_instance->final_outputs[name].Merge(checkpoint);
+	const FloatMatrix indices = indices_M.GetCopiedContents();
+	for (int i = 0; i < indices.rows(); i++) {
+	  const int index = (int) indices(i, 0); 
+	  _instance->completed_indices[index] = true;
+	  _instance->output_indices[name].push_back(index);
+	  for (int j = 0; j < all_indices->size(); j++) {
+	    if ((*all_indices)[j] == index) {
+	      all_indices->erase(all_indices->begin() + j);
+	      break;
+	    }
+	  }
+	}
+	
+	LOG(INFO) << "Found checkpoint for variable: " << name 
+		  << " (Indices: " << _instance->output_indices[name].size() << ")";
+      }
+    }
     
     bool Cesium::ExecuteJob(const JobDescription& job, JobOutput* output) {
       LOG(INFO) << "Total processors: " << _size - 1;
@@ -265,10 +302,10 @@ namespace slib {
       vector<int> all_indices = mutable_job.indices;
       mutable_job.indices.clear();      
       _instance->total_indices = all_indices.size();
-#if 0
+#if 1
       // Load the checkpointed variables.
-      if (FLAGS_checkpointed_variables != "") {
-	const vector<string> variables = StringUtils::Explode(";", FLAGS_checkpointed_variables);
+      if (FLAGS_cesium_checkpointed_variables != "") {
+	const vector<string> variables = StringUtils::Explode(",", FLAGS_cesium_checkpointed_variables);
 	LoadCheckpoint(variables, &all_indices);
       }
 #endif 
