@@ -9,7 +9,7 @@
 #include <common/scoped_ptr.h>
 #include <gflags/gflags.h>
 #include <map>
-#include <mpi/mpijob.h>
+#include <cesium/mpijob.h>
 #include <string>
 #include <util/matlab.h>
 #include <vector>
