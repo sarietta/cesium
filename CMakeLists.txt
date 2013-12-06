@@ -99,7 +99,7 @@ endif()
 find_package(MPI QUIET)
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
-set(MODULES util drawing string image gl interpolation svm mpi matrix kmeans)
+set(MODULES util drawing string image gl interpolation svm cesium matrix kmeans)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./lib)
@@ -245,9 +245,9 @@ list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f jpeg stdc++)
 add_library(slib_svm STATIC IMPORTED)
 set_property(TARGET slib_svm PROPERTY
   IMPORTED_LOCATION lib/libsvm.a)
-add_library(slib_mpi STATIC IMPORTED)
-set_property(TARGET slib_mpi PROPERTY
-  IMPORTED_LOCATION lib/libmpi.a)
+add_library(slib_cesium STATIC IMPORTED)
+set_property(TARGET slib_cesium PROPERTY
+  IMPORTED_LOCATION lib/libcesium.a)
 add_library(slib_util STATIC IMPORTED)
 set_property(TARGET slib_util PROPERTY
   IMPORTED_LOCATION lib/libutil.a)
@@ -267,6 +267,22 @@ add_library(slib_interpolation STATIC IMPORTED)
 set_property(TARGET slib_interpolation PROPERTY
   IMPORTED_LOCATION lib/libinterpolation.a)
 
+<<<<<<< HEAD:CMakeLists.txt
+=======
+list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
+
+find_package(MPI REQUIRED CXX)
+include_directories(${MPI_CXX_INCLUDE_PATH})
+list (APPEND TEST_LIBRARIES ${MPI_CXX_LIBRARIES})
+add_definitions(${MPI_CXX_COMPILE_FLAGS})
+
+add_definitions(-DMPICH_SKIP_MPICXX)
+add_definitions(-DOMPI_SKIP_MPICXX)
+
+find_package(ARPACK REQUIRED)
+list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
+
+>>>>>>> 77fd0ef89d43f80758f7c9d68a67a97b81d888af:CMakeLists.txt
 file(MAKE_DIRECTORY "tests")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tests")
 set(TEST_BINARIES)
