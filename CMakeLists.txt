@@ -96,7 +96,7 @@ endif()
 #endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 
 ## MPI
-find_package(MPI REQUIRED CXX)
+find_package(MPI QUIET)
 include_directories(${MPI_CXX_INCLUDE_PATH})
 
 set(MODULES util drawing string image gl interpolation svm mpi matrix kmeans)
@@ -151,7 +151,97 @@ else()
   message(FATAL_ERROR "\nTo build tests, please set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}. You can skip this if you don't want to build any tests, but it is worth setting anyway when it comes time to build your own binaries.")
 endif()
 
-list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f stdc++ jpeg)
+find_package(MPI REQUIRED CXX)
+include_directories(${MPI_CXX_INCLUDE_PATH})
+list (APPEND TEST_LIBRARIES ${MPI_CXX_LIBRARIES})
+add_definitions(${MPI_CXX_COMPILE_FLAGS})
+
+add_definitions(-DMPICH_SKIP_MPICXX)
+add_definitions(-DOMPI_SKIP_MPICXX)
+
+#find_package(ARPACK REQUIRED)
+#list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
+
+## Google Flags
+if(DEFINED ENV{GFLAGS_INCLUDE_DIR} AND DEFINED ENV{GFLAGS_LIB_DIR})
+  include_directories($ENV{GFLAGS_INCLUDE_DIR})
+  link_directories ($ENV{GFLAGS_LIB_DIR})
+else()
+  find_package(GoogleFlags)
+  if(GFLAGS_FOUND)
+    include_directories(${GFLAGS_INCLUDE_DIR})
+  else(GFLAGS_FOUND)
+    message(FATAL_ERROR "\nCouldn't automatically locate your Google Flags installation. Please set the environment variables GFLAGS_INCLUDE_DIR and GFLAGS_LIB_DIR to the correct directories.")
+  endif(GFLAGS_FOUND)
+endif()
+
+## Google Logging
+if(DEFINED ENV{GLOG_INCLUDE_DIR} AND DEFINED ENV{GLOG_LIB_DIR})
+  include_directories($ENV{GLOG_INCLUDE_DIR})
+  link_directories ($ENV{GLOG_LIB_DIR})
+else()
+  find_package(GoogleLogging)
+  if(GLOG_FOUND)
+    include_directories(${GLOG_INCLUDE_DIR})
+  else(GLOG_FOUND)
+    message(FATAL_ERROR "\nCouldn't automatically locate your Google Logging installation. Please set the environment variables GLOG_INCLUDE_DIR and GLOG_LIB_DIR to the correct directories.")
+  endif(GLOG_FOUND)
+endif()
+
+## FFTW3
+find_package(FFTW3 REQUIRED)
+include_directories(${FFTW3_INCLUDE_DIRS})
+link_directories (${FFTW3_LIB_DIRS})
+
+## Boost
+if(DEFINED ENV{BOOST_INCLUDE_DIR})
+  include_directories($ENV{BOOST_INCLUDE_DIR})
+else(DEFINED ENV{BOOST_INCLUDE_DIR})
+  find_package(Boost)
+  if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+    include_directories(${BOOST_INCLUDE_DIRS})
+  else()
+    message(FATAL_ERROR "\nCouldn't automatically locate your Boost installation directory. Please set the environment variable BOOST_INCLUDE_DIR to the correct directory.")
+  endif()
+endif(DEFINED ENV{BOOST_INCLUDE_DIR})
+
+## Eigen3
+if(DEFINED ENV{EIGEN3_INCLUDE_DIR})
+  include_directories($ENV{EIGEN3_INCLUDE_DIR})
+else(DEFINED ENV{EIGEN3_INCLUDE_DIR})
+  find_package(Eigen3)
+  if(EIGEN3_FOUND)
+    include_directories(${EIGEN3_INCLUDE_DIR})
+  else(EIGEN3_FOUND)
+    message(FATAL_ERROR "\nCouldn't automatically locate your Eigen3 installation directory. Please set the environment variable EIGEN3_INCLUDE_DIR to the correct directory.")
+  endif(EIGEN3_FOUND)
+endif(DEFINED ENV{EIGEN3_INCLUDE_DIR})
+
+## MATLAB
+if(DEFINED ENV{MATLAB_INCLUDE_DIR} AND DEFINED ENV{MATLAB_LIB_DIR})
+  include_directories($ENV{MATLAB_INCLUDE_DIR})
+  link_directories ($ENV{MATLAB_LIB_DIR})
+
+  string (REGEX REPLACE "bin" "sys/os" MATLAB_OS_DIR $ENV{MATLAB_LIB_DIR})
+
+  # Need the stdc++ library from MATLAB
+  file (GLOB files "${MATLAB_OS_DIR}/*libstdc++*.so.*")
+  list (GET files 0 MATLAB_CSTD_LIB)
+
+  add_library(matlab_stdc++ SHARED IMPORTED)
+  set_property(TARGET matlab_stdc++ PROPERTY
+    IMPORTED_LOCATION ${MATLAB_CSTD_LIB})
+  list (APPEND TEST_LIBRARIES matlab_stdc++)  
+
+else()
+  message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}")
+endif()
+
+list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_mpi slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
+
+list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f jpeg stdc++)
+
 add_library(slib_svm STATIC IMPORTED)
 set_property(TARGET slib_svm PROPERTY
   IMPORTED_LOCATION lib/libsvm.a)
@@ -176,19 +266,6 @@ set_property(TARGET slib_matrix PROPERTY
 add_library(slib_interpolation STATIC IMPORTED)
 set_property(TARGET slib_interpolation PROPERTY
   IMPORTED_LOCATION lib/libinterpolation.a)
-
-list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_mpi slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
-
-find_package(MPI REQUIRED CXX)
-include_directories(${MPI_CXX_INCLUDE_PATH})
-list (APPEND TEST_LIBRARIES ${MPI_CXX_LIBRARIES})
-add_definitions(${MPI_CXX_COMPILE_FLAGS})
-
-add_definitions(-DMPICH_SKIP_MPICXX)
-add_definitions(-DOMPI_SKIP_MPICXX)
-
-find_package(ARPACK REQUIRED)
-list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
 
 file(MAKE_DIRECTORY "tests")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tests")
