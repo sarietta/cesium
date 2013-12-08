@@ -238,7 +238,7 @@ else()
   message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}")
 endif()
 
-list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_mpi slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
+list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
 
 list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f jpeg stdc++)
 
@@ -267,22 +267,6 @@ add_library(slib_interpolation STATIC IMPORTED)
 set_property(TARGET slib_interpolation PROPERTY
   IMPORTED_LOCATION lib/libinterpolation.a)
 
-<<<<<<< HEAD:CMakeLists.txt
-=======
-list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
-
-find_package(MPI REQUIRED CXX)
-include_directories(${MPI_CXX_INCLUDE_PATH})
-list (APPEND TEST_LIBRARIES ${MPI_CXX_LIBRARIES})
-add_definitions(${MPI_CXX_COMPILE_FLAGS})
-
-add_definitions(-DMPICH_SKIP_MPICXX)
-add_definitions(-DOMPI_SKIP_MPICXX)
-
-find_package(ARPACK REQUIRED)
-list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
-
->>>>>>> 77fd0ef89d43f80758f7c9d68a67a97b81d888af:CMakeLists.txt
 file(MAKE_DIRECTORY "tests")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tests")
 set(TEST_BINARIES)
