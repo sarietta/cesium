@@ -225,14 +225,16 @@ if(DEFINED ENV{MATLAB_INCLUDE_DIR} AND DEFINED ENV{MATLAB_LIB_DIR})
 
   string (REGEX REPLACE "bin" "sys/os" MATLAB_OS_DIR $ENV{MATLAB_LIB_DIR})
 
-  # Need the stdc++ library from MATLAB
-  file (GLOB files "${MATLAB_OS_DIR}/*libstdc++*.so.*")
-  list (GET files 0 MATLAB_CSTD_LIB)
-
-  add_library(matlab_stdc++ SHARED IMPORTED)
-  set_property(TARGET matlab_stdc++ PROPERTY
-    IMPORTED_LOCATION ${MATLAB_CSTD_LIB})
-  list (APPEND TEST_LIBRARIES matlab_stdc++)  
+  if (DEFINED ENV{TACC_SYSTEM})
+    # Need the stdc++ library from MATLAB
+    file (GLOB files "${MATLAB_OS_DIR}/*libstdc++*.so.*")
+    list (GET files 0 MATLAB_CSTD_LIB)
+    
+    add_library(matlab_stdc++ SHARED IMPORTED)
+    set_property(TARGET matlab_stdc++ PROPERTY
+      IMPORTED_LOCATION ${MATLAB_CSTD_LIB})
+    list (APPEND TEST_LIBRARIES matlab_stdc++)  
+  endif()
 
 else()
   message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}")
