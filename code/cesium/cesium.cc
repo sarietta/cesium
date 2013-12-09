@@ -391,7 +391,7 @@ namespace slib {
 	      }
 	    }
 	    
-	    indices_list = StringUtils::StringPrintf("%s]", indices_list.c_str());	  
+	    indices_list = StringUtils::StringPrintf("%s ]", indices_list.c_str());	  
 	    
 	    // In the case that the node is not assigned any indices,
 	    // push it to the bottom of the stack so the next node gets
