@@ -2,12 +2,13 @@
 #define __SLIB_UTIL_COLORMAP_H__
 
 #include <CImg.h>
-#include "../common/types.h"
+#include <common/scoped_ptr.h>
+#include <common/types.h>
 #include <gflags/gflags.h>
 #include <math.h>
-#include "statistics.h"
-#include "../string/conversions.h"
+#include <string/conversions.h>
 #include <string>
+#include <util/statistics.h>
 #include <vector>
 
 DECLARE_double(gaussian_colormap_shape);
@@ -18,7 +19,30 @@ namespace slib {
     
     class ColorMap {
     private:
+      void SetToImage(const FloatImage& image);
+      int GetIndex(const float& val) const;
+
+      scoped_array<float> _map;
+      float _map_length;
     public:
+      // Loads a ColorMap from an image. The image can be any height,
+      // but only the first row is used. The pixel values of the first
+      // row will be mapped from 0 to 1, such that pixel (0,0) in the
+      // image will map to a value of 0.
+      explicit ColorMap(const std::string& filename);
+
+      // Same as above except it takes a FloatImage.
+      explicit ColorMap(const FloatImage& image);
+
+      void Map(const float& val, float* rgb) const;
+      Triplet<float> Map(const float& val) const;
+
+      /**
+	 Begin static ColorMap methods
+
+	 These are here for convenience as commonly used colormaps
+	 (based loosely on some of the more popular MATLAB colormaps).
+       **/
       static void jet(const float& val, float* rgb) {
 	const float map_length1 = 63.0f;
 	const float jetmap[] = {0, 0, 0.5625, 0, 0, 0.6250, 0, 0, 0.6875, 0, 0, 0.7500, 0, 0, 0.8125, 0, 0, 0.8750, 0, 0, 0.9375, 0, 0, 1.0000, 0, 0.0625, 1.0000, 0, 0.1250, 1.0000, 0, 0.1875, 1.0000, 0, 0.2500, 1.0000, 0, 0.3125, 1.0000, 0, 0.3750, 1.0000, 0, 0.4375, 1.0000, 0, 0.5000, 1.0000, 0, 0.5625, 1.0000, 0, 0.6250, 1.0000, 0, 0.6875, 1.0000, 0, 0.7500, 1.0000, 0, 0.8125, 1.0000, 0, 0.8750, 1.0000, 0, 0.9375, 1.0000, 0, 1.0000, 1.0000, 0.0625, 1.0000, 0.9375, 0.1250, 1.0000, 0.8750, 0.1875, 1.0000, 0.8125, 0.2500, 1.0000, 0.7500, 0.3125, 1.0000, 0.6875, 0.3750, 1.0000, 0.6250, 0.4375, 1.0000, 0.5625, 0.5000, 1.0000, 0.5000, 0.5625, 1.0000, 0.4375, 0.6250, 1.0000, 0.3750, 0.6875, 1.0000, 0.3125, 0.7500, 1.0000, 0.2500, 0.8125, 1.0000, 0.1875, 0.8750, 1.0000, 0.1250, 0.9375, 1.0000, 0.0625, 1.0000, 1.0000, 0, 1.0000, 0.9375, 0, 1.0000, 0.8750, 0, 1.0000, 0.8125, 0, 1.0000, 0.7500, 0, 1.0000, 0.6875, 0, 1.0000, 0.6250, 0, 1.0000, 0.5625, 0, 1.0000, 0.5000, 0, 1.0000, 0.4375, 0, 1.0000, 0.3750, 0, 1.0000, 0.3125, 0, 1.0000, 0.2500, 0, 1.0000, 0.1875, 0, 1.0000, 0.1250, 0, 1.0000, 0.0625, 0, 1.0000, 0, 0, 0.9375, 0, 0, 0.8750, 0, 0, 0.8125, 0, 0, 0.7500, 0, 0, 0.6875, 0, 0, 0.6250, 0, 0, 0.5625, 0, 0, 0.5000, 0, 0};

@@ -1,10 +1,66 @@
 #include "colormap.h"
 
+#include <glog/logging.h>
+
 DEFINE_double(gaussian_colormap_shape, -1, "Shape of generalized gaussian");
 DEFINE_double(gaussian_colormap_epsilon, 0.4, "Epsilon of generalized gaussian");
 
 namespace slib {
   namespace util {
+
+    ColorMap::ColorMap(const std::string& filename) {
+      const FloatImage image(filename.c_str());
+      SetToImage(image);
+    }
+
+    ColorMap::ColorMap(const FloatImage& image) {
+      SetToImage(image);
+    }
+
+    void ColorMap::SetToImage(const FloatImage& image) {
+      const int dimension = image.width() == 1 ? image.height() : image.width();
+
+      _map_length = (float) dimension;
+      _map.reset(new float[dimension * 3]);
+
+      VLOG(1) << "Colormap length: " << _map_length;
+
+      const float image_max = image.max();
+      for (int i = 0; i < dimension; i++) {
+	_map[3*i + 0] = image(i, 0, 0) / image_max;
+	_map[3*i + 1] = image(i, 0, 1) / image_max;
+	_map[3*i + 2] = image(i, 0, 2) / image_max;
+      }
+    }
+
+    int ColorMap::GetIndex(const float& val) const {
+      float lookup = val < 0 ? 0 : val;
+      lookup = lookup > 1 ? 1 : lookup;
+      if (std::isnan(val)) {
+	lookup = 0;
+      }
+      
+      const int index = static_cast<int>(lookup * _map_length);
+      VLOG(3) << "Lookup index: " << index;
+
+      return index;
+    }
+
+    void ColorMap::Map(const float& val, float* rgb) const {
+      const int index = GetIndex(val);
+      rgb[0] = _map[index * 3 + 0];
+      rgb[1] = _map[index * 3 + 1];
+      rgb[2] = _map[index * 3 + 2];
+    }
+
+    Triplet<float> ColorMap::Map(const float& val) const {
+      const int index = GetIndex(val);
+      const float r = _map[index * 3 + 0];
+      const float g = _map[index * 3 + 1];
+      const float b = _map[index * 3 + 2];
+
+      return Triplet<float>(r, g, b);
+    }
     
     float ColorMap::GaussianTransformation(const float& max, 
 					   const float& min, 
