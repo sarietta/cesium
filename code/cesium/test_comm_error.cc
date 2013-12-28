@@ -1,5 +1,6 @@
 #include "cesium.h"
 #include <common/types.h>
+#include <execinfo.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <map>
@@ -29,8 +30,36 @@ using std::stringstream;
 DEFINE_bool(use_handler, false, "If true, will use the error handler below.");
 DEFINE_bool(wait, false, "If true, will wait before doing anything so that you can debug.");
 
+int rank, size;
+
 void TestFunction(const JobDescription& job, JobOutput* output) {
+  if (rank == 2) {
+    raise(SIGSEGV);
+  }
+
   output->indices.push_back(job.indices[0]);
+}
+
+void handler(int sig) {
+  void *array[10];
+  size_t size;
+  
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+  
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+
+  // Tell the master we're "done"
+  JobOutput died;
+  died.command = CESIUM_NODE_DIED_JOB_STRING;
+  JobNode::SendCompletionMessage(MPI_ROOT_NODE);
+  JobNode::WaitForCompletionResponse(MPI_ROOT_NODE);
+  JobNode::SendJobDataToNode(died, MPI_ROOT_NODE);
+
+  MPI_Finalize();
+  exit(0);
 }
 
 void HandleError(const int& error_code, const int& node) {
@@ -66,10 +95,10 @@ namespace slib {
 }
 
 int main(int argc, char** argv) {
+  signal(SIGSEGV, handler);   // install our handler
+
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
-
-  int rank, size;
 
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
