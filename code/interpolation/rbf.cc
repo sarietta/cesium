@@ -1,10 +1,15 @@
 #include "rbf.h"
 
-#include "../util/assert.h"
+#include <common/scoped_ptr.h>
 #include <Eigen/Dense>
+#include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <interpolation/rbf_interp_nd.h>
 #include <stdio.h>
 #include <string>
+#include <util/assert.h>
+
+DEFINE_double(rbf_interpolation_radius, 0.01, "The 'radius' of the radial basis function interpolator.");
 
 using namespace Eigen;
 using std::string;
@@ -12,23 +17,90 @@ using std::string;
 namespace slib {
   namespace interpolation {
 
-    RadialBasisFunction::RadialBasisFunction(float(*rbf)(const float& r)) {
-      _rbf = rbf;
+    RadialBasisFunction::RadialBasisFunction(RadialBasisFunction_Function rbf) 
+      : _rbf(rbf), _alt_rbf(NULL), _condition_test(false) {}
+
+    RadialBasisFunction::RadialBasisFunction(RadialBasisFunction_AltFunction rbf) 
+      : _rbf(NULL), _alt_rbf(rbf), _condition_test(false) {}
+
+    void RadialBasisFunction::EnableConditionTest() {
+      _condition_test = true;
     }
 
-    void RadialBasisFunction::SetPoints(const MatrixXf& points) {
+    void RadialBasisFunction::SetPoints(const atrixXf& points) {
       _points = points;
       _N = _points.rows();
       _dimensions = _points.cols();      
     }
 
+    void RadialBasisFunction::ComputeWeightsAlt(const VectorXf& values, const bool& normalized) {
+      ASSERT_EQ(values.size(), _N);
+      ASSERT_NOT_NULL(_alt_rbf);
+
+      const int  = _dimensions;
+      const int ND = _N;
+      scoped_array<double> XD(new double[ * ND]);
+      for (int i = 0; i < ND; i++) {
+	for (int j = 0; j < ; j++) {
+	  XD[j + i * ] = (double) _points(i, j);
+	}
+      }
+
+      const double R0 = FLAGS_rbf_interpolation_radius;
+      scoped_array<double> FD(new double[ND]);
+      for (int i = 0; i < ND; i++) {
+	FD[i] = (double) values(i);
+      }
+
+      scoped_array<double> w(rbf_weight(, ND, XD.get(), R0, _alt_rbf, FD.get()));
+
+      _w.resize(ND);
+      for (int i = 0; i < ND; i++) {
+	_w(i) = w[i];
+      }
+    }
+
+    float RadialBasisFunction::InterpolateAlt(const VectorXf& point) {
+      ASSERT_EQ(point.size(), _dimensions);
+
+      const int  = _dimensions;
+      const int ND = _N;
+      scoped_array<double> XD(new double[ * ND]);
+      for (int i = 0; i < ND; i++) {
+	for (int j = 0; j < ; j++) {
+	  XD[j + i * ] = (double) _points(i, j);
+	}
+      }
+
+      const double R0 = FLAGS_rbf_interpolation_radius;
+      
+      scoped_array<double> W(new double[ND]);
+      for (int i = 0; i < ND; i++) {
+	W[i] = (double) _w(i);
+      }
+
+      const int NI = 1;
+      scoped_array<double> XI(new double[ * NI]);
+      for (int i = 0; i <  * NI; i++) {
+	XI[i] = (double) point(i);
+      }
+
+      scoped_array<double> interpolated(rbf_interp_nd(, ND, XD.get(), R0, _alt_rbf, W.get(), NI, XI.get()));
+      return interpolated[0];
+    }
+
     // Input is a (w, h) = (dimensions, N) matrix of points. Values is a vector of length N.
     void RadialBasisFunction::ComputeWeights(const VectorXf& values, const bool& normalized) {
+      if (_rbf == NULL && _alt_rbf != NULL) {
+	ComputeWeightsAlt(values, normalized);
+	return;
+      }
+
       _normalized = normalized;
 
       ASSERT_EQ(values.size(), _N);
 
-      MatrixXf rbf(_N, _N);
+      atrixXf rbf(_N, _N);
       VectorXf b(_N);
       for (int32 i = 0; i < _N; i++) {
 	float sum = 0.0f;
@@ -45,9 +117,27 @@ namespace slib {
 	}
       }
       _w = rbf.colPivHouseholderQr().solve(b);
+
+      if (_condition_test) {
+	SelfAdjointEigenSolver<atrixXf> eigensolver(rbf);
+	if (eigensolver.info() != Success) {
+	  LOG(ERROR) << "Couldn't compute eigenvalues for matrix";
+	} else {
+	  const VectorXf eigenvalues = eigensolver.eigenvalues();
+	  const float min_eig = eigenvalues(0);
+	  const float max_eig = eigenvalues(eigenvalues.size() - 1);
+	  const float condition_number = fabs(max_eig / min_eig);
+
+	  LOG(INFO) << "Condition Number: " << condition_number;
+	}
+      }
     }
 
     float RadialBasisFunction::Interpolate(const VectorXf& point) {
+      if (_rbf == NULL && _alt_rbf != NULL) {
+	return InterpolateAlt(point);
+      }
+
       ASSERT_EQ(point.size(), _dimensions);
 
       float weight_sum = 0.0f;
@@ -132,7 +222,7 @@ namespace slib {
       }
 
       // Points.
-      _points = MatrixXf(N, dimensions);
+      _points = atrixXf(N, dimensions);
       read = fread(_points.data(), sizeof(float), N * dimensions, fid);
       if (read != N * dimensions) {
 	LOG(WARNING) << "Could not read points from file: " << filename;
