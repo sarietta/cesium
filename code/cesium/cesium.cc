@@ -753,8 +753,18 @@ namespace slib {
 	for (uint32 i = 0; i < output.indices.size(); i++) {
 	  output_indices_list = StringUtils::StringPrintf("%s %d", output_indices_list.c_str(), output.indices[i]);
 	  _instance->completed_indices[output.indices[i]] = true;
-	  _instance->pending_indices.erase(output.indices[i]);
 	}
+
+	// Dequeue all of the indices that the node was
+	// processing. Note that this doesn't necessarily mean that
+	// the node completed them, just that it indicated it finished
+	// so we are dequeing everything it was supposed to have
+	// completed.
+	const vector<int>& indices = _instance->node_indices[node];
+	for (int i = 0; i < (int) indices.size(); i++) {
+	  _instance->pending_indices.erase(indices[i]);
+	}
+	_instance->node_indices.erase(node);
 	
 	LOG(INFO) << "Node " << node << " output indices: " << output_indices_list << "]";
 	for (map<string, MatlabMatrix>::const_iterator it = output.variables.begin(); 
