@@ -744,6 +744,11 @@ namespace slib {
     }
 
     void Cesium::HandleJobCompleted(const JobOutput& output, const int& node) {
+      if (output.command == CESIUM_NODE_DIED_JOB_STRING) {
+	HandleDeadNode(node);
+	return;
+      }
+
       LOG(INFO) << "Job completed on node: " << node;
 
       // Synchronized access with the accessor routines in the main loop
