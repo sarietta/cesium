@@ -824,6 +824,11 @@ namespace slib {
       } else {
 	scale = canonical_size / static_cast<float>(image.height());
       }
+
+      if (parameters.imageCanonicalSize <= 0) {
+	scale = 1.0f;
+      }
+
       VLOG(1) << "Canonical Scale: " << scale;
       
       const float scaled_width = scale * image.width();
