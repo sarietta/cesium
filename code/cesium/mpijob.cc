@@ -128,6 +128,8 @@ namespace slib {
 	const int state = MPI_Test(request, &flag, &status);
 	_request_handlers[iter->first] = *request;
 
+	VLOG(2) << "Status for node " << iter->first << ": " << status.MPI_ERROR;
+
 	if (state != MPI_SUCCESS) {
 	  const int node = iter->first;
 	  LOG(ERROR) << "Communication error with node: " << node;

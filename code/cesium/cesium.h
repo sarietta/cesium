@@ -15,7 +15,9 @@
 #include <vector>
 
 #define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
+
 #define CESIUM_FINISH_JOB_STRING "__CESIUM_FINISH_JOB__"
+#define CESIUM_NODE_DIED_JOB_STRING "__CESIUM_NODE_DIED__"
 
 #define CESIUM_CACHED_VARIABLES_FIELD "__CESIUM_CACHED_VARIABLES__"
 

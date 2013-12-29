@@ -45,6 +45,16 @@ namespace slib {
       return indices;
     }
 
+    // Just returns the indices. DOES NOT ACTUALLY SORT!
+    template <typename T>
+    vector<int> UnwrapContainer(const vector<STLIndexedEntry<T> >& VI, const vector<T>& V) {
+      vector<int> indices(VI.size());
+      for (int i = 0; i < (int) VI.size(); i++) {
+	indices[i] = VI[i].index;
+      }
+      return indices;
+    }
+
     // Create a vector of values from [start, end) with a stride of
     // step. The templated type must be well-defined for the operators
     // < and ++, and must be able to cast the value 1 appropriately if
@@ -66,8 +76,15 @@ namespace slib {
     }
 
     template <typename T>
+    vector<int> Sort(const vector<T>& V) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      sort(VI.begin(), VI.end(), AscendingOrder<T>);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    template <typename T>
     vector<int> Sort(const vector<T>& V, bool(&compare)(const T& left, const T& right)) {
-      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
       sort(VI.begin(), VI.end(), compare);
       return UnwrapContainer<T>(VI, V);
     }

@@ -159,8 +159,13 @@ add_definitions(${MPI_CXX_COMPILE_FLAGS})
 add_definitions(-DMPICH_SKIP_MPICXX)
 add_definitions(-DOMPI_SKIP_MPICXX)
 
-#find_package(ARPACK REQUIRED)
-#list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
+find_package(ARPACK)
+if(ARPACK_FOUND)
+  list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
+else()
+  message(WARNING "\nCouldn't find an installation of ARPACK on this machine. Compilation is still possible, but fast eigen decomposition routines for large/sparse matrices will not be possible.")
+  add_definitions(-DOSKIP_ARPACK)
+endif()
 
 ## Google Flags
 if(DEFINED ENV{GFLAGS_INCLUDE_DIR} AND DEFINED ENV{GFLAGS_LIB_DIR})
@@ -279,6 +284,7 @@ foreach(TEST_FILE ${TEST_FILES})
   # Explicitly avoiding some troublesome binaries that need to be
   # built with special care
   if(${BINARY} STREQUAL "test_matlab_function")
+  elseif(${BINARY} STREQUAL "test_eigs" AND (NOT ARPACK_FOUND))
   else()
     add_executable(${BINARY} EXCLUDE_FROM_ALL ${TEST_FILE} ${LINKED_SOURCES})
     target_link_libraries (${BINARY} ${TEST_LIBRARIES})
