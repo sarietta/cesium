@@ -27,7 +27,7 @@ namespace slib {
       _condition_test = true;
     }
 
-    void RadialBasisFunction::SetPoints(const atrixXf& points) {
+    void RadialBasisFunction::SetPoints(const MatrixXf& points) {
       _points = points;
       _N = _points.rows();
       _dimensions = _points.cols();      
@@ -37,12 +37,12 @@ namespace slib {
       ASSERT_EQ(values.size(), _N);
       ASSERT_NOT_NULL(_alt_rbf);
 
-      const int  = _dimensions;
+      const int M = _dimensions;
       const int ND = _N;
-      scoped_array<double> XD(new double[ * ND]);
+      scoped_array<double> XD(new double[M * ND]);
       for (int i = 0; i < ND; i++) {
-	for (int j = 0; j < ; j++) {
-	  XD[j + i * ] = (double) _points(i, j);
+	for (int j = 0; j < M; j++) {
+	  XD[j + i * M] = (double) _points(i, j);
 	}
       }
 
@@ -52,7 +52,7 @@ namespace slib {
 	FD[i] = (double) values(i);
       }
 
-      scoped_array<double> w(rbf_weight(, ND, XD.get(), R0, _alt_rbf, FD.get()));
+      scoped_array<double> w(rbf_weight(M, ND, XD.get(), R0, _alt_rbf, FD.get()));
 
       _w.resize(ND);
       for (int i = 0; i < ND; i++) {
@@ -63,12 +63,12 @@ namespace slib {
     float RadialBasisFunction::InterpolateAlt(const VectorXf& point) {
       ASSERT_EQ(point.size(), _dimensions);
 
-      const int  = _dimensions;
+      const int M = _dimensions;
       const int ND = _N;
-      scoped_array<double> XD(new double[ * ND]);
+      scoped_array<double> XD(new double[M * ND]);
       for (int i = 0; i < ND; i++) {
-	for (int j = 0; j < ; j++) {
-	  XD[j + i * ] = (double) _points(i, j);
+	for (int j = 0; j < M; j++) {
+	  XD[j + i * M] = (double) _points(i, j);
 	}
       }
 
@@ -80,12 +80,12 @@ namespace slib {
       }
 
       const int NI = 1;
-      scoped_array<double> XI(new double[ * NI]);
-      for (int i = 0; i <  * NI; i++) {
+      scoped_array<double> XI(new double[M * NI]);
+      for (int i = 0; i < M * NI; i++) {
 	XI[i] = (double) point(i);
       }
 
-      scoped_array<double> interpolated(rbf_interp_nd(, ND, XD.get(), R0, _alt_rbf, W.get(), NI, XI.get()));
+      scoped_array<double> interpolated(rbf_interp_nd(M, ND, XD.get(), R0, _alt_rbf, W.get(), NI, XI.get()));
       return interpolated[0];
     }
 
@@ -100,7 +100,7 @@ namespace slib {
 
       ASSERT_EQ(values.size(), _N);
 
-      atrixXf rbf(_N, _N);
+      MatrixXf rbf(_N, _N);
       VectorXf b(_N);
       for (int32 i = 0; i < _N; i++) {
 	float sum = 0.0f;
@@ -119,7 +119,7 @@ namespace slib {
       _w = rbf.colPivHouseholderQr().solve(b);
 
       if (_condition_test) {
-	SelfAdjointEigenSolver<atrixXf> eigensolver(rbf);
+	SelfAdjointEigenSolver<MatrixXf> eigensolver(rbf);
 	if (eigensolver.info() != Success) {
 	  LOG(ERROR) << "Couldn't compute eigenvalues for matrix";
 	} else {
@@ -222,7 +222,7 @@ namespace slib {
       }
 
       // Points.
-      _points = atrixXf(N, dimensions);
+      _points = MatrixXf(N, dimensions);
       read = fread(_points.data(), sizeof(float), N * dimensions, fid);
       if (read != N * dimensions) {
 	LOG(WARNING) << "Could not read points from file: " << filename;
