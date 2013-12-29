@@ -204,6 +204,8 @@ namespace slib {
       LOAD_PARAMETER(featureTypeDecaf, bool);
       LOAD_PARAMETER(patchStride, int);
 
+      LOAD_STRING_PARAMETER(decafFeatureName);
+
       LOAD_PARAMETER(removeDuplicateImageDetections, bool);
       LOAD_PARAMETER(removeDuplicatePanoramaDetections, bool);
       
@@ -270,6 +272,8 @@ namespace slib {
 
       SAVE_PARAMETER(featureTypeDecaf);
       SAVE_PARAMETER(patchStride);
+
+      SAVE_STRING_PARAMETER(decafFeatureName);
 
       SAVE_PARAMETER(removeDuplicateImageDetections);
       SAVE_PARAMETER(removeDuplicatePanoramaDetections);
@@ -730,7 +734,13 @@ namespace slib {
       } else if (parameters.featureTypePatchOnly) {
 	patch_channels = 1;
       } else if (parameters.featureTypeDecaf) {
-	
+	// TODO(sean): Oh come on. This is just silly. All of it.
+	patch_channels = parameters.useColor ? -2 : 0;
+	if (parameters.decafFeatureName == "fc6_cudanet_out") {
+	  extra_dimensions = 4096;
+	} else if (parameters.decafFeatureName == "pool5_cudanet_out") {
+	  extra_dimensions = 9216;
+	}
       }
 
       if (parameters.useColor) {
@@ -772,6 +782,7 @@ namespace slib {
       parameters.featureTypeSparse = false;
       parameters.featureTypeFisher = false;
       parameters.featureTypeDecaf = false;
+      parameters.decafFeatureName = "fc6_cudanet_out";
       parameters.patchStride = parameters.basePatchSize.x / 5;
       parameters.useColor = true;
       parameters.selectTopN = false;

@@ -19,8 +19,16 @@
     parameters.name = (type) mxGetScalar(field);			\
   }									
 
+#define LOAD_STRING_PARAMETER(name)					\
+  if ((field = mxGetField(params, 0, #name))) {				\
+    parameters.name = string(mxArrayToString((field)));			\
+  }									
+
 #define SAVE_PARAMETER(name)						\
   params.SetStructField(#name, MatlabMatrix(static_cast<float>(_parameters.name)));
+
+#define SAVE_STRING_PARAMETER(name)					\
+  params.SetStructField(#name, MatlabMatrix(_parameters.name));
 
 namespace slib {
   namespace svm {
@@ -56,6 +64,8 @@ namespace slib {
       bool featureTypeDecaf;
       int patchStride;
       bool useColor;  // Whether the color channels should be added to the feature.
+
+      std::string decafFeatureName;
       
       bool selectTopN;
       int32 numToSelect;
