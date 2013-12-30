@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <common/math.h>
 #include <common/scoped_ptr.h>
+#ifdef DECAF_ENABLED
+#include <decaf/decaf.h>
+#endif
 #include <glog/logging.h>
 #include <fstream>
 #include <image/cimgutils.h>
@@ -554,7 +557,7 @@ namespace slib {
       return indices;
     }
     
-    DetectionResultSet Detector::DetectInImage(const FloatImage& image) {
+    DetectionResultSet Detector::DetectInImage(const FloatImage& image, const string& filename) {
       DetectionResultSet result_set;
       
       FloatMatrix features;
@@ -563,14 +566,35 @@ namespace slib {
       // Compute the features for the input image.
       Timer::Start();
       // Compute the feature pyramid for the image
-      FeaturePyramid pyramid = ComputeFeaturePyramid(image);
-      {
+      scoped_ptr<FeaturePyramid> pyramid;  // Ignored for decaf features
+
+      if (_parameters.featureTypeDecaf) {
+#ifdef DECAF_ENABLED
+	if (image.spectrum() != 3) {
+	  LOG(INFO) << "Can't compute decaf features on non-RGB image: " << filename;
+	  return result_set;
+	}
+
+	vector<DetectionMetadata> patches;
+	features = Decaf::ExtractAllFeatures(image, filename, _parameters, &patches);
+
+	for (int i = 0; i < (int) patches.size(); i++) {
+	  indices.push_back(Pair<int32>(patches[i].x1, patches[i].y1));
+	  levels.push_back(patches[i].pyramid_offset.first());
+	}
+#else
+	LOG(ERROR) << "Attempted to use Decaf features but they're not enabled!";
+	return result_set;
+#endif
+      } else {
+	pyramid.reset(new FeaturePyramid(ComputeFeaturePyramid(image)));
+	
 	// Get all of the features for the image.
 	vector<float> gradient_sums;
 	Pair<int32> patch_size;
 	const int32 feature_dimensions = Detector::GetFeatureDimensions(_parameters, &patch_size);
-	FloatMatrix allfeatures = pyramid.GetAllLevelFeatureVectors(patch_size, feature_dimensions, 
-								    &levels, &indices, &gradient_sums);
+	FloatMatrix allfeatures = pyramid->GetAllLevelFeatureVectors(patch_size, feature_dimensions, 
+								     &levels, &indices, &gradient_sums);
 	ASSERT_EQ(allfeatures.rows(), levels.size());
 	ASSERT_EQ(allfeatures.rows(), levels.size());
 	features = FeaturePyramid::ThresholdFeatures(allfeatures, gradient_sums, _parameters.gradientSumThreshold, 
@@ -637,8 +661,58 @@ namespace slib {
 	  //continue;
 	} else {	
 	  Timer::Start();
-	  vector<DetectionMetadata> metadata 
-	    = Detector::GetDetectionMetadata(pyramid, indices, selected_indices, levels, _parameters);
+	  vector<DetectionMetadata> metadata;
+
+	  if (_parameters.featureTypeDecaf) {
+#ifdef DECAF_ENABLED
+	    const float canonical_size = static_cast<float>(_parameters.imageCanonicalSize);
+	    float scale = 0.0f;
+	    if (image.width() < image.height()) {
+	      scale = canonical_size / static_cast<float>(image.width());
+	    } else {
+	      scale = canonical_size / static_cast<float>(image.height());
+	    }
+	    
+	    if (_parameters.imageCanonicalSize <= 0) {
+	      scale = 1.0f;
+	    }
+
+	    const float scaled_height = (int) (((float) image.height()) * scale);
+	    const float scaled_width = (int) (((float) image.width()) * scale);
+
+	    vector<float> scales;
+	    Decaf::ComputeScales(scaled_width, scaled_height, _parameters, &scales);
+
+	    metadata.resize(selected_indices.size());
+	    for (int i = 0; i < (int) selected_indices.size(); i++) {
+	      const int selected_index = selected_indices[i];
+
+	      const int level = levels[selected_index];
+	      const float level_scale = scale / scales[level];
+	      
+	      metadata[i].x1 = indices[selected_index].x * level_scale;
+	      metadata[i].y1 = indices[selected_index].y * level_scale;
+	      metadata[i].x2 = metadata[i].x1 + _parameters.basePatchSize.x * level_scale;
+	      metadata[i].y2 = metadata[i].y1 + _parameters.basePatchSize.y * level_scale;
+	      
+	      metadata[i].x1 = metadata[i].x1 < 0 ? 0 : metadata[i].x1;
+	      metadata[i].y1 = metadata[i].y1 < 0 ? 0 : metadata[i].y1;
+	      metadata[i].x2 = metadata[i].x2 > image.width() - 1 ? image.width() - 1 : metadata[i].x2;
+	      metadata[i].y2 = metadata[i].y2 > image.height() - 1 ? image.height() - 1 : metadata[i].y2;
+
+	      metadata[i].pyramid_offset 
+		= Triplet<int32>(level, indices[selected_index].x, indices[selected_index].y);
+
+	      metadata[i].image_size = Pair<int32>(image.width(), image.height());
+	    }
+#else
+	    LOG(ERROR) << "Attempted to use Decaf features but they're not enabled!";
+	    return result_set;
+#endif
+	  } else {
+	    metadata = Detector::GetDetectionMetadata((*pyramid.get()), indices, selected_indices, 
+						      levels, _parameters);
+	  }
 	  VLOG(2) << "Time spent collating the metadata: " << Timer::Stop();
 	  
 	  Timer::Start();

@@ -104,6 +104,19 @@ set(MODULES util drawing string image gl interpolation svm cesium matrix kmeans)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./lib)
 
+# Temporary hack for decaf
+find_path(DECAF_INCLUDE_DIR NAMES decaf.h
+  HINTS   
+  ${CMAKE_INSTALL_PREFIX}/include
+  ${CMAKE_SYSTEM_INCLUDE_PATH}/include
+  PATH_SUFFIXES decaf)
+
+if (DECAF_INCLUDE_DIR MATCHES DECAF_INCLUDE_DIR-NOTFOUND)
+  message(WARNING, "\nCould not locate Decaf header file")
+else ()
+  add_definitions(-DDECAF_ENABLED)
+endif ()
+
 # Compile each module
 set(TEST_FILES)
 foreach(MODULE ${MODULES}) 

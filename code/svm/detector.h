@@ -163,8 +163,10 @@ namespace slib {
 								 const std::vector<int32>& levels,
 								 const DetectionParameters& parameters);
       
-      // Outputs one DetectionResultSet per model.
-      DetectionResultSet DetectInImage(const FloatImage& image);
+      // Outputs one DetectionResultSet per model. The filename
+      // parameter is only used for extracting decaf features since at
+      // the moment
+      DetectionResultSet DetectInImage(const FloatImage& image, const std::string& filename = "");
 
       // Helper function to remove any detections that from the same image.
       static std::vector<int32> SelectUniqueDetectionImages(const std::vector<DetectionMetadata>& metadata, 
