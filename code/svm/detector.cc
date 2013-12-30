@@ -690,10 +690,10 @@ namespace slib {
 	      const int level = levels[selected_index];
 	      const float level_scale = scale / scales[level];
 	      
-	      metadata[i].x1 = indices[selected_index].x * level_scale;
-	      metadata[i].y1 = indices[selected_index].y * level_scale;
-	      metadata[i].x2 = metadata[i].x1 + _parameters.basePatchSize.x * level_scale;
-	      metadata[i].y2 = metadata[i].y1 + _parameters.basePatchSize.y * level_scale;
+	      metadata[i].x1 = indices[selected_index].x / level_scale;
+	      metadata[i].y1 = indices[selected_index].y / level_scale;
+	      metadata[i].x2 = metadata[i].x1 + _parameters.basePatchSize.x / level_scale;
+	      metadata[i].y2 = metadata[i].y1 + _parameters.basePatchSize.y / level_scale;
 	      
 	      metadata[i].x1 = metadata[i].x1 < 0 ? 0 : metadata[i].x1;
 	      metadata[i].y1 = metadata[i].y1 < 0 ? 0 : metadata[i].y1;
