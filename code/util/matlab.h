@@ -234,6 +234,27 @@ namespace slib {
 	}
       }
 
+      // This is what you would expect to call for a 'normal' matrix,
+      // and it's relatively efficient all things considered, but it's
+      // probably best if you can initialize larger chunks in
+      // FloatMatrix and then set the contents.
+      //
+      // Note this only works for regular matrices, not cell nor
+      // struct.
+      template <typename T>
+      inline void Set(const int& row, const int& col, const T& value) {
+	if (_type == MATLAB_MATRIX) {
+	  const int rows = mxGetM(_matrix);
+	  if (mxIsDouble(_matrix)) {
+	    ((double*) mxGetData(_matrix))[row + col * rows] = static_cast<double>(value);
+	  } else if (mxIsSingle(_matrix)) {
+	    ((float*) mxGetData(_matrix))[row + col * rows] = static_cast<float>(value);
+	  }
+	} else {
+	  LOG(WARNING) << "Attempted to assign a scalar value to a non-numeric matrix.";
+	}
+      }
+
       // Print a friendly version of the matrix based on the type.
       friend std::ostream& operator<<(std::ostream& os, const MatlabMatrix& obj) {
 	const Pair<int> dimensions = obj.GetDimensions();
