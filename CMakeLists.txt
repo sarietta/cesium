@@ -140,6 +140,9 @@ foreach(MODULE ${MODULES})
 
 endforeach(MODULE) 
 
+##########################################################################################
+##########################################################################################
+
 # Build all the tests
 if(DEFINED ENV{MATLAB_LIB_DIR})
   include_directories($ENV{MATLAB_INCLUDE_DIR})
@@ -171,14 +174,6 @@ add_definitions(${MPI_CXX_COMPILE_FLAGS})
 
 add_definitions(-DMPICH_SKIP_MPICXX)
 add_definitions(-DOMPI_SKIP_MPICXX)
-
-find_package(ARPACK)
-if(ARPACK_FOUND)
-  list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
-else()
-  message(WARNING "\nCouldn't find an installation of ARPACK on this machine. Compilation is still possible, but fast eigen decomposition routines for large/sparse matrices will not be possible.")
-  add_definitions(-DOSKIP_ARPACK)
-endif()
 
 ## Google Flags
 if(DEFINED ENV{GFLAGS_INCLUDE_DIR} AND DEFINED ENV{GFLAGS_LIB_DIR})
@@ -258,7 +253,29 @@ else()
   message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}")
 endif()
 
-list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
+## Decaf
+# Temporary hack for decaf
+find_library(BOOST_PYTHON_LIBRARY NAMES python2.7 boost_python-py27 boost_numpy
+  HINTS
+  ${CMAKE_INSTALL_PREFIX}/lib
+  ${CMAKE_SYSTEM_INCLUDE_PATH}/lib})
+find_path(BOOST_PYTHON_INCLUDE_DIR NAMES pyconfig.h
+  HINTS   
+  ${CMAKE_INSTALL_PREFIX}/include/
+  ${CMAKE_SYSTEM_INCLUDE_PATH}/include
+  PATH_SUFFIXES python2.7)
+
+if (BOOST_PYTHON_LIBRARY MATCHES BOOST_PYTHON_LIBRARY-NOTFOUND OR BOOST_PYTHON_INCLUDE_DIR MATCHES BOOST_PYTHON_INCLUDE_DIR-NOTFOUND)
+  message(WARNING, "\nCould not locate Boost Python libraries")
+
+  list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
+else ()
+  list (APPEND TEST_LIBRARIES python2.7 boost_python-py27 boost_numpy)
+  add_library(decaf STATIC /home/sarietta/Development/silicon/code/vizstat/decaf.cc)
+  include_directories(${BOOST_PYTHON_INCLUDE_DIR})
+
+  list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation decaf -Wl,-end-group)
+endif ()
 
 list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f jpeg stdc++)
 
@@ -286,6 +303,15 @@ set_property(TARGET slib_matrix PROPERTY
 add_library(slib_interpolation STATIC IMPORTED)
 set_property(TARGET slib_interpolation PROPERTY
   IMPORTED_LOCATION lib/libinterpolation.a)
+
+## ARPACK
+find_package(ARPACK)
+if(ARPACK_FOUND)
+  list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
+else()
+  message(WARNING "\nCouldn't find an installation of ARPACK on this machine. Compilation is still possible, but fast eigen decomposition routines for large/sparse matrices will not be possible.")
+  add_definitions(-DOSKIP_ARPACK)
+endif()
 
 file(MAKE_DIRECTORY "tests")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tests")
