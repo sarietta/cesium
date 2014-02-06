@@ -24,6 +24,11 @@ namespace slib {
     }
 
     template <typename T>
+    bool DescendingOrder(const STLIndexedEntry<T>& left, const STLIndexedEntry<T>& right) {
+      return (left.value > right.value);
+    }
+
+    template <typename T>
     vector<STLIndexedEntry<T> > CreateIndexedContainer(const vector<T>& V) {
       vector<STLIndexedEntry<T> > VI(V.size());
       for (int i = 0; i < (int) V.size(); i++) {
@@ -68,6 +73,9 @@ namespace slib {
       return values;
     }
 
+    // Sorts a vector in ascending order. The return vector are a
+    // mapping from the sorted vector to the original vector such that
+    // vector<int> i = Sort(V_original) --> V_sorted = V_original(i).
     template <typename T>
     vector<int> Sort(vector<T>* V) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
@@ -75,6 +83,10 @@ namespace slib {
       return UnwrapContainer<T>(VI, V);
     }
 
+    // Returns the sorted indices (ascending order) but doesn't
+    // actually sort the vector (hence the const). This is useful if
+    // you just want to know how to reorder a vector without actually
+    // reordering it.
     template <typename T>
     vector<int> Sort(const vector<T>& V) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
@@ -82,8 +94,21 @@ namespace slib {
       return UnwrapContainer<T>(VI, V);
     }
 
+    // Same as above except you get to pass your own compare function
+    // in.  TODO(sean): Make it so users can just specify a functor on
+    // const T& rather than the IndexedEntry.
     template <typename T>
-    vector<int> Sort(const vector<T>& V, bool(&compare)(const T& left, const T& right)) {
+    vector<int> Sort(vector<T>* V, 
+		     bool(&compare)(const STLIndexedEntry<T>& left, const STLIndexedEntry<T>& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
+      sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    // Same as above except you get to pass your own compare function in.
+    template <typename T>
+    vector<int> Sort(const vector<T>& V, 
+		     bool(&compare)(const STLIndexedEntry<T>& left, const STLIndexedEntry<T>& right)) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
       sort(VI.begin(), VI.end(), compare);
       return UnwrapContainer<T>(VI, V);
