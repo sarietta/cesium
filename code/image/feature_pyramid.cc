@@ -128,6 +128,8 @@ namespace slib {
 	  // Unrolled patch of "features" values (HOG, color, etc).
 	  const FloatImage feature = level
 	    .get_crop(j, i, j + patch_size.y - 1, i + patch_size.x - 1).transpose().unroll('x');
+	  VLOG(3) << "Level Feature Size: " 
+		  << feature.width() << "x" << feature.height() << "x" << feature.spectrum();
 	  const float* feature_data = feature.data();
 	  // Fast copy.
 	  memcpy(features + feature_dimensions * num_features, feature_data, sizeof(float) * feature_dimensions);

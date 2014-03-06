@@ -161,9 +161,7 @@ namespace slib {
 	  LOG(WARNING) << "Unknown data type for field: patchSize";
 	}
       }
-      if ((field = mxGetField(params, 0, "sBins"))) {
-	parameters.sBins = (int32) mxGetScalar(field);
-      }
+      LOAD_PARAMETER(sBins, float);
       if ((field = mxGetField(params, 0, "scaleIntervals"))) {
 	parameters.scaleIntervals = (int32) mxGetScalar(field);
       }
@@ -245,7 +243,7 @@ namespace slib {
 			    MatlabMatrix(static_cast<float>(_parameters.patchScaleIntervals)));
       params.SetStructField("patchSize", 
 			    MatlabMatrix(static_cast<vector<float> >(_parameters.patchSize), false));
-      params.SetStructField("sBins", MatlabMatrix(static_cast<float>(_parameters.sBins)));
+      SAVE_PARAMETER(sBins);
       params.SetStructField("scaleIntervals", MatlabMatrix(static_cast<float>(_parameters.scaleIntervals)));
       params.SetStructField("svmflags", MatlabMatrix(_parameters.svmflags));
       params.SetStructField("topNOverlapThresh", 
@@ -384,7 +382,7 @@ namespace slib {
       Pair<int32> patch_size;
       Detector::GetFeatureDimensions(parameters, &patch_size);
       
-      const int32 sbins = parameters.sBins;
+      const float sbins = parameters.sBins;
       const Pair<Pair<float> > levelPatch = pyramid.GetPatchSizeInLevel(patch_size, level, sbins);
 	
       const float level_scale = pyramid.GetScales()[level];
@@ -392,8 +390,8 @@ namespace slib {
       const float xoffset = point.x - levelPatch.first().x;
       const float yoffset = point.y - levelPatch.first().y;
       
-      const float x1 = xoffset * canonical_scale / (level_scale * ((float) sbins));
-      const float y1 = yoffset * canonical_scale / (level_scale * ((float) sbins));
+      const float x1 = xoffset * canonical_scale / (level_scale *  sbins);
+      const float y1 = yoffset * canonical_scale / (level_scale *  sbins);
 
       return Pair<int>(x1, y1);
     }
@@ -406,14 +404,14 @@ namespace slib {
       Pair<int32> patch_size;
       Detector::GetFeatureDimensions(parameters, &patch_size);
       
-      const int32 sbins = parameters.sBins;
+      const float sbins = parameters.sBins;
       const Pair<Pair<float> > levelPatch = pyramid.GetPatchSizeInLevel(patch_size, level, sbins);
 	
       const float level_scale = pyramid.GetScales()[level];
       const float x1 = point.x;
       const float y1 = point.y;
-      const float xoffset = floor(x1 * ((float) sbins) * level_scale / canonical_scale);
-      const float yoffset = floor(y1 * ((float) sbins) * level_scale / canonical_scale);
+      const float xoffset = floor(x1 * sbins * level_scale / canonical_scale);
+      const float yoffset = floor(y1 * sbins * level_scale / canonical_scale);
       
       Pair<int> image_point;
       image_point.x = levelPatch.first().x + xoffset;
@@ -433,7 +431,7 @@ namespace slib {
       Pair<int32> patch_size;
       Detector::GetFeatureDimensions(parameters, &patch_size);
       
-      const int32 sbins = parameters.sBins;
+      const float sbins = parameters.sBins;
       for (uint32 i = 0; i < selected_indices.size(); i++) {
 	const int32 selected_index = selected_indices[i];
 	ASSERT_LT((uint32) selected_index, levels.size());
@@ -444,8 +442,8 @@ namespace slib {
 	const float level_scale = pyramid.GetScales()[level];
 	const float x1 = indices[selected_index].x;
 	const float y1 = indices[selected_index].y;
-	const float xoffset = floor(x1 * ((float) sbins) * level_scale / canonical_scale);
-	const float yoffset = floor(y1 * ((float) sbins) * level_scale / canonical_scale);
+	const float xoffset = floor(x1 * sbins * level_scale / canonical_scale);
+	const float yoffset = floor(y1 * sbins * level_scale / canonical_scale);
 	
 	DetectionMetadata selection_metadata;
 	selection_metadata.x1 = levelPatch.first().x + xoffset;
@@ -791,8 +789,8 @@ namespace slib {
     int32 Detector::GetFeatureDimensions(const DetectionParameters& parameters,
 					 Pair<int32>* patch_size_out) {
       Pair<int32> patch_size;
-      patch_size.x = round(((float) parameters.patchCanonicalSize.x) / ((float) parameters.sBins)) - 2;
-      patch_size.y = round(((float) parameters.patchCanonicalSize.y) / ((float) parameters.sBins)) - 2;
+      patch_size.x = round(((float) parameters.patchCanonicalSize.x) / parameters.sBins) - 2;
+      patch_size.y = round(((float) parameters.patchCanonicalSize.y) / parameters.sBins) - 2;
       
       int32 extra_dimensions = 0;
       int32 patch_channels = 0;
@@ -846,7 +844,7 @@ namespace slib {
       parameters.patchOverlapThreshold = 0.6000;
       parameters.patchScaleIntervals = 2;
       parameters.patchSize = Pair<int32>(80, 80);
-      parameters.sBins = 8;
+      parameters.sBins = 8.0f;
       parameters.scaleIntervals = 8;
       parameters.svmflags = string("-s 0 -t 0 -c 0.1");
       parameters.topNOverlapThresh = 0.5000;
@@ -963,6 +961,8 @@ namespace slib {
       FeaturePyramid pyramid(num_levels);
       int32 numx;
       int32 numy;
+      const int32 sBins = (int32) parameters.sBins;
+
       // Compute feature for each level in the feature pyramid.
       for (uint32 i = 0; i < levels_to_compute.size(); i++) {
 	const int32 level = levels_to_compute[i];
@@ -977,8 +977,8 @@ namespace slib {
 	VLOG(1) << "Image Level Size: " << image_level.width() << " x " << image_level.height();
 	
 	// Truncate the image to fit exactly within the bounds of the bins.
-	const int32 overflow_x = image_level.width() % parameters.sBins;
-	const int32 overflow_y = image_level.height() % parameters.sBins;
+	const int32 overflow_x = image_level.width() % sBins;
+	const int32 overflow_y = image_level.height() % sBins;
 	if (overflow_x > 0 || overflow_y > 0) {
 	  image_level.crop(0, 0, image_level.width() - overflow_x - 1, image_level.height() - overflow_y - 1);
 	  VLOG(1) << "Cropping to: " << image_level.width() << " x " << image_level.height();
@@ -989,7 +989,7 @@ namespace slib {
 	****************************************************/
 	FloatImage features;
 	if (parameters.featureTypeHOG) {
-	  features.assign(slib::image::FeatureComputer::ComputeHOGFeatures(image_level, parameters.sBins));
+	  features.assign(slib::image::FeatureComputer::ComputeHOGFeatures(image_level, sBins));
 	} else if (parameters.featureTypePatchOnly) {	  
 	  FloatImage lab_image_level = 
 	    lab_image.get_resize(image_level.width(), image_level.height(), -100, -100, 3);
