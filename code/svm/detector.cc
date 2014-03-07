@@ -9,7 +9,7 @@
 #include <glog/logging.h>
 #include <fstream>
 #include <image/cimgutils.h>
-#include <image/feature_computer.h>
+#include <image/hog_feature_computer.h>
 #include <image/feature_pyramid.h>
 #include <iostream>
 #include <mat.h>
@@ -28,7 +28,7 @@ using Eigen::ArrayXf;
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
 using Eigen::VectorXi;
-using slib::image::FeatureComputer;
+using slib::image::HOGFeatureComputer;
 using slib::image::FeaturePyramid;
 using slib::svm::Model;
 using slib::util::MatlabMatrix;
@@ -989,7 +989,8 @@ namespace slib {
 	****************************************************/
 	FloatImage features;
 	if (parameters.featureTypeHOG) {
-	  features.assign(slib::image::FeatureComputer::ComputeHOGFeatures(image_level, sBins));
+	  HOGFeatureComputer computer(sBins);
+	  features.assign(computer.ComputeFeatures(image_level));
 	} else if (parameters.featureTypePatchOnly) {	  
 	  FloatImage lab_image_level = 
 	    lab_image.get_resize(image_level.width(), image_level.height(), -100, -100, 3);
