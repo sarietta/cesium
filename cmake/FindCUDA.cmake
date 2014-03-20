@@ -483,7 +483,7 @@ set (CUDA_INCLUDE_DIRS ${CUDA_TOOLKIT_INCLUDE})
 macro(FIND_LIBRARY_LOCAL_FIRST _var _names _doc)
   find_library(${_var}
     NAMES ${_names}
-    PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib"
+    PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64"
     ENV CUDA_LIB_PATH
     DOC ${_doc}
     NO_DEFAULT_PATH
