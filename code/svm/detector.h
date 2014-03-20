@@ -62,6 +62,7 @@ namespace slib {
       bool featureTypeSparse;
       bool featureTypeFisher;
       bool featureTypeDecaf;
+      bool featureTypeCaffe;
       int patchStride;
       bool useColor;  // Whether the color channels should be added to the feature.
 
@@ -97,10 +98,12 @@ namespace slib {
       
       int32 image_index;
       int32 image_set_index;
+      bool cropped;
 
       DetectionMetadata() : x1(0), x2(0), y1(0), y2(0)
 			  , image_size(0,0), pyramid_offset(0,0,0)
-			  , image_path(""), image_index(0), image_set_index(0) {}
+			  , image_path(""), image_index(0), image_set_index(0)
+			  , cropped(false) {}
     };
     
     // A DetectionResult is a single fire of a Model.
@@ -140,7 +143,7 @@ namespace slib {
       // have. Note that this is different than the number of channels in
       // the levels of the feature pyramid.
       static int32 GetFeatureDimensions(const DetectionParameters& parameters,
-					Pair<int32>* patch_size_out = NULL);
+					Pair<float>* patch_size_out = NULL);
       // We allocate the memory via a deep copy. You are in charge of destroying the pointer.
       void SaveParametersToMatlabMatrix(mxArray** matrix) const;
       

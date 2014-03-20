@@ -63,6 +63,18 @@ namespace slib {
     FloatImage HOGFeatureComputer::ComputeFeatures(const FloatImage& image) const {
       return ComputeHOGFeatures(image, _sBins);
     }
+
+    Pair<float> HOGFeatureComputer::GetPatchSize(const Pair<float>& canonical_patch_size) const {
+      return HOGFeatureComputer::GetPatchSize(canonical_patch_size, _sBins);
+    }
+
+    Pair<float> HOGFeatureComputer::GetPatchSize(const Pair<float>& canonical_patch_size, const float& sbins) {
+      Pair<float> patch_size;
+      patch_size.x = round(canonical_patch_size.x / sbins) - 2;
+      patch_size.y = round(canonical_patch_size.y / sbins) - 2;
+      
+      return patch_size;
+    }
     
     FloatImage HOGFeatureComputer::ComputeHOGFeatures(const FloatImage& image, const int32& bins) const {
       const FloatImage imageT = image.get_transpose();

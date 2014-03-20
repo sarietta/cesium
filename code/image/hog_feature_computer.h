@@ -16,6 +16,9 @@ namespace slib {
       explicit HOGFeatureComputer(const int32& sBins);
       virtual FloatImage ComputeFeatures(const FloatImage& image) const;
 
+      virtual Pair<float> GetPatchSize(const Pair<float>& canonical_patch_size) const;
+      static Pair<float> GetPatchSize(const Pair<float>& canonical_patch_size, const float& sbins);
+
     private:
       int32 _sBins;
 

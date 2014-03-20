@@ -19,6 +19,23 @@ namespace slib {
     class FeatureComputer {
     public:
       virtual FloatImage ComputeFeatures(const FloatImage& image) const = 0;
+
+      // This function must return the effective size of a patch given
+      // the size of a patch in an image of "canonical
+      // size". Sometimes this may just return the same patch size
+      // (the default implementation), but often FeatureComputers have
+      // a different output width/height than the input images. This
+      // function effectively dictates that scaling, although it can
+      // include other potential effects like boundary isssues so it
+      // should NOT be interpreted as a scale directly.
+      //
+      // Typically it's preferred that you can create a static method
+      // in the base class that takes the relevant parameters (stride,
+      // etc) and then have this member function call the static
+      // method. This makes it easier for external programs and
+      // functions to determine this information easily.
+      virtual Pair<float> GetPatchSize(const Pair<float>& canonical_patch_size) const;
+
       virtual FeaturePyramid ComputeFeaturePyramid(const FloatImage& image, 
 						   const float& image_canonical_size,
 						   const int32& scale_intervals = 8, 

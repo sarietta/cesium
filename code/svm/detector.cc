@@ -9,6 +9,9 @@
 #include <glog/logging.h>
 #include <fstream>
 #include <image/cimgutils.h>
+#ifndef SKIP_CAFFE_FEATURE_COMPUTER
+#include <image/caffe_feature_computer.h>
+#endif  // SKIP_CAFFE_FEATURE_COMPUTER
 #include <image/hog_feature_computer.h>
 #include <image/feature_pyramid.h>
 #include <iostream>
@@ -28,6 +31,9 @@ using Eigen::ArrayXf;
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
 using Eigen::VectorXi;
+#ifndef SKIP_CAFFE_FEATURE_COMPUTER
+using slib::image::CaffeFeatureComputer;
+#endif  // SKIP_CAFFE_FEATURE_COMPUTER
 using slib::image::HOGFeatureComputer;
 using slib::image::FeaturePyramid;
 using slib::svm::Model;
@@ -203,6 +209,7 @@ namespace slib {
       }
 
       LOAD_PARAMETER(featureTypeDecaf, bool);
+      LOAD_PARAMETER(featureTypeCaffe, bool);
       LOAD_PARAMETER(patchStride, int);
 
       LOAD_STRING_PARAMETER(decafFeatureName);
@@ -272,6 +279,7 @@ namespace slib {
 			    MatlabMatrix(static_cast<float>(_parameters.sampleBig)));
 
       SAVE_PARAMETER(featureTypeDecaf);
+      SAVE_PARAMETER(featureTypeCaffe);
       SAVE_PARAMETER(patchStride);
 
       SAVE_STRING_PARAMETER(decafFeatureName);
@@ -379,7 +387,7 @@ namespace slib {
 						 const DetectionParameters& parameters) {
       const float canonical_scale = pyramid.GetCanonicalScale();
 
-      Pair<int32> patch_size;
+      Pair<float> patch_size;
       Detector::GetFeatureDimensions(parameters, &patch_size);
       
       const float sbins = parameters.sBins;
@@ -401,7 +409,7 @@ namespace slib {
 						 const DetectionParameters& parameters) {
       const float canonical_scale = pyramid.GetCanonicalScale();
 
-      Pair<int32> patch_size;
+      Pair<float> patch_size;
       Detector::GetFeatureDimensions(parameters, &patch_size);
       
       const float sbins = parameters.sBins;
@@ -419,6 +427,57 @@ namespace slib {
 
       return image_point;
     }
+
+    int32 Detector::GetFeatureDimensions(const DetectionParameters& parameters,
+					 Pair<float>* patch_size_out) {
+      Pair<float> patch_size;
+      patch_size.x = round(((float) parameters.patchCanonicalSize.x) / parameters.sBins) - 2;
+      patch_size.y = round(((float) parameters.patchCanonicalSize.y) / parameters.sBins) - 2;
+      
+      int32 extra_dimensions = 0;
+      int32 patch_channels = 0;
+
+      if (parameters.featureTypeHOG) {
+	patch_channels = 31;
+      } else if (parameters.featureTypeHistogram) {
+	// TODO(sean): IMPLEMENT ME
+      } else if (parameters.featureTypeSparse) {
+	// TODO(sean): IMPLEMENT ME
+      } else if (parameters.featureTypeFisher) {
+	// TODO(sean): IMPLEMENT ME
+      } else if (parameters.featureTypePatchOnly) {
+	patch_channels = 1;
+      } else if (parameters.featureTypeDecaf) {
+	// TODO(sean): Oh come on. This is just silly. All of it.
+	patch_channels = parameters.useColor ? -2 : 0;
+	if (parameters.decafFeatureName == "fc6_cudanet_out") {
+	  extra_dimensions = 4096;
+	} else if (parameters.decafFeatureName == "pool5_cudanet_out") {
+	  extra_dimensions = 9216;
+	}
+      } else if (parameters.featureTypeCaffe) {
+	// Typical bins: 
+	//	conv1 :: 4
+	//	conv5 :: 16
+	//	pool5 :: 32
+	const int bins = CaffeFeatureComputer::GetBinsForNet(CaffeFeatureComputer::GetInstance()->GetNet());
+
+	// patch_size = patchCanonicalSize / bins - 2
+	patch_size = CaffeFeatureComputer::GetPatchSize(parameters.patchCanonicalSize, bins);
+	patch_channels = CaffeFeatureComputer::GetPatchChannels();
+      }
+
+      if (parameters.useColor) {
+	patch_channels += 2;
+      }
+      
+      if (patch_size_out) {
+	patch_size_out->x = patch_size.x;
+	patch_size_out->y = patch_size.y;
+      }
+      
+      return (round(patch_size.x) * round(patch_size.y) * patch_channels + extra_dimensions);
+    }
     
     vector<DetectionMetadata> Detector::GetDetectionMetadata(const FeaturePyramid& pyramid, 
 							     const vector<Pair<int32> >& indices,
@@ -428,7 +487,7 @@ namespace slib {
       vector<DetectionMetadata> metadata;
       const float canonical_scale = pyramid.GetCanonicalScale();
       
-      Pair<int32> patch_size;
+      Pair<float> patch_size;
       Detector::GetFeatureDimensions(parameters, &patch_size);
       
       const float sbins = parameters.sBins;
@@ -457,6 +516,15 @@ namespace slib {
 	
 	// Clip the metadata about the patch to the boundary of the image.
 	const Pair<int32> image_size = pyramid.GetOriginalImageSize();
+	if (selection_metadata.x1 < 0 
+	    || selection_metadata.y1 < 0
+	    || selection_metadata.x2 > image_size.x - 1 
+	    || selection_metadata.y2 > image_size.y - 1) {
+	  selection_metadata.cropped = true;
+	} else {
+	  selection_metadata.cropped = false;
+	}
+
 	selection_metadata.x1 = selection_metadata.x1 < 0 ? 0 : selection_metadata.x1;
 	selection_metadata.y1 = selection_metadata.y1 < 0 ? 0 : selection_metadata.y1;
 	selection_metadata.x2 = selection_metadata.x2 > image_size.x - 1 ? image_size.x - 1 : selection_metadata.x2;
@@ -585,11 +653,24 @@ namespace slib {
 	return result_set;
 #endif
       } else {
-	pyramid.reset(new FeaturePyramid(ComputeFeaturePyramid(image)));
+	if (_parameters.featureTypeCaffe) {
+#ifdef SKIP_CAFFE_FEATURE_COMPUTER
+	  LOG(ERROR) << "Attempted to use Caffe feature computer, but it was not enabled. Falling back to HOG.";
+	  pyramid.reset(new FeaturePyramid(ComputeFeaturePyramid(image)));
+#else
+	  CaffeFeatureComputer* computer = CaffeFeatureComputer::GetInstance();
+	  pyramid.reset(new FeaturePyramid(computer->ComputeFeaturePyramid(image, 
+									   _parameters.imageCanonicalSize, 
+									   _parameters.scaleIntervals,
+									   _parameters.patchCanonicalSize)));
+#endif  // SKIP_CAFFE_FEATURE_COMPUTER
+	} else {
+	  pyramid.reset(new FeaturePyramid(ComputeFeaturePyramid(image)));
+	}
 	
 	// Get all of the features for the image.
 	vector<float> gradient_sums;
-	Pair<int32> patch_size;
+	Pair<float> patch_size;
 	const int32 feature_dimensions = Detector::GetFeatureDimensions(_parameters, &patch_size);
 	FloatMatrix allfeatures = pyramid->GetAllLevelFeatureVectors(patch_size, feature_dimensions, 
 								     &levels, &indices, &gradient_sums);
@@ -786,47 +867,6 @@ namespace slib {
       return decisions;
     }
     
-    int32 Detector::GetFeatureDimensions(const DetectionParameters& parameters,
-					 Pair<int32>* patch_size_out) {
-      Pair<int32> patch_size;
-      patch_size.x = round(((float) parameters.patchCanonicalSize.x) / parameters.sBins) - 2;
-      patch_size.y = round(((float) parameters.patchCanonicalSize.y) / parameters.sBins) - 2;
-      
-      int32 extra_dimensions = 0;
-      int32 patch_channels = 0;
-
-      if (parameters.featureTypeHOG) {
-	patch_channels = 31;
-      } else if (parameters.featureTypeHistogram) {
-	// TODO(sean): IMPLEMENT ME
-      } else if (parameters.featureTypeSparse) {
-	// TODO(sean): IMPLEMENT ME
-      } else if (parameters.featureTypeFisher) {
-	// TODO(sean): IMPLEMENT ME
-      } else if (parameters.featureTypePatchOnly) {
-	patch_channels = 1;
-      } else if (parameters.featureTypeDecaf) {
-	// TODO(sean): Oh come on. This is just silly. All of it.
-	patch_channels = parameters.useColor ? -2 : 0;
-	if (parameters.decafFeatureName == "fc6_cudanet_out") {
-	  extra_dimensions = 4096;
-	} else if (parameters.decafFeatureName == "pool5_cudanet_out") {
-	  extra_dimensions = 9216;
-	}
-      }
-
-      if (parameters.useColor) {
-	patch_channels += 2;
-      }
-      
-      if (patch_size_out) {
-	patch_size_out->x = patch_size.x;
-	patch_size_out->y = patch_size.y;
-      }
-      
-      return (patch_size.x * patch_size.y * patch_channels + extra_dimensions);
-    }
-
     DetectionParameters Detector::GetDefaultDetectionParameters() {
       DetectionParameters parameters;
       
@@ -854,6 +894,7 @@ namespace slib {
       parameters.featureTypeSparse = false;
       parameters.featureTypeFisher = false;
       parameters.featureTypeDecaf = false;
+      parameters.featureTypeCaffe = false;
       parameters.decafFeatureName = "fc6_cudanet_out";
       parameters.patchStride = parameters.basePatchSize.x / 5;
       parameters.useColor = true;
@@ -940,7 +981,7 @@ namespace slib {
 	scales[i] = pow(sc, (float) i);
 	VLOG(2) << "Scale for level " << i << ": " << scales[i];
       }
-      
+#if 0
       const int32 num_bins = 11;
       scoped_array<int32> bins(new int32[num_bins]);
       for (int i = 0; i < num_bins; i++) {
@@ -949,7 +990,7 @@ namespace slib {
 	  bins[i]++;
 	}
       }
-      
+#endif 
       ASSERT_LTE((int32) levels_to_compute.size(), num_levels);
 
       // Convert the image to the Lab color space so it can be used as
@@ -967,6 +1008,7 @@ namespace slib {
       for (uint32 i = 0; i < levels_to_compute.size(); i++) {
 	const int32 level = levels_to_compute[i];
 	const float level_scale = scale / scales[level];
+	VLOG(1) << "Scale: " << scales[level];
 	VLOG(1) << "Level Scale: " << level_scale;
 	
 	const float image_level_width = ceil(level_scale * ((float) image.width()));

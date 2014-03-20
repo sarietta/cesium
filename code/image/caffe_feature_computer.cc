@@ -18,9 +18,15 @@
 #include <util/matlab.h>
 #include <vector>
 
+DEFINE_string(caffe_network_description_filename, "", 
+	      "The file (protobuffer) that contains the description of the trained network specified below.");
+DEFINE_string(caffe_trained_network_filename, "",
+	      "The file that contains a trained caffe model.");
+DEFINE_int32(caffe_feature_computer_upsample_factor, 1, "Amount to upsample images by before computing features.");
+DEFINE_int32(caffe_feature_computer_padding, 1, "The amount of padding to add to the image.");
+
 using caffe::Blob;
 using caffe::Caffe;
-using caffe::densenet_params_t;
 using caffe::Net;
 using caffe::NetParameter;
 using FFLD::JPEGImage;
@@ -33,8 +39,59 @@ using std::vector;
 
 namespace slib {
   namespace image {
+
+    scoped_ptr<CaffeFeatureComputer> CaffeFeatureComputer::_instance(NULL);
     
-    int CaffeFeatureComputer::GetBinsForNet(Net<float>& net) const {
+    CaffeFeatureComputer* CaffeFeatureComputer::GetInstance() {
+      if (_instance.get() == NULL) {
+	_instance.reset(new CaffeFeatureComputer(FLAGS_caffe_network_description_filename, 
+						 FLAGS_caffe_trained_network_filename));
+      }
+      return _instance.get();
+    }
+
+    CaffeFeatureComputer::CaffeFeatureComputer() {
+      LoadModel(FLAGS_caffe_network_description_filename, FLAGS_caffe_trained_network_filename);
+    }
+
+    CaffeFeatureComputer::CaffeFeatureComputer(const string& network_description_filename, 
+					       const string& trained_network_filename) {
+      LoadModel(network_description_filename, trained_network_filename);
+    }
+
+    void CaffeFeatureComputer::LoadModel(const string& network_description_filename, 
+					 const string& trained_network_filename) {
+      VLOG(1) << "Setting up initial parameters for Caffe";
+      Caffe::set_phase(Caffe::TEST);
+      Caffe::set_mode(Caffe::CPU);
+
+      VLOG(1) << "Loading network definition proto from file: " << network_description_filename;
+      NetParameter test_net_param;
+      ReadProtoFromTextFile(network_description_filename, &test_net_param);
+      
+      VLOG(1) << "Initializing Caffe";
+      _caffe.reset(new Net<float>(test_net_param));
+
+      VLOG(1) << "Loading pretrained network from file: " << trained_network_filename;
+      NetParameter trained_net_param;
+      ReadProtoFromBinaryFile(trained_network_filename, &trained_net_param);
+      _caffe->CopyTrainedLayersFrom(trained_net_param);
+    }
+    
+    Pair<float> CaffeFeatureComputer::GetPatchSize(const Pair<float>& canonical_patch_size) const {
+      return CaffeFeatureComputer::GetPatchSize(canonical_patch_size, GetBinsForNet(*_caffe.get()));
+    }
+
+    Pair<float> CaffeFeatureComputer::GetPatchSize(const Pair<float>& canonical_patch_size, const float& bins) {
+      Pair<float> patch_size;
+
+      patch_size.x = round(canonical_patch_size.x / bins) - 2.0f;
+      patch_size.y = round(canonical_patch_size.y / bins) - 2.0f;
+      
+      return patch_size;
+    }
+
+    int CaffeFeatureComputer::GetBinsForNet(const Net<float>& net) {
       const vector<uint32_t>& strides = net.layer_strides();
       int bins = 1;
       for (vector<uint32_t>::const_iterator i = strides.begin(); i != strides.end(); ++i) { 
@@ -43,6 +100,12 @@ namespace slib {
 	} 
       }
       return bins;
+    }
+
+    int CaffeFeatureComputer::GetPatchChannels() {
+      // Shouldn't actually be mutable, but Caffe class doesn't have
+      // CV qualifiers for const access to this information.
+      return GetInstance()->GetMutableNet()->output_blobs()[0]->channels();
     }
     
     Patchwork CaffeFeatureComputer::CreatePatchwork(const FloatImage& cimage, const int& img_minWidth, 
@@ -54,7 +117,7 @@ namespace slib {
       }
       JPEGImage image(cimage.width(), cimage.height(), cimage.spectrum(), bits.get());
       
-      int upsampleFactor = 2; //TODO: make this an input param?
+      const int upsampleFactor = FLAGS_caffe_feature_computer_upsample_factor;
       
       // Compute the downsample+stitch
       // 	multiscale DOWNSAMPLE with (padx == pady == padding)
@@ -106,15 +169,7 @@ namespace slib {
       memcpy(blob->mutable_cpu_data(), bits.get(), sizeof(float) * width * height * depth);
       blob->Update();
     }
-    
-    CaffeFeatureComputer::CaffeFeatureComputer(const string& network_proto_filename, 
-					       const string& network_filename) 
-      : _network_proto_filename(network_proto_filename), _network_filename(network_filename) {
-      VLOG(1) << "Setting up initial parameters for Caffe";
-      Caffe::set_phase(Caffe::TEST);
-      Caffe::set_mode(Caffe::CPU);
-    }    
-    
+        
     FloatImage CaffeFeatureComputer::ComputeFeatures(const FloatImage& image) const {
       LOG(ERROR) << "Do not call CaffeFeatureComputer::ComputeFeatures directly. "
 		 << "Use the ComputeFeaturePyramid(string, ...) instead.";
@@ -151,35 +206,20 @@ namespace slib {
 
       const Pair<int32> original_image_size(original_image.width(), original_image.height());      
       const FloatImage image = original_image.get_resize(scaled_width, scaled_height, -100, -100, 5);
-      
-      VLOG(1) << "Loading network definition proto from file: " << _network_proto_filename;
-      NetParameter test_net_param;
-      ReadProtoFromTextFile(_network_proto_filename, &test_net_param);
-      
-      VLOG(1) << "Initializing Caffe";
-      Net<float> caffe(test_net_param);
+            
+      const int bins = GetBinsForNet(*_caffe.get());
+      const int resultDepth = _caffe->output_blobs()[0]->channels();
+      const int planeDim = _caffe->input_blobs()[0]->width();
+            
+      //const int padding = patch_size.x / 2;
+      const int padding = FLAGS_caffe_feature_computer_padding;
 
-      VLOG(1) << "Loading pretrained network from file: " << _network_filename;
-      NetParameter trained_net_param;
-      ReadProtoFromBinaryFile(_network_filename, &trained_net_param);
-      caffe.CopyTrainedLayersFrom(trained_net_param);
-      
-      const int bins = GetBinsForNet(caffe);
-      const int resultDepth = caffe.output_blobs()[0]->channels();
-      const int planeDim = caffe.input_blobs()[0]->width();
-      
-      densenet_params_t params;
-      params.interval = scale_intervals;
-      params.img_padding = patch_size.x / 2;
-      // These are determined based on the patch_size scaled to the canonical_scale.
-      //params.feat_minWidth = patch_size.x * scale;
-      //params.feat_minHeight = patch_size.y * scale;
-      
-      const uint32_t img_minHeight = params.feat_minHeight * bins;
-      const uint32_t img_minWidth = params.feat_minWidth * bins;
+      const Pair<int> min_level_size = CaffeFeatureComputer::GetPatchSize(patch_size, bins);
+
       VLOG(1) << "Creating patchwork from image";
-      Patchwork patchwork = CreatePatchwork(image, img_minWidth, img_minHeight, 
-					    params.img_padding, params.interval, planeDim); 
+      VLOG(1) << "Min Level Size: " << min_level_size.x << "x" << min_level_size.y;
+      Patchwork patchwork = CreatePatchwork(image, min_level_size.x, min_level_size.y, 
+					    padding, scale_intervals, planeDim); 
       int nbPlanes = patchwork.planes_.size();
       
       vector<Blob<float>*> output_blobs;
@@ -196,7 +236,7 @@ namespace slib {
 	plane_input_blob[0] = new Blob<float>();
 	PlaneToBlobProto(currPlane, plane_input_blob[0]);
 	
-	const vector<Blob<float>*> output = caffe.Forward(plane_input_blob);
+	const vector<Blob<float>*> output = _caffe->Forward(plane_input_blob);
 	for (int i = 0; i < output.size(); i++) {
 	  Blob<float>* blob = new Blob<float>();
 	  blob->CopyFrom(*output[i], false, true);
@@ -210,8 +250,15 @@ namespace slib {
       const int nbScales = scaleLocations.size();
       
       FeaturePyramid pyramid(nbScales);
-      vector<float> scales;  
-      
+      const float sc = pow(2.0f, 1.0f / ((float) scale_intervals));
+      vector<float> scales(nbScales);
+#if 0
+      for (int i = 0; i < nbScales; i++) {
+	scales[i] = pow(sc, (float) i);
+	VLOG(2) << "Scale for level " << i << ": " << scales[i];
+      }
+#endif     
+ 
       VLOG(1) << "Copying features into output FeaturePyramid";
       for (int i = 0; i < nbScales; i++) {
 	const int planeID = scaleLocations[i].planeID;
@@ -224,12 +271,14 @@ namespace slib {
 	const int width = scaleLocations[i].width;
 	const int height = scaleLocations[i].height;
 	const int channels = resultDepth;
+#if 1
+	scales[i] = ((float) scaleLocations[0].width) / ((float) (width));
+#endif
 	
 	const int blob_width = level_blob->width();
 	
 	VLOG(1) << "Found blob at level: " << (i+1) << " [" << planeID << "]"
 		<< " (" << width << ", " << height << ", " << channels << ")";
-	VLOG(1) << "# Bits: " << level_blob->count();
 	
 	const float* bits = level_blob->cpu_data();
 	FloatImage full_level(level_blob->width(), level_blob->height(), level_blob->channels());
@@ -242,13 +291,15 @@ namespace slib {
 	  level(x, y, c) = full_level(levelx, levely, c);
 	}
 
-	scales.push_back(static_cast<float>(image.width()) / static_cast<float>(level.width()));
-	
-	const float image_level_width = level.width();
-	const float image_level_height = level.height();
+	const float level_scale = scale / scales[i];
+	VLOG(1) << "Scale: " << scales[i];
+	VLOG(1) << "Level Scale: " << level_scale;
+
+	const float image_level_width = ceil(level_scale * ((float) image.width()));
+	const float image_level_height = ceil(level_scale * ((float) image.height()));
 	const FloatImage image_level = image.get_resize(image_level_width, image_level_height,
-							1, image.spectrum(), 5);    
-	
+							1, image.spectrum(), 5);	
+
 	const FloatImage gradient_magnitude = ComputeGradientMagnitude(image_level, 
 								       image_level_width, 
 								       image_level_height);

@@ -19,6 +19,10 @@ namespace slib {
       return ComputeFeatures(image);
     }
 
+    Pair<float> FeatureComputer::GetPatchSize(const Pair<float>& canonical_patch_size) const {
+      return canonical_patch_size;
+    }
+
     FeaturePyramid FeatureComputer::ComputeFeaturePyramid(const string& image_filename, 
 							  const float& image_canonical_size,
 							  const int32& scale_intervals, 
