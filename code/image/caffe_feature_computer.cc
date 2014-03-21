@@ -222,7 +222,7 @@ namespace slib {
 					    padding, scale_intervals, planeDim); 
       int nbPlanes = patchwork.planes_.size();
       
-      vector<Blob<float>*> output_blobs;
+      scoped_array<Blob<float> > output_blobs(new Blob<float>[nbPlanes]);
       VLOG(1) << "Propagating " << nbPlanes << " patchwork planes through network";
       for (int planeID = 0; planeID < nbPlanes; planeID++) {
 	const JPEGImage& currPlane = patchwork.planes_[planeID];
@@ -232,18 +232,14 @@ namespace slib {
 		<< currPlane.height() << ", " 
 		<< currPlane.depth() << ")";
 	
-	vector<Blob<float>*> plane_input_blob(1);
-	plane_input_blob[0] = new Blob<float>();
-	PlaneToBlobProto(currPlane, plane_input_blob[0]);
-	
-	const vector<Blob<float>*> output = _caffe->Forward(plane_input_blob);
-	for (int i = 0; i < output.size(); i++) {
-	  Blob<float>* blob = new Blob<float>();
-	  blob->CopyFrom(*output[i], false, true);
-	  blob->Update();
-	  
-	  output_blobs.push_back(blob);
-	}
+	vector<Blob<float>*>& input_blobs = _caffe->input_blobs();
+	ASSERT_EQ(input_blobs.size(), 1);
+	PlaneToBlobProto(currPlane, input_blobs[0]);
+
+	const vector<Blob<float>*>& output = _caffe->ForwardPrefilled();
+	ASSERT_EQ(output.size(), 1);
+	output_blobs[planeID].CopyFrom(*output[0], false, true);
+	output_blobs[planeID].Update();
       }  
       
       vector<ScaleLocation> scaleLocations = unstitch_pyramid_locations(patchwork, bins);
@@ -262,9 +258,9 @@ namespace slib {
       VLOG(1) << "Copying features into output FeaturePyramid";
       for (int i = 0; i < nbScales; i++) {
 	const int planeID = scaleLocations[i].planeID;
-	ASSERT_LT(planeID, (int) output_blobs.size());
+	ASSERT_LT(planeID, (int) nbPlanes);
 	
-	Blob<float>* level_blob = output_blobs[planeID];
+	Blob<float>& level_blob = output_blobs[planeID];
 	const int xmin = scaleLocations[i].xMin;
 	const int ymin = scaleLocations[i].yMin;
 	
@@ -275,14 +271,14 @@ namespace slib {
 	scales[i] = ((float) scaleLocations[0].width) / ((float) (width));
 #endif
 	
-	const int blob_width = level_blob->width();
+	const int blob_width = level_blob.width();
 	
 	VLOG(1) << "Found blob at level: " << (i+1) << " [" << planeID << "]"
 		<< " (" << width << ", " << height << ", " << channels << ")";
 	
-	const float* bits = level_blob->cpu_data();
-	FloatImage full_level(level_blob->width(), level_blob->height(), level_blob->channels());
-	memcpy(full_level.data(), bits, sizeof(float) * level_blob->count());
+	const float* bits = level_blob.cpu_data();
+	FloatImage full_level(level_blob.width(), level_blob.height(), level_blob.channels());
+	memcpy(full_level.data(), bits, sizeof(float) * level_blob.count());
 	
 	FloatImage level(width, height, channels);
 	cimg_forXYZ(level, x, y, c) {
