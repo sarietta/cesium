@@ -154,7 +154,9 @@ namespace slib {
       for (int i = 0; i < GetNumLevels(); i++) {
 	const int32 rLim = _levels[i].height() - patch_size.x + 1;
 	const int32 cLim = _levels[i].width() - patch_size.y + 1;
-	total_features += (rLim * cLim);
+	if (rLim > 0 && cLim > 0) {
+	  total_features += (rLim * cLim);
+	}
       }
 
       FloatMatrix features(total_features, feature_dimensions);
@@ -164,7 +166,9 @@ namespace slib {
 			      levels, indices, gradient_sums);
 	const int32 rLim = _levels[i].height() - patch_size.x + 1;
 	const int32 cLim = _levels[i].width() - patch_size.y + 1;
-	features_data += (rLim * cLim * feature_dimensions);
+	if (rLim > 0 && cLim > 0) {
+	  features_data += (rLim * cLim * feature_dimensions);
+	}
       }
 
       return features;
