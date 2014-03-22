@@ -29,7 +29,6 @@ using caffe::Blob;
 using caffe::Caffe;
 using caffe::Net;
 using caffe::NetParameter;
-using FFLD::JPEGImage;
 using FFLD::JPEGPyramid;
 using FFLD::Patchwork;
 using slib::StringUtils;
@@ -108,15 +107,9 @@ namespace slib {
       return GetInstance()->GetMutableNet()->output_blobs()[0]->channels();
     }
     
-    Patchwork CaffeFeatureComputer::CreatePatchwork(const FloatImage& cimage, const int& img_minWidth, 
+    Patchwork CaffeFeatureComputer::CreatePatchwork(const FloatImage& image, const int& img_minWidth, 
 						    const int& img_minHeight, const int& padding, 
 						    const int& interval, const int& planeDim) const {
-      scoped_array<uint8_t> bits(new uint8_t[cimage.width() * cimage.height() * cimage.spectrum()]);
-      cimg_forXYC(cimage, x, y, c) {
-	bits[c + cimage.spectrum() * (x + cimage.width() * y)] = static_cast<uint8_t>(255.0f * cimage(x, y, c));
-      }
-      JPEGImage image(cimage.width(), cimage.height(), cimage.spectrum(), bits.get());
-      
       const int upsampleFactor = FLAGS_caffe_feature_computer_upsample_factor;
       
       // Compute the downsample+stitch
