@@ -180,6 +180,11 @@ namespace slib {
 	return FeaturePyramid(0);
       }
 
+      if (original_image.spectrum() != 3) {
+	LOG(ERROR) << "Image must be an RGB image";
+	return FeaturePyramid(0);
+      }
+
       // Scale the image to the canonical size.
       float scale = 0.0f;
       if (original_image.width() < original_image.height()) {
