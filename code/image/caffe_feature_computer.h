@@ -49,6 +49,8 @@ namespace slib {
 						   const Pair<int32>& patch_size = Pair<int32>(80, 80),
 						   const std::vector<int32>& levels = std::vector<int32>(0)) const;
 
+      static bool Finalize();
+
       static int GetBinsForNet(const caffe::Net<float>& net);
       static int GetPatchChannels();
       inline const caffe::Net<float>& GetNet() const {
@@ -59,7 +61,7 @@ namespace slib {
 	return _caffe.get();
       }
 
-      static CaffeFeatureComputer* GetInstance();
+      static CaffeFeatureComputer* GetInstance();      
 
     private:
       scoped_ptr<caffe::Net<float> > _caffe;

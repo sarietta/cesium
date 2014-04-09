@@ -40,6 +40,13 @@ namespace slib {
   namespace image {
 
     scoped_ptr<CaffeFeatureComputer> CaffeFeatureComputer::_instance(NULL);
+
+    bool CaffeFeatureComputer::Finalize() {
+      if (_instance.get() != NULL) {
+	_instance.reset(NULL);
+      }
+      return true;
+    }
     
     CaffeFeatureComputer* CaffeFeatureComputer::GetInstance() {
       if (_instance.get() == NULL) {
