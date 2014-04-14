@@ -12,6 +12,7 @@
 #ifndef SKIP_CAFFE_FEATURE_COMPUTER
 #include <image/caffe_feature_computer.h>
 #endif  // SKIP_CAFFE_FEATURE_COMPUTER
+#include <image/color_histogram_feature_computer.h>
 #include <image/hog_feature_computer.h>
 #include <image/feature_pyramid.h>
 #include <iostream>
@@ -34,6 +35,7 @@ using Eigen::VectorXi;
 #ifndef SKIP_CAFFE_FEATURE_COMPUTER
 using slib::image::CaffeFeatureComputer;
 #endif  // SKIP_CAFFE_FEATURE_COMPUTER
+using slib::image::ColorHistogramFeatureComputer;
 using slib::image::HOGFeatureComputer;
 using slib::image::FeaturePyramid;
 using slib::svm::Model;
@@ -439,8 +441,12 @@ namespace slib {
 
       if (parameters.featureTypeHOG) {
 	patch_channels = 31;
+
+	if (parameters.useColor) {
+	  patch_channels += 2;
+	}
       } else if (parameters.featureTypeHistogram) {
-	// TODO(sean): IMPLEMENT ME
+	patch_channels = ColorHistogramFeatureComputer::GetPatchChannels();
       } else if (parameters.featureTypeSparse) {
 	// TODO(sean): IMPLEMENT ME
       } else if (parameters.featureTypeFisher) {
@@ -465,10 +471,6 @@ namespace slib {
 	// patch_size = patchCanonicalSize / bins - 2
 	patch_size = CaffeFeatureComputer::GetPatchSize(parameters.patchCanonicalSize, bins);
 	patch_channels = CaffeFeatureComputer::GetPatchChannels();
-      }
-
-      if (parameters.useColor) {
-	patch_channels += 2;
       }
       
       if (patch_size_out) {
@@ -664,6 +666,12 @@ namespace slib {
 									   _parameters.scaleIntervals,
 									   _parameters.patchCanonicalSize)));
 #endif  // SKIP_CAFFE_FEATURE_COMPUTER
+	} else if (_parameters.featureTypeHistogram) {
+	  ColorHistogramFeatureComputer computer(_parameters.sBins);
+	  pyramid.reset(new FeaturePyramid(computer.ComputeFeaturePyramid(image, 
+									  _parameters.imageCanonicalSize, 
+									  _parameters.scaleIntervals,
+									  _parameters.patchCanonicalSize)));
 	} else {
 	  pyramid.reset(new FeaturePyramid(ComputeFeaturePyramid(image)));
 	}
@@ -1037,11 +1045,11 @@ namespace slib {
 	  FloatImage lab_image_level = 
 	    lab_image.get_resize(image_level.width(), image_level.height(), -100, -100, 3);
 	  features = lab_image_level.get_channel(0);  // Extract the L channel.
-	} 
-
+	}
+	
 	numx = features.width();
 	numy = features.height();
-
+	
 	if (parameters.useColor) {
 	  FloatImage concatenated_features(features.width(), features.height(), 1, 31 + 1 + 1);
 	  // First C dimensions are from the already-computed features.
@@ -1059,7 +1067,7 @@ namespace slib {
 	    }
 	  }
 	  features.assign(concatenated_features);
-	} 
+	}
 	
 	// Compute the gradient of this level's image. For options to this
 	// method see:
