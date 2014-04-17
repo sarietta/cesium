@@ -185,9 +185,6 @@ namespace slib {
       if ((field = mxGetField(params, 0, "featureTypeHOG"))) {
 	parameters.featureTypeHOG = (bool) mxGetScalar(field);
       }
-      if ((field = mxGetField(params, 0, "featureTypeHistogram"))) {
-	parameters.featureTypeHistogram = (bool) mxGetScalar(field);
-      }
       if ((field = mxGetField(params, 0, "featureTypeSparse"))) {
 	parameters.featureTypeSparse = (bool) mxGetScalar(field);
       }
@@ -210,6 +207,7 @@ namespace slib {
 	parameters.gradientSumThreshold = (float) mxGetScalar(field);
       }
 
+      LOAD_PARAMETER(featureTypeHistogram, bool);
       LOAD_PARAMETER(featureTypeDecaf, bool);
       LOAD_PARAMETER(featureTypeCaffe, bool);
       LOAD_PARAMETER(patchStride, int);
@@ -280,6 +278,7 @@ namespace slib {
       params.SetStructField("sampleBig", 
 			    MatlabMatrix(static_cast<float>(_parameters.sampleBig)));
 
+      SAVE_PARAMETER(featureTypeHistogram);
       SAVE_PARAMETER(featureTypeDecaf);
       SAVE_PARAMETER(featureTypeCaffe);
       SAVE_PARAMETER(patchStride);
@@ -623,6 +622,7 @@ namespace slib {
       //indices.pop_back();
       
       return indices;
+
     }
     
     DetectionResultSet Detector::DetectInImage(const FloatImage& image, const string& filename) {
@@ -682,6 +682,7 @@ namespace slib {
 	const int32 feature_dimensions = Detector::GetFeatureDimensions(_parameters, &patch_size);
 	FloatMatrix allfeatures = pyramid->GetAllLevelFeatureVectors(patch_size, feature_dimensions, 
 								     &levels, &indices, &gradient_sums);
+	VLOG(1) << "Number of features before gradient thresholding: " << allfeatures.rows();
 	ASSERT_EQ(allfeatures.rows(), levels.size());
 	ASSERT_EQ(allfeatures.rows(), levels.size());
 	features = FeaturePyramid::ThresholdFeatures(allfeatures, gradient_sums, _parameters.gradientSumThreshold, 
@@ -703,6 +704,8 @@ namespace slib {
 	 features in the image and M is the number of models in the
 	 detector.
        */
+      VLOG(1) << "Number of features: " << features.rows();
+      VLOG(1) << "Number of models: " << _models.size();
       FloatMatrix detections = Predict(features);
       LOG(INFO) << "Elapsed time to compute detections: " << Timer::Stop();
       
