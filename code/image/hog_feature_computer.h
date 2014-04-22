@@ -19,6 +19,8 @@ namespace slib {
       virtual Pair<float> GetPatchSize(const Pair<float>& canonical_patch_size) const;
       static Pair<float> GetPatchSize(const Pair<float>& canonical_patch_size, const float& sbins);
 
+      static int GetPatchChannels();
+
     private:
       int32 _sBins;
 

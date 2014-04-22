@@ -13,6 +13,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <image/feature_pyramid.h>
+#include <image/hog_feature_computer.h>
 #include <string/stringutils.h>
 #include <util/assert.h>
 #include <util/matlab.h>
@@ -24,6 +25,10 @@ DEFINE_string(caffe_trained_network_filename, "",
 	      "The file that contains a trained caffe model.");
 DEFINE_int32(caffe_feature_computer_upsample_factor, 1, "Amount to upsample images by before computing features.");
 DEFINE_int32(caffe_feature_computer_padding, 1, "The amount of padding to add to the image.");
+
+DEFINE_bool(caffe_feature_computer_include_hog, false, "Concatenates HOG features with Caffe. EXPERIMENTAL.");
+DEFINE_int32(caffe_feature_computer_hog_bins, 8, "Number of HOG feature bins. EXPERIMENTAL.");
+DEFINE_double(caffe_feature_computer_hog_weight, 80.0, "Should be set to approximately max Caffe feature value.");
 
 using caffe::Blob;
 using caffe::Caffe;
@@ -111,7 +116,12 @@ namespace slib {
     int CaffeFeatureComputer::GetPatchChannels() {
       // Shouldn't actually be mutable, but Caffe class doesn't have
       // CV qualifiers for const access to this information.
-      return GetInstance()->GetMutableNet()->output_blobs()[0]->channels();
+      int channels = GetInstance()->GetMutableNet()->output_blobs()[0]->channels();
+      if (FLAGS_caffe_feature_computer_include_hog) {
+	channels += HOGFeatureComputer::GetPatchChannels();
+      }
+
+      return channels;
     }
     
     Patchwork CaffeFeatureComputer::CreatePatchwork(const FloatImage& image, const int& img_minWidth, 
@@ -305,6 +315,31 @@ namespace slib {
 								       image_level_width, 
 								       image_level_height);
 	
+	if (FLAGS_caffe_feature_computer_include_hog) {
+	  VLOG(1) << "Computing HOG features for level: " << (i+1);
+	  const int sBins = FLAGS_caffe_feature_computer_hog_bins;
+	  HOGFeatureComputer computer(sBins);
+
+	  const float hog_image_level_width = (width + 2) * sBins;
+	  const float hog_image_level_height = (height + 2) * sBins;
+	  const FloatImage hog_image_level = image.get_resize(hog_image_level_width, hog_image_level_height,
+							      1, image.spectrum(), 5);
+
+	  const FloatImage hog_features(computer.ComputeFeatures(hog_image_level));
+	  ASSERT_EQ(hog_features.width(), level.width());
+	  ASSERT_EQ(hog_features.height(), level.height());
+
+	  FloatImage concatenated(width, height, channels + hog_features.spectrum());
+	  cimg_forXYZ(level, x, y, c) {
+	    concatenated(x, y, c) = level(x, y, c);
+	  }
+	  cimg_forXYC(hog_features, x, y, c) {
+	    concatenated(x, y, c + channels) = FLAGS_caffe_feature_computer_hog_weight * hog_features(x, y, c);
+	  }
+
+	  level.assign(concatenated);
+	}
+
 	pyramid.AddLevel(i, level);
 	pyramid.AddGradientLevel(i, gradient_magnitude);
       }

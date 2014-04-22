@@ -439,8 +439,7 @@ namespace slib {
       int32 patch_channels = 0;
 
       if (parameters.featureTypeHOG) {
-	patch_channels = 31;
-
+	patch_channels = HOGFeatureComputer::GetPatchChannels();
 	if (parameters.useColor) {
 	  patch_channels += 2;
 	}
@@ -1054,7 +1053,7 @@ namespace slib {
 	numy = features.height();
 	
 	if (parameters.useColor) {
-	  FloatImage concatenated_features(features.width(), features.height(), 1, 31 + 1 + 1);
+	  FloatImage concatenated_features(features.width(), features.height(), 1, features.spectrum() + 2);
 	  // First C dimensions are from the already-computed features.
 	  cimg_forXYC(features, x, y, c) {
 	    concatenated_features(x, y, c) = features(x, y, c);
