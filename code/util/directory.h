@@ -30,6 +30,9 @@ namespace util {
     
     // Get the directory from the path to the file.
     static std::string GetDirectory(const std::string& path);
+
+    // Returns the contents of the file in a string.
+    static std::string GetContentsAsString(const std::string& path);
   };
 }  // namespace util
 }  // namespace slib
