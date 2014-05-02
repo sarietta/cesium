@@ -220,63 +220,63 @@ namespace slib {
       return parameters;
     }
 
-    void Detector::SaveParametersToMatlabMatrix(mxArray** matrix) const {
+    MatlabMatrix DetectorFactory::ConvertParametersToMatlabMatrix(const DetectionParameters& parameters) {
       MatlabMatrix params(slib::util::MATLAB_STRUCT, Pair<int>(1,1));
 
-      MatlabMatrix category(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, _parameters.category.size()));
-      for (int i = 0; i < (int) _parameters.category.size(); i++) {
+      MatlabMatrix category(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, parameters.category.size()));
+      for (int i = 0; i < (int) parameters.category.size(); i++) {
 	MatlabMatrix cell(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1,1));
-	cell.SetCell(0, MatlabMatrix(_parameters.category[i]));
+	cell.SetCell(0, MatlabMatrix(parameters.category[i]));
 	category.SetCell(i, cell);
       }
 
       params.SetStructField("basePatchSize", 
-			    MatlabMatrix(static_cast<vector<float> >(_parameters.basePatchSize), false));
+			    MatlabMatrix(static_cast<vector<float> >(parameters.basePatchSize), false));
       params.SetStructField("category", category);
       params.SetStructField("imageCanonicalSize", 
-			    MatlabMatrix(static_cast<float>(_parameters.imageCanonicalSize)));
-      params.SetStructField("levelFactor", MatlabMatrix(static_cast<float>(_parameters.levelFactor)));
-      params.SetStructField("maxClusterSize", MatlabMatrix(static_cast<float>(_parameters.maxClusterSize)));
-      params.SetStructField("maxLevels", MatlabMatrix(static_cast<float>(_parameters.maxLevels)));
-      params.SetStructField("minClusterSize", MatlabMatrix(static_cast<float>(_parameters.minClusterSize)));
-      params.SetStructField("nThNeg", MatlabMatrix(static_cast<float>(_parameters.nThNeg)));
-      params.SetStructField("numPatchClusters", MatlabMatrix(static_cast<float>(_parameters.numPatchClusters)));
-      params.SetStructField("overlapThreshold", MatlabMatrix(static_cast<float>(_parameters.overlapThreshold)));
+			    MatlabMatrix(static_cast<float>(parameters.imageCanonicalSize)));
+      params.SetStructField("levelFactor", MatlabMatrix(static_cast<float>(parameters.levelFactor)));
+      params.SetStructField("maxClusterSize", MatlabMatrix(static_cast<float>(parameters.maxClusterSize)));
+      params.SetStructField("maxLevels", MatlabMatrix(static_cast<float>(parameters.maxLevels)));
+      params.SetStructField("minClusterSize", MatlabMatrix(static_cast<float>(parameters.minClusterSize)));
+      params.SetStructField("nThNeg", MatlabMatrix(static_cast<float>(parameters.nThNeg)));
+      params.SetStructField("numPatchClusters", MatlabMatrix(static_cast<float>(parameters.numPatchClusters)));
+      params.SetStructField("overlapThreshold", MatlabMatrix(static_cast<float>(parameters.overlapThreshold)));
       params.SetStructField("patchCanonicalSize", 
-			    MatlabMatrix(static_cast<vector<float> >(_parameters.patchCanonicalSize), false));
+			    MatlabMatrix(static_cast<vector<float> >(parameters.patchCanonicalSize), false));
       params.SetStructField("patchOverlapThreshold", 
-			    MatlabMatrix(static_cast<float>(_parameters.patchOverlapThreshold)));
+			    MatlabMatrix(static_cast<float>(parameters.patchOverlapThreshold)));
       params.SetStructField("patchScaleIntervals", 
-			    MatlabMatrix(static_cast<float>(_parameters.patchScaleIntervals)));
+			    MatlabMatrix(static_cast<float>(parameters.patchScaleIntervals)));
       params.SetStructField("patchSize", 
-			    MatlabMatrix(static_cast<vector<float> >(_parameters.patchSize), false));
+			    MatlabMatrix(static_cast<vector<float> >(parameters.patchSize), false));
       SAVE_PARAMETER(sBins);
-      params.SetStructField("scaleIntervals", MatlabMatrix(static_cast<float>(_parameters.scaleIntervals)));
-      params.SetStructField("svmflags", MatlabMatrix(_parameters.svmflags));
+      params.SetStructField("scaleIntervals", MatlabMatrix(static_cast<float>(parameters.scaleIntervals)));
+      params.SetStructField("svmflags", MatlabMatrix(parameters.svmflags));
       params.SetStructField("topNOverlapThresh", 
-			    MatlabMatrix(static_cast<float>(_parameters.topNOverlapThresh)));
+			    MatlabMatrix(static_cast<float>(parameters.topNOverlapThresh)));
       params.SetStructField("featureTypePatchOnly", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypePatchOnly)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypePatchOnly)));
       params.SetStructField("featureTypeHOG", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypeHOG)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypeHOG)));
       params.SetStructField("featureTypeSparse", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypeSparse)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypeSparse)));
       params.SetStructField("featureTypeFisher", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypeFisher)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypeFisher)));
       params.SetStructField("featureTypePatchOnly", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypePatchOnly)));
-      params.SetStructField("useColor", MatlabMatrix(static_cast<float>(_parameters.useColor)));
-      params.SetStructField("selectTopN", MatlabMatrix(static_cast<float>(_parameters.selectTopN)));
-      params.SetStructField("numToSelect", MatlabMatrix(static_cast<float>(_parameters.numToSelect)));
-      params.SetStructField("useDecisionThresh", MatlabMatrix(static_cast<float>(_parameters.useDecisionThresh)));
-      params.SetStructField("overlap", MatlabMatrix(static_cast<float>(_parameters.overlap)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypePatchOnly)));
+      params.SetStructField("useColor", MatlabMatrix(static_cast<float>(parameters.useColor)));
+      params.SetStructField("selectTopN", MatlabMatrix(static_cast<float>(parameters.selectTopN)));
+      params.SetStructField("numToSelect", MatlabMatrix(static_cast<float>(parameters.numToSelect)));
+      params.SetStructField("useDecisionThresh", MatlabMatrix(static_cast<float>(parameters.useDecisionThresh)));
+      params.SetStructField("overlap", MatlabMatrix(static_cast<float>(parameters.overlap)));
       params.SetStructField("fixedDecisionThresh", 
-			    MatlabMatrix(static_cast<float>(_parameters.fixedDecisionThresh)));
-      params.SetStructField("removeFeatures", MatlabMatrix(static_cast<float>(_parameters.removeFeatures)));
+			    MatlabMatrix(static_cast<float>(parameters.fixedDecisionThresh)));
+      params.SetStructField("removeFeatures", MatlabMatrix(static_cast<float>(parameters.removeFeatures)));
       params.SetStructField("gradientSumThreshold", 
-			    MatlabMatrix(static_cast<float>(_parameters.gradientSumThreshold)));
+			    MatlabMatrix(static_cast<float>(parameters.gradientSumThreshold)));
       params.SetStructField("sampleBig", 
-			    MatlabMatrix(static_cast<float>(_parameters.sampleBig)));
+			    MatlabMatrix(static_cast<float>(parameters.sampleBig)));
 
       SAVE_PARAMETER(featureTypeHistogram);
       SAVE_PARAMETER(featureTypeDecaf);
@@ -288,6 +288,11 @@ namespace slib {
       SAVE_PARAMETER(removeDuplicateImageDetections);
       SAVE_PARAMETER(removeDuplicatePanoramaDetections);
 
+      return params;
+    }
+
+    void Detector::SaveParametersToMatlabMatrix(mxArray** matrix) const {
+      MatlabMatrix params = DetectorFactory::ConvertParametersToMatlabMatrix(_parameters);
       (*matrix) = mxDuplicateArray(&params.GetMatlabArray());
     }
         

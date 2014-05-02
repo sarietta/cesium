@@ -25,10 +25,10 @@
   }									
 
 #define SAVE_PARAMETER(name)						\
-  params.SetStructField(#name, MatlabMatrix(static_cast<float>(_parameters.name)));
+  params.SetStructField(#name, MatlabMatrix(static_cast<float>(parameters.name)));
 
 #define SAVE_STRING_PARAMETER(name)					\
-  params.SetStructField(#name, MatlabMatrix(_parameters.name));
+  params.SetStructField(#name, MatlabMatrix(parameters.name));
 
 namespace slib {
   namespace svm {
@@ -311,6 +311,7 @@ namespace slib {
       static Detector InitializeFromMatlabArray(const mxArray& array);
 
       static DetectionParameters LoadParametersFromMatlabMatrix(const mxArray* params);
+      static slib::util::MatlabMatrix ConvertParametersToMatlabMatrix(const DetectionParameters& parameters);
     };
     
   }  // namespace svm
