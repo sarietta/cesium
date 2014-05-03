@@ -1,4 +1,5 @@
 #define SLIB_NO_DEFINE_64BIT
+#define SKIP_FFTW_WISDOM
 
 #include <algorithm>
 #include <CImg.h>
@@ -92,9 +93,12 @@ namespace slib {
     bool import_failed = false;
     char fname[1024];
     FILE *in = 0;
-    
+
+#ifndef SKIP_FFTW_WISDOM
     fftwf_forget_wisdom();
-    
+#endif    
+
+#ifndef SKIP_FFTW_WISDOM
     import_failed = false;
     sprintf(fname,"%s/.fftw3_wisdom/%d_%d_%d.wisdom", getenv("HOME"), _w, _h, 1);
     in = fopen(fname,"rb");
@@ -112,7 +116,10 @@ namespace slib {
     if (import_failed) {
       LOG(ERROR) << "Failed to locate wisdom file [" << fname << "], will take longer to build plans.";
     }
-    
+#else
+    import_failed = true;
+#endif
+
     pf_image = fftwf_plan_many_dft(2, dim, 1,
 				   imageBuffer, NULL, 1, _w*_h,   // input 
 				   imageBuffer, NULL, 1, _w*_h,   // output (in-place)
@@ -191,7 +198,8 @@ namespace slib {
 	filtered(x,y) = convBuffer[(y+padding)*_w+(x+padding)][0]*lscale;
       }
     }
-    
+
+#ifndef SKIP_FFTW_WISDOM
     if (import_failed) {
       FILE *out = fopen(fname,"wb");
       if (!out) {
@@ -204,6 +212,7 @@ namespace slib {
 	LOG(WARNING) << "Wrote wisdom file: " << fname;
       }
     }
+#endif
     
     // clean up convolution buffers
     fftwf_free(imageBuffer);
@@ -214,10 +223,12 @@ namespace slib {
     fftwf_destroy_plan(pf_image); pf_image=0;
     fftwf_destroy_plan(pf_filter); pf_filter=0;
     fftwf_destroy_plan(pb_conv); pb_conv=0;
-    
+
+#ifndef SKIP_FFTW_WISDOM    
     // drop wisdom
     fftwf_forget_wisdom();
-    
+#endif
+
     return filtered;
   }
 #endif
