@@ -185,14 +185,14 @@ namespace slib {
       // GetDimensions().
       inline int cols() const {
 	const Pair<int> dimensions = GetDimensions();
-	return dimensions.x;
+	return dimensions.y;
       }
 
       // Try to avoid this. It's more efficient to get them both via
       // GetDimensions().
       inline int rows() const {
 	const Pair<int> dimensions = GetDimensions();
-	return dimensions.y;
+	return dimensions.x;
       }
 
       inline MatlabMatrixType GetMatrixType() const {
@@ -308,6 +308,14 @@ namespace slib {
 
     class MatlabConverter {
     public:
+      // Determine whether indices (as appropriate) should be offset
+      // for use in MATLAB.  Default is that this is enabled.
+      //
+      // TODO(sean): This should be probably be a parameter to all
+      // routines to avoid people missing this setting.
+      static void EnableMatlabOffset();
+      static void DisableMatlabOffset();
+
       static MatlabMatrix ConvertModelToMatrix(const slib::svm::Model& model);
       static MatlabMatrix ConvertMetadataToMatrix(const std::vector<slib::svm::DetectionMetadata>& metadata,
 						  const bool& minimal = false);
@@ -320,6 +328,9 @@ namespace slib {
 
       static slib::svm::Detector ConvertMatrixToDetector(const MatlabMatrix& matrix);
       static MatlabMatrix ConvertDetectorToMatrix(const slib::svm::Detector& detector);
+
+    private:
+      static int _matlab_offset;
     };    
 
   }  // namespace util
