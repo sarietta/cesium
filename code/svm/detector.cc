@@ -410,18 +410,17 @@ namespace slib {
       return Pair<int>(x1, y1);
     }
 
-    Pair<int> Detector::PyramidPointToImagePoint(const FeaturePyramid& pyramid, 
+    // Mirrors pyridx2pos.m
+    Pair<int> Detector::PyramidPointToImagePoint(const float& level_scale, const float& canonical_scale,
 						 const Pair<int>& point, const int& level, 
 						 const DetectionParameters& parameters) {
-      const float canonical_scale = pyramid.GetCanonicalScale();
-
       Pair<float> patch_size;
       Detector::GetFeatureDimensions(parameters, &patch_size);
       
       const float sbins = parameters.sBins;
-      const Pair<Pair<float> > levelPatch = pyramid.GetPatchSizeInLevel(patch_size, level, sbins);
+      const Pair<Pair<float> > levelPatch 
+	= FeaturePyramid::GetPatchSizeInLevel(patch_size, level_scale, canonical_scale, sbins);
 	
-      const float level_scale = pyramid.GetScales()[level];
       const float x1 = point.x;
       const float y1 = point.y;
       const float xoffset = floor(x1 * sbins * level_scale / canonical_scale);
@@ -432,6 +431,15 @@ namespace slib {
       image_point.y = levelPatch.first().y + yoffset;
 
       return image_point;
+    }
+
+    Pair<int> Detector::PyramidPointToImagePoint(const FeaturePyramid& pyramid, 
+						 const Pair<int>& point, const int& level, 
+						 const DetectionParameters& parameters) {
+      const float canonical_scale = pyramid.GetCanonicalScale();
+      const float level_scale = pyramid.GetScales()[level];
+
+      return Detector::PyramidPointToImagePoint(level_scale, canonical_scale, point, level, parameters);
     }
 
     int32 Detector::GetFeatureDimensions(const DetectionParameters& parameters,

@@ -216,6 +216,10 @@ namespace slib {
       static Pair<int> ImagePointToPyramidPoint(const slib::image::FeaturePyramid& pyramid, 
 						const Pair<int>& point, const int& level, 
 						const DetectionParameters& parameters);
+
+      static Pair<int> PyramidPointToImagePoint(const float& level_scale, const float& canonical_scale,
+						const Pair<int>& point, const int& level, 
+						const DetectionParameters& parameters);
       static Pair<int> PyramidPointToImagePoint(const slib::image::FeaturePyramid& pyramid, 
 						const Pair<int>& point, const int& level, 
 						const DetectionParameters& parameters);
