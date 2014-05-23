@@ -23,9 +23,6 @@ DEFINE_string(cesium_checkpointed_variables, "",
 	      "A comma-separated liste of variable names that should be loaded via checkpoints");
 
 DEFINE_bool(cesium_checkpoint_variables, true, "Set to false if you don't want to checkpoint variables.");
-DEFINE_bool(cesium_all_indices_at_once, false,
-	    "Whether the indices that are sent to the workers should be processed together or separately.");
-DEFINE_bool(cesium_intelligent_parameters, true, "Automatically sets batch size and checkpoint interval.");
 DEFINE_int32(cesium_partial_variable_chunk_size, 50, 
 	     "The size of each chunk of a partial variable. "
 	     "If a variable is NxM and is a partial row variable, "
@@ -65,6 +62,12 @@ namespace slib {
       , _batch_size(-1)
       , _checkpoint_interval(-1)
       , _stripped_feature_dimensions(-1) {}
+
+    Cesium::~Cesium() {
+      _singleton->Finish();
+      google::FlushLogFiles(google::GLOG_INFO);
+      MPI_Finalize();
+    }
     
     Cesium* Cesium::GetInstance() {
       if (_singleton.get() == NULL) {
@@ -85,6 +88,26 @@ namespace slib {
 
     void Cesium::SetBatchSize(const int& batch_size)  {
       _batch_size = batch_size;
+    }
+
+    void Cesium::EnableAllIndicesAtOnce() {
+      InitializeInstance();
+      _instance->process_all_indices_at_once = true;
+    }
+
+    void Cesium::DisableAllIndicesAtOnce() {
+      InitializeInstance();
+      _instance->process_all_indices_at_once = false;
+    }
+
+    void Cesium::EnableIntelligentParameters() {
+      InitializeInstance();
+      _instance->use_intelligent_parameters = true;
+    }
+
+    void Cesium::DisableIntelligentParameters() {
+      InitializeInstance();
+      _instance->use_intelligent_parameters = false;
     }
 
     void Cesium::SetParametersIntelligently() {
@@ -223,6 +246,8 @@ namespace slib {
 	_instance.reset(new CesiumExecutionInstance());
 	_instance->total_indices = 0;
 	_instance->partial_output_unique_int = 0;
+	_instance->process_all_indices_at_once = false;
+	_instance->use_intelligent_parameters = true;
       }
     }
 
@@ -269,6 +294,10 @@ namespace slib {
       JobDescription mutable_job = job;
 
       InitializeInstance();
+
+      if (_instance->process_all_indices_at_once) {
+	mutable_job.variables[CESIUM_CONFIG_ALL_INDICES_FIELD] = MatlabMatrix(true);
+      }
 
       // Determine the cached variables so we can indicate to the
       // processors what they should cache.
@@ -331,7 +360,7 @@ namespace slib {
       }
       VLOG(1) << "Available processors: " << _instance->available_processors.size();
 
-      if (FLAGS_cesium_intelligent_parameters) {
+      if (_instance->use_intelligent_parameters) {
 	SetParametersIntelligently();
       }
       
@@ -628,7 +657,8 @@ namespace slib {
 	} else {
 	  const Function& function = _available_commands[job.command];
 	  
-	  if (FLAGS_cesium_all_indices_at_once) {
+	  if (job.variables.find(CESIUM_CONFIG_ALL_INDICES_FIELD) != job.variables.end()) {
+	    VLOG(1) << "Running all indices at once";
 	    (*function)(job, &output);
 	    google::FlushLogFiles(google::GLOG_INFO);
 	  } else {

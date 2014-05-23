@@ -21,13 +21,13 @@
 
 #define CESIUM_CACHED_VARIABLES_FIELD "__CESIUM_CACHED_VARIABLES__"
 
+#define CESIUM_CONFIG_ALL_INDICES_FIELD "__CESIUM_ALL_INDICES__"
+
 DECLARE_string(cesium_working_directory);
 DECLARE_string(cesium_temporary_directory);
 DECLARE_bool(cesium_export_log);
 DECLARE_int32(cesium_wait_interval);
 DECLARE_bool(cesium_checkpoint_variables);
-DECLARE_bool(cesium_all_indices_at_once);
-DECLARE_bool(cesium_intelligent_parameters);
 DECLARE_int32(cesium_partial_variable_chunk_size);
 DECLARE_bool(cesium_debug_mode);
 DECLARE_int32(cesium_debug_mode_node);
@@ -54,6 +54,8 @@ namespace slib {
       CesiumComputeNode
     };
 
+    // TODO(sean): ?Convert this to a ProtocolBuffer implementation for
+    // ease of extending?
     struct CesiumExecutionInstance {
       int total_indices;
 
@@ -93,11 +95,20 @@ namespace slib {
       // loading each part of the partial variable until we execute
       // the job.
       std::map<std::string, std::pair<slib::util::MatlabMatrix, FILE*> > partial_variables;
+
+      // Whether the indices that are sent to the workers should be
+      // processed all at once. Set via
+      // Cesium::{Enable,Disable}AllIndicesAtOnce().
+      bool process_all_indices_at_once;
+
+      // Whether the batch size, etc is automatically determined. Set
+      // via Cesium::{Enable,Disable}IntellientParameters().
+      bool use_intelligent_parameters;
     };  // struct CesiumExecutionInstance
 
     class Cesium {
     public:
-      virtual ~Cesium() {}
+      virtual ~Cesium();
 
       static Cesium* GetInstance();
 
@@ -120,6 +131,20 @@ namespace slib {
       // time. Make sure to disable intelligent parameters if you want
       // this to take effect.
       void SetBatchSize(const int& batch_size);
+
+      // Indicates that the indices that are sent to the workers
+      // should be processed all at once. This will only modify the
+      // current CesiumInstance; it is not a permanant change. Default
+      // is disabled.
+      void EnableAllIndicesAtOnce();
+      void DisableAllIndicesAtOnce();
+
+      // Determines whether parameters will be set "intelligently",
+      // i.e. whether the batch size, etc is automatically
+      // determined. This will only modify the current CesiumInstance;
+      // it is not a permanant change. Default is enabled.
+      void EnableIntelligentParameters();
+      void DisableIntelligentParameters();
 
       // This method should be called when all processes are
       // completed.
