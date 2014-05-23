@@ -208,8 +208,7 @@ int main(int argc, char** argv) {
 
       FLAGS_cesium_partial_variable_chunk_size = 1;
       FLAGS_cesium_temporary_directory = "/tmp";
-      FLAGS_cesium_intelligent_parameters = false;
-
+      instance->DisableIntelligentParameters();
       instance->SetBatchSize(1);
 
       JobOutput output;
@@ -313,7 +312,7 @@ int main(int argc, char** argv) {
       FLAGS_cesium_working_directory = "/tmp";
       instance->SetVariableType("partial", partial, slib::mpi::PARTIAL_VARIABLE_COLS);
       
-      FLAGS_cesium_intelligent_parameters = false;
+      instance->DisableIntelligentParameters();
       instance->SetBatchSize(1);
       
       JobOutput output;
