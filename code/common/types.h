@@ -63,6 +63,11 @@ struct Pair {
     return !(*this == other);
   }
 
+  friend std::ostream& operator<<(std::ostream& out, const Pair<T>& point) {
+    out << "(" << point.x << ", " << point.y << ")";
+    return out;
+  }
+
   /** 
       Casting operations.
    */
