@@ -19,6 +19,7 @@ namespace util {
 			const bool& recurse = false);
 
     static bool Exists(const std::string& path);
+    static bool Create(const std::string& path);
 
     static std::string GenerateTemporaryFilename(const std::string& root = "./");
   };

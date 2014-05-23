@@ -1,3 +1,4 @@
+#include <boost/filesystem.hpp>
 #include <fstream>
 #include <glob.h>
 #include <glog/logging.h>
@@ -103,6 +104,10 @@ namespace slib {
     bool Directory::Exists(const string& path) {
       struct stat sb;
       return (stat(path.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode));
+    }
+
+    bool Directory::Create(const string& path) {
+      return boost::filesystem::create_directory(path);
     }
 
     bool File::Exists(const string& path) {
