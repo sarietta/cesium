@@ -305,21 +305,19 @@ namespace slib {
     }
 
     float MatlabMatrix::GetMatrixEntry(const int& row, const int& col) const {
-      if (_matrix != NULL && _type == MATLAB_MATRIX) {
-	const int dimensions = mxGetNumberOfDimensions(_matrix);
-	if (dimensions > 2) {
-	  LOG(ERROR) << "Only 2D matrices are supported";
-	  return 0.0f;
-	}
-	const int rows = mxGetM(_matrix);
-	const int cols = mxGetN(_matrix);
+      const mwIndex subscripts[2] = {row, col};
+      const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+      return GetMatrixEntry(index);
+    }
 
+    float MatlabMatrix::GetMatrixEntry(const int& index) const {
+      if (_matrix != NULL && _type == MATLAB_MATRIX) {
 	if (mxIsDouble(_matrix)) {
 	  const double* data = (double*) mxGetData(_matrix);
-	  return ((float) data[row + col * rows]);
+	  return ((float) data[index]);
 	} else if (mxIsSingle(_matrix)) {
 	  const float* data = (float*) mxGetData(_matrix);
-	  return data[row + col * rows];
+	  return data[index];
 	} else {
 	  LOG(ERROR) << "Only float and double matrices are supported";
 	}
@@ -1075,6 +1073,20 @@ namespace slib {
       return offset - position;
     }
 
+    /**
+       MatlabConverter 
+     **/
+
+    int MatlabConverter::_matlab_offset = 1;
+
+    void MatlabConverter::EnableMatlabOffset() {
+      _matlab_offset = 1;
+    }
+
+    void MatlabConverter::DisableMatlabOffset() {
+      _matlab_offset = 0;
+    }
+
     MatlabMatrix MatlabConverter::ConvertModelToMatrix(const Model& model) {
       MatlabMatrix matrix(MATLAB_STRUCT, Pair<int>(1, 1));
 
@@ -1099,10 +1111,10 @@ namespace slib {
       for (int i = 0; i < (int) metadata.size(); i++) {
 	const DetectionMetadata entry = metadata[i];
 	matrix.SetStructField("im", i, MatlabMatrix(entry.image_path));
-	matrix.SetStructField("x1", i, MatlabMatrix((float) entry.x1 + 1));
-	matrix.SetStructField("x2", i, MatlabMatrix((float) entry.x2 + 1));
-	matrix.SetStructField("y1", i, MatlabMatrix((float) entry.y1 + 1));
-	matrix.SetStructField("y2", i, MatlabMatrix((float) entry.y2 + 1));
+	matrix.SetStructField("x1", i, MatlabMatrix((float) entry.x1 + _matlab_offset));
+	matrix.SetStructField("x2", i, MatlabMatrix((float) entry.x2 + _matlab_offset));
+	matrix.SetStructField("y1", i, MatlabMatrix((float) entry.y1 + _matlab_offset));
+	matrix.SetStructField("y2", i, MatlabMatrix((float) entry.y2 + _matlab_offset));
 
 	if (minimal) {
 	  continue;
@@ -1115,15 +1127,15 @@ namespace slib {
 	size.SetStructField("nrows", MatlabMatrix(entry.image_size.y));
 	matrix.SetStructField("size", i, size);
 
-	matrix.SetStructField("imidx", i, MatlabMatrix((float) entry.image_index + 1));
-	matrix.SetStructField("setidx", i, MatlabMatrix((float) entry.image_set_index + 1));
+	matrix.SetStructField("imidx", i, MatlabMatrix((float) entry.image_index + _matlab_offset));
+	matrix.SetStructField("setidx", i, MatlabMatrix((float) entry.image_set_index + _matlab_offset));
 
 	// The original order is <level, x, y>, but MATLAB expects <level, y, x>. Also have to add one.
 	FloatMatrix pyramid_offset(1, 3);
 	pyramid_offset << 
-	  (float) entry.pyramid_offset.x + 1
-	  , (float) entry.pyramid_offset.z + 1
-	  , (float) entry.pyramid_offset.y + 1;
+	  (float) entry.pyramid_offset.x + _matlab_offset
+	  , (float) entry.pyramid_offset.z + _matlab_offset
+	  , (float) entry.pyramid_offset.y + _matlab_offset;
 	matrix.SetStructField("pyramid", i, MatlabMatrix(pyramid_offset));
       }
 
@@ -1146,10 +1158,10 @@ namespace slib {
 	for (int j = 0; j < (int) detections.model_detections[i].detections.size(); j++) {
 	  const DetectionMetadata metadata = detections.model_detections[i].detections[j].metadata;
 	  MatlabMatrix position(MATLAB_STRUCT, Pair<int>(1,1));
-	  position.SetStructField("x1", MatlabMatrix((float) metadata.x1 + 1));
-	  position.SetStructField("x2", MatlabMatrix((float) metadata.x2 + 1));
-	  position.SetStructField("y1", MatlabMatrix((float) metadata.y1 + 1));
-	  position.SetStructField("y2", MatlabMatrix((float) metadata.y2 + 1));
+	  position.SetStructField("x1", MatlabMatrix((float) metadata.x1 + _matlab_offset));
+	  position.SetStructField("x2", MatlabMatrix((float) metadata.x2 + _matlab_offset));
+	  position.SetStructField("y1", MatlabMatrix((float) metadata.y1 + _matlab_offset));
+	  position.SetStructField("y2", MatlabMatrix((float) metadata.y2 + _matlab_offset));
 
 	  int current_image_index = 0;
 	  if (image_indices.size() == 0) {
@@ -1170,8 +1182,9 @@ namespace slib {
 	  matrix.SetStructField("decision", current_index, 
 				MatlabMatrix(detections.model_detections[i].detections[j].score));
 	  matrix.SetStructField("pos", current_index, position);
-	  matrix.SetStructField("imidx", current_index, MatlabMatrix((float) (current_image_index + 1)));
-	  matrix.SetStructField("detector", current_index, MatlabMatrix((float) (detector + 1)));
+	  matrix.SetStructField("imidx", current_index, 
+				MatlabMatrix((float) (current_image_index + _matlab_offset)));
+	  matrix.SetStructField("detector", current_index, MatlabMatrix((float) (detector + _matlab_offset)));
 
 	  if (detections.model_detections[i].features.rows() > 0 
 	      && detections.model_detections[i].features.cols()) {
