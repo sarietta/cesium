@@ -19,6 +19,9 @@ namespace slib {
       static float Uniform(const float& rangeStart, const float& rangeEnd);
       static float Gaussian();
       static float Cauchy();
+
+      // Returns a randomly permututed set of numbers from [start,
+      // end]. Note that this is INCLUSIVE.
       static std::vector<int> PermutationIndices(const int& start, const int& end);
 
       static Eigen::VectorXf SampleArbitraryDistribution(const Eigen::VectorXf& distribution, 
