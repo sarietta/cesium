@@ -1,4 +1,3 @@
-#include <boost/filesystem.hpp>
 #include <fstream>
 #include <glob.h>
 #include <glog/logging.h>
@@ -9,7 +8,9 @@
 #include <vector>
 #include <unistd.h>
 #include <util/directory.h>
+#include <util/system.h>
 
+using slib::util::System;
 using std::ifstream;
 using std::string;
 using std::vector;
@@ -107,7 +108,8 @@ namespace slib {
     }
 
     bool Directory::Create(const string& path) {
-      return boost::filesystem::create_directory(path);
+      System::ExecuteSystemCommand("mkdir -p " + path);
+      return true;
     }
 
     bool File::Exists(const string& path) {
