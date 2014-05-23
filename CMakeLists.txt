@@ -300,6 +300,9 @@ else ()
 endif ()
 
 list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f jpeg stdc++)
+if (CUDA_FOUND)
+  list (APPEND TEST_LIBRARIES caffe PyramidStitcher)
+endif()
 
 add_library(slib_svm STATIC IMPORTED)
 set_property(TARGET slib_svm PROPERTY
