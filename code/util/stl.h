@@ -24,6 +24,11 @@ namespace slib {
     }
 
     template <typename T>
+    bool DescendingOrder(const STLIndexedEntry<T>& left, const STLIndexedEntry<T>& right) {
+      return (left.value > right.value);
+    }
+
+    template <typename T>
     vector<STLIndexedEntry<T> > CreateIndexedContainer(const vector<T>& V) {
       vector<STLIndexedEntry<T> > VI(V.size());
       for (int i = 0; i < (int) V.size(); i++) {
@@ -69,6 +74,38 @@ namespace slib {
     }
 
     template <typename T>
+    vector<T> Intersect(const vector<T>& V1, const vector<T>& V2) {
+      vector<T> V1_(V1);
+      vector<T> V2_(V2);
+      
+      vector<T> intersection(V1_.size() + V2_.size());
+      
+      std::sort(V1_.begin(), V1_.end());
+      std::sort(V2_.begin(), V2_.end());
+      typename vector<T>::iterator it = std::set_intersection(V1_.begin(), V1_.end(),
+							      V2_.begin(), V2_.end(),
+							      intersection.begin());
+      intersection.resize(it - intersection.begin());
+      return intersection;
+    }
+
+    template <typename T>
+    vector<T> SetDifference(const vector<T>& V1, const vector<T>& V2) {
+      vector<T> V1_(V1);
+      vector<T> V2_(V2);
+
+      vector<T> difference(V1_.size() + V2_.size());
+
+      std::sort(V1_.begin(), V1_.end());
+      std::sort(V2_.begin(), V2_.end());
+      typename vector<T>::iterator it = std::set_difference(V1_.begin(), V1_.end(),
+							    V2_.begin(), V2_.end(),
+							    difference.begin());
+      difference.resize(it - difference.begin());
+      return difference;
+    }
+
+    template <typename T>
     vector<int> Sort(vector<T>* V) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
       sort(VI.begin(), VI.end(), AscendingOrder<T>);
@@ -82,8 +119,19 @@ namespace slib {
       return UnwrapContainer<T>(VI, V);
     }
 
+    // For situations where you want to define your own sorter.
     template <typename T>
     vector<int> Sort(const vector<T>& V, bool(&compare)(const T& left, const T& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    // This enables users to use the pre-defined sorters in this file
+    // directly as arguments.
+    template <typename T>
+    vector<int> Sort(const vector<T>& V, bool(&compare)(const STLIndexedEntry<T>& left, 
+							const STLIndexedEntry<T>& right)) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
       sort(VI.begin(), VI.end(), compare);
       return UnwrapContainer<T>(VI, V);
