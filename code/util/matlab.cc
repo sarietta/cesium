@@ -10,6 +10,7 @@
 #include <sstream>
 #include <svm/detector.h>
 #include <vector>
+#include <wchar.h>
 
 using slib::svm::DetectionMetadata;
 using slib::svm::DetectionResultSet;
@@ -328,6 +329,24 @@ namespace slib {
       return 0.0f;
     }
 
+    bool MatlabMatrix::HasStructField(const string& field, const int& row, const int& col) const {
+      const mwIndex subscripts[2] = {row, col};
+      const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+      return HasStructField(field, index);
+    }
+
+    bool MatlabMatrix::HasStructField(const string& field, const int& index) const {
+      if (_matrix != NULL && _type == MATLAB_STRUCT) {
+	if (mxGetFieldNumber(_matrix, field.c_str()) == -1) {
+	  return false;
+	} else {
+	  return true;
+	}
+      } else {
+	return false;
+      }
+    }
+
     const MatlabMatrix MatlabMatrix::GetStructField(const string& field, const int& row, const int& col) const {
       const mwIndex subscripts[2] = {row, col};
       const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
@@ -476,7 +495,7 @@ namespace slib {
       }
     }
 
-
+    // TODO(sean): Implement all conversions
     FloatMatrix MatlabMatrix::GetCopiedContents() const {
       FloatMatrix matrix;
       if (_matrix != NULL && _type == MATLAB_MATRIX) {
@@ -504,8 +523,22 @@ namespace slib {
 	      matrix(j, i) = data[j + i * rows];
 	    }
 	  }
+	} else if (mxIsUint8(_matrix)) {
+	  const unsigned char* data = (unsigned char*) mxGetData(_matrix);
+	  for (int i = 0; i < cols; i++) {
+	    for (int j = 0; j < rows; j++) {
+	      matrix(j, i) = data[j + i * rows];
+	    }
+	  }
+	} else if (mxIsUint16(_matrix)) {
+	  const unsigned short* data = (unsigned short*) mxGetData(_matrix);
+	  for (int i = 0; i < cols; i++) {
+	    for (int j = 0; j < rows; j++) {
+	      matrix(j, i) = data[j + i * rows];
+	    }
+	  }
 	} else {
-	  LOG(ERROR) << "Only float and double matrices are supported";
+	  LOG(ERROR) << "Only numeric matrices are supported (" << mxGetClassID(_matrix) << ")";
 	}
       } else {
 	VLOG(2) << "Attempted to access non-matrix";
@@ -588,7 +621,24 @@ namespace slib {
 	if (mxGetString(_matrix, characters.get(), length+1) == 0) {
 	  contents.assign(characters.get());
 	} else {
-	  VLOG(1) << "Couldn't find string";
+	  // If the string is multibyte encoded, mxGetString will fail.
+	  char* multibyte_string = mxArrayToString(_matrix);
+	  if (multibyte_string) {
+	    scoped_array<wchar_t> multibyte_characters(new wchar_t[length+1]);
+	    mbstowcs(multibyte_characters.get(), multibyte_string, length+1);
+
+	    for (int i = 0; i < wcslen(multibyte_characters.get()); ++i) {
+	      const int byte = wctob(multibyte_characters[i]);
+	      if (byte != EOF) {
+		contents.append((const char*) &byte);
+	      } else {
+		contents.append("-");
+	      }
+	    }
+	    mxFree(multibyte_string);
+	  } else {
+	    VLOG(1) << "Couldn't find string";
+	  }
 	}
       } else {
 	VLOG(1) << "Attempted to access non-string matrix";
@@ -914,6 +964,7 @@ namespace slib {
 	ss.write(reinterpret_cast<const char*>(&dimensions.y), sizeof(int));
 	// Write out the actual data.
 	const string contents = GetStringContents();
+	VLOG(2) << "Writing string: " << contents;
 	ss.write(contents.c_str(), sizeof(char) * (contents.length() + 1));
 	break;
       }
@@ -926,7 +977,7 @@ namespace slib {
       return ss.str();
     }
 
-    int MatlabMatrix::Deserialize(const string& str, const int& position) {
+    long long int MatlabMatrix::Deserialize(const string& str, const long long int& position) {
       // These methods mirror the above methods.
       const char* ss = str.c_str() + position;
 
@@ -934,7 +985,7 @@ namespace slib {
       char type;
       memcpy(&type, ss, sizeof(char)); ss += sizeof(char);
 
-      int offset = position + sizeof(char);
+      long long int offset = position + sizeof(char);
       switch (type) {
       case 'S': {  // Struct
 	VLOG(2) << "Found struct at offset: " << offset;
@@ -978,10 +1029,13 @@ namespace slib {
 	    const int index = j;
 	    // Deserialize the field and then save it.
 	    MatlabMatrix field_matrix;
-	    const int bytes_read = field_matrix.Deserialize(str, offset);
-	    if (bytes_read == 0) {
+	    const long long int bytes_read = field_matrix.Deserialize(str, offset);
+	    if (bytes_read == 0L) {
 	      LOG(ERROR) << "Malformed field: " << field << " (index: " << index << ")";
+#if 1
+#else
 	      return 0;
+#endif
 	    }
 	    offset += bytes_read;
 	    SetStructField(field, index, field_matrix);
@@ -1006,8 +1060,8 @@ namespace slib {
 	  const int index = j;
 	  // Deserialize the field and then save it.
 	  MatlabMatrix cell_matrix;
-	  const int bytes_read = cell_matrix.Deserialize(str, offset);
-	  if (bytes_read == 0) {
+	  const long long int bytes_read = cell_matrix.Deserialize(str, offset);
+	  if (bytes_read == 0L) {
 	    LOG(ERROR) << "Malformed cell at index: " << index;
 	    return 0;
 	  }
@@ -1067,10 +1121,10 @@ namespace slib {
       }
       default:
 	LOG(ERROR) << "Unknown matrix type: " << type << " (Offset: " << offset << ")";
-	return 0;
+	//return 0;
       }
 
-      return offset - position;
+      return (offset - position);
     }
 
     /**

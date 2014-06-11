@@ -122,6 +122,9 @@ namespace slib {
       bool SaveToFile(const std::string& filename, const bool& struct_format = false) const;
       bool SaveToBinaryFile(const std::string& filename) const;
 
+      bool HasStructField(const std::string& file, const int& index = 0) const;
+      bool HasStructField(const std::string& file, const int& row, const int& col) const;
+
       // TODO(sarietta): Slowly transition this to be GetMutable* and Get*.
 
       MatlabMatrix GetCopiedStructField(const std::string& field, const int& index = 0) const;
@@ -211,7 +214,7 @@ namespace slib {
       // recursive and needs to be able to start reading from the
       // correct position in the stream. A calling method does not
       // need to worry with these details... just use the default.
-      int Deserialize(const std::string& str, const int& position = 0);
+      long long int Deserialize(const std::string& str, const long long int& position = 0L);
 
       Pair<int> GetDimensions() const;
       std::vector<std::string> GetStructFieldNames() const;
