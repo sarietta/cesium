@@ -66,9 +66,11 @@ namespace slib {
     // you want to use the default argument list.
     template <typename T>
     vector<T> Range(const T& start, const T& end, const T& step = 1) {
-      vector<T> values(end - start);
-      for (T value = start; value < end; value += step) {
-	values[value - start] = value;
+      const int num = static_cast<int>((end - start) / step);
+      const T num_T = static_cast<T>(num);
+      vector<T> values(num);
+      for (int i = 0; i < num; ++i) {
+	values[i] = start + step * static_cast<T>(i);
       }
       return values;
     }
