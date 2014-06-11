@@ -367,7 +367,7 @@ namespace slib {
       const int last_node = _size - 1;
       
       LOG(INFO) << "***********************************************";
-      LOG(INFO) << "Entering Main Computation Loop";
+      LOG(INFO) << "Entering Main Computation Loop [" << mutable_job.command << "]";
       LOG(INFO) << "***********************************************";
       
       while ((int) _instance->completed_indices.size() < _instance->total_indices) {
@@ -601,6 +601,10 @@ namespace slib {
       // This kills the current instance so that any modifications to
       // an "instance" will effectively create a new one.
       _instance.reset(NULL);
+
+      LOG(INFO) << "***********************************************";
+      LOG(INFO) << "Exiting Main Computation Loop [" << mutable_job.command << "]";
+      LOG(INFO) << "***********************************************";
 
       return true;
     }
