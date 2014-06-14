@@ -109,6 +109,11 @@ namespace slib {
       _instance->use_intelligent_parameters = false;
     }
 
+    void Cesium::SetExecutionNodes(const vector<int>& nodes) { 
+      InitializeInstance();
+      _instance->available_processors = vector<int>(nodes);
+    }
+
     void Cesium::SetParametersIntelligently() {
       const int total_indices = _instance->total_indices;
       const int num_nodes = _instance->available_processors.size();
@@ -346,15 +351,19 @@ namespace slib {
       controller.SetCompletionHandler(&__HandleJobCompletedWrapper__);
       controller.SetCommunicationErrorHandler(&__HandleCommunicationErrorWrapper__);
 
-      // Setup the available processors information. Do in reverse order
-      // in case the job size is less than the number of nodes.
-      for (int node = _size - 1; node >= 1; node--) {
-	if (FLAGS_cesium_debug_mode) {
-	  if (node == FLAGS_cesium_debug_mode_node) {	  
+      // Setup the available processors information. Do in reverse
+      // order in case the job size is less than the number of
+      // nodes. Note that a user can specify these directly via a call
+      // to SetExecutionNodes().
+      if (_instance->available_processors.size() == 0) {
+	for (int node = _size - 1; node >= 1; node--) {
+	  if (FLAGS_cesium_debug_mode) {
+	    if (node == FLAGS_cesium_debug_mode_node) {	  
+	      _instance->available_processors.push_back(node);
+	    }
+	  } else {
 	    _instance->available_processors.push_back(node);
 	  }
-	} else {
-	  _instance->available_processors.push_back(node);
 	}
       }
       VLOG(1) << "Available processors: " << _instance->available_processors.size();

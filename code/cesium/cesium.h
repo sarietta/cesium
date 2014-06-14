@@ -152,6 +152,13 @@ namespace slib {
       void EnableIntelligentParameters();
       void DisableIntelligentParameters();
 
+      // Sets the nodes that will be involved in the NEXT Execute*
+      // call. This can be useful if there are jobs that have steep
+      // resource requirements and need to be processed by a smaller
+      // number of nodes than normal. This will only modify the
+      // current CesiumInstance; it is not a permanant change.
+      void SetExecutionNodes(const std::vector<int>& nodes);
+
       // This method should be called when all processes are
       // completed.
       void Finish();
