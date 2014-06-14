@@ -52,7 +52,6 @@ namespace slib {
   namespace mpi {
 
     scoped_ptr<Cesium> Cesium::_singleton;
-    map<string, Function> Cesium::_available_commands;
     map<int, bool> Cesium::_dead_processors;
     
     Cesium::Cesium() 
@@ -82,7 +81,7 @@ namespace slib {
 	LOG(ERROR) << "Attempted to register a job under the protected name: " << CESIUM_FINISH_JOB_STRING;
 	LOG(ERROR) << "Please rename your function to avoid this collision";
       } else {
-	_available_commands[command] = function;
+	GetAvailableCommands()[command] = function;
       }
     }
 
@@ -621,8 +620,8 @@ namespace slib {
       map<string, MatlabMatrix> cached_variables;
 
       if (FLAGS_v >= 1) {
-	for (map<string, Function>::const_iterator iter = _available_commands.begin();
-	     iter != _available_commands.end();
+	for (map<string, Function>::const_iterator iter = GetAvailableCommands().begin();
+	     iter != GetAvailableCommands().end();
 	     iter++) {
 	  VLOG(1) << "Available Command: " << (*iter).first;
 	}
@@ -656,10 +655,10 @@ namespace slib {
 	JobOutput output;
 	output.command = job.command;
 	// Determine the function.
-	if (_available_commands.find(job.command) == _available_commands.end()) {
+	if (GetAvailableCommands().find(job.command) == GetAvailableCommands().end()) {
 	  LOG(ERROR) << "Attempted to execute unknown command: " << job.command;
 	} else {
-	  const Function& function = _available_commands[job.command];
+	  const Function& function = GetAvailableCommands()[job.command];
 	  
 	  if (job.variables.find(CESIUM_CONFIG_ALL_INDICES_FIELD) != job.variables.end()) {
 	    VLOG(1) << "Running all indices at once";

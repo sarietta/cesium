@@ -14,7 +14,9 @@
 #include <util/matlab.h>
 #include <vector>
 
-#define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
+//#define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
+#define CESIUM_REGISTER_COMMAND(function) \
+  static slib::mpi::CesiumCommandRegistrator __CESIUM_##function(#function, function);
 
 #define CESIUM_FINISH_JOB_STRING "__CESIUM_FINISH_JOB__"
 #define CESIUM_NODE_DIED_JOB_STRING "__CESIUM_NODE_DIED__"
@@ -113,6 +115,10 @@ namespace slib {
       static Cesium* GetInstance();
 
       static void RegisterCommand(const std::string& command, const Function& function);     
+      static std::map<std::string, Function>& GetAvailableCommands() {
+	static std::map<std::string, Function> available_commands;
+	return available_commands;
+      }
       
       // This MUST be called before any other operations. It starts up
       // the framework across the available nodes (automatically
@@ -263,12 +269,18 @@ namespace slib {
       int _stripped_feature_dimensions;
 
       static scoped_ptr<Cesium> _singleton;
-      static std::map<std::string, Function> _available_commands;
 
       static std::map<int, bool> _dead_processors;
 
       friend class TestCesiumCommunication;
     };  // class Cesium
+
+    class CesiumCommandRegistrator {
+    public:
+      CesiumCommandRegistrator(const std::string& command, const Function& function) {
+	slib::mpi::Cesium::RegisterCommand(command, function);
+      }
+    };  // class CesiumCommandRegistrator
 
   }  // namespace mpi
 }  // namespace slib
