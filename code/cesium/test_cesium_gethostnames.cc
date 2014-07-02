@@ -43,13 +43,16 @@ int main(int argc, char** argv) {
 
   Cesium* instance = Cesium::GetInstance();
   if (instance->Start() == slib::mpi::CesiumMasterNode) {
-    const map<string, vector<int> > nodes = instance->GetHostnameNodes();
-    for (iterator iter = nodes.begin(); iter != nodes.end(); ++iter) {
+    const map<string, vector<int> > hostnames = instance->GetHostnameNodes();
+    for (iterator iter = hostnames.begin(); iter != hostnames.end(); ++iter) {
       LOG(INFO) << (*iter).first << ": " << slib::util::PrintVector((*iter).second);
     }
-  }
 
-  LOG(INFO) << "ALL TESTS PASSED";
+    const vector<string> nodes = instance->GetNodeHostnames();
+    for (int i = 0; i < (int) nodes.size(); ++i) {
+      LOG(INFO) << i << ": " << nodes[i];
+    }
+  }
 
   return 0;
 }

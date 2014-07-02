@@ -166,6 +166,8 @@ namespace slib {
       // computation and the value is a list of node ids that belong
       // to each hostname.
       std::map<std::string, std::vector<int> > GetHostnameNodes() const;
+      // Same as above but a list of hostnames, one for each node (the inverse).
+      std::vector<std::string> GetNodeHostnames() const;
 
       // This method should be called when all processes are
       // completed.

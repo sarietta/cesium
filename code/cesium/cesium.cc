@@ -136,6 +136,27 @@ namespace slib {
       return info;
     }
 
+    vector<string> Cesium::GetNodeHostnames() const {
+      JobController controller;
+      
+      vector<string> info(_size);
+
+      JobDescription hostname;
+      hostname.command = CESIUM_IDENTIFY_HOSTNAME_JOB_STRING;
+      for (int node = 0; node < _size; node++) {
+	if (node == MPI_ROOT_NODE) {
+	  info[node] = _hostname;
+	  continue;
+	}
+	controller.StartJobOnNode(hostname, node);
+	const string hostname = JobNode::WaitForString(node);
+
+	info[node] = hostname;
+      }
+
+      return info;
+    }
+
     void Cesium::SetParametersIntelligently() {
       const int total_indices = _instance->total_indices;
       const int num_nodes = _instance->available_processors.size();
