@@ -207,6 +207,8 @@ namespace slib {
 	parameters.gradientSumThreshold = (float) mxGetScalar(field);
       }
 
+      LOAD_PARAMETER(keepAllDetections, bool);
+
       LOAD_PARAMETER(featureTypeHistogram, bool);
       LOAD_PARAMETER(featureTypeDecaf, bool);
       LOAD_PARAMETER(featureTypeCaffe, bool);
@@ -277,6 +279,8 @@ namespace slib {
 			    MatlabMatrix(static_cast<float>(parameters.gradientSumThreshold)));
       params.SetStructField("sampleBig", 
 			    MatlabMatrix(static_cast<float>(parameters.sampleBig)));
+
+      SAVE_PARAMETER(keepAllDetections);
 
       SAVE_PARAMETER(featureTypeHistogram);
       SAVE_PARAMETER(featureTypeDecaf);
@@ -387,6 +391,52 @@ namespace slib {
 	return (lhs.value > rhs.value);
       }
     };
+
+    Triplet<int> Detector::ImagePointToPyramidLocation(const FeaturePyramid& pyramid, 
+						       const Pair<Pair<float> >& point,
+						       const DetectionParameters& parameters) {
+      const float x1 = point.first().x;
+      const float y1 = point.first().y;
+      const float x2 = point.second().x;
+      const float y2 = point.second().y;
+
+      const float width = x2 - x1;
+      const float height = y2 - y1;
+      const float area = width * height;
+
+      Pair<float> patch_size;
+      Detector::GetFeatureDimensions(parameters, &patch_size);      
+      const float sbins = parameters.sBins;     
+
+      // This is NOT exact. It tries to find the closest size patches
+      // in the pyramid wrt to the input patch. However, because
+      // patches can be cropped, this may not be the actual pyramid
+      // location.
+      const int num_levels = pyramid.GetNumLevels();
+      int level = 0;
+      float diff = -1;
+      for (int i = 0; i < num_levels; i++) {
+	const Pair<Pair<float> > level_patch = pyramid.GetPatchSizeInLevel(patch_size, i, sbins);
+	const float x1 = level_patch.first().x;
+	const float y1 = level_patch.first().y;
+	const float x2 = level_patch.second().x;
+	const float y2 = level_patch.second().y;
+	
+	const float level_patch_width = x2 - x1;
+	const float level_patch_height = y2 - y1;	
+	
+	const float level_patch_area = level_patch_width * level_patch_height;
+
+	const float level_diff = (level_patch_area - area) * (level_patch_area - area);
+	if (i == 0 || level_diff < diff) {
+	  level = i;
+	  diff = level_diff;
+	}
+      }
+
+      const Pair<int> pyramid_point = ImagePointToPyramidPoint(pyramid, Pair<int>(x1, y1), level, parameters);
+      return Triplet<int>(level, pyramid_point.x, pyramid_point.y);
+    }
     
     Pair<int> Detector::ImagePointToPyramidPoint(const FeaturePyramid& pyramid, 
 						 const Pair<int>& point, const int& level, 
@@ -817,10 +867,15 @@ namespace slib {
 	  }
 	  VLOG(2) << "Time spent collating the metadata: " << Timer::Stop();
 	  
-	  Timer::Start();
-	  vector<int32> final_indices
-	    = SelectViaNonMaxSuppression(metadata, selected_indices, detections.col(i), _parameters.overlap);
-	  VLOG(2) << "Time spent performing non-maximum suppression: " << Timer::Stop();
+	  vector<int32> final_indices;
+	  if (_parameters.keepAllDetections) {
+	    final_indices = slib::util::Range(0, (int) selected_indices.size());
+	  } else {
+	    Timer::Start();
+	    final_indices = SelectViaNonMaxSuppression(metadata, selected_indices, 
+						       detections.col(i), _parameters.overlap);
+	    VLOG(2) << "Time spent performing non-maximum suppression: " << Timer::Stop();
+	  }
 	  
 	  VLOG(1) << "Final number of detections: " << final_indices.size();
 
@@ -923,6 +978,7 @@ namespace slib {
       parameters.useColor = true;
       parameters.selectTopN = false;
       parameters.numToSelect = 0;
+      parameters.keepAllDetections = false;
       parameters.useDecisionThresh = true;
       parameters.overlap = parameters.overlapThreshold;
       parameters.fixedDecisionThresh = -1.002;

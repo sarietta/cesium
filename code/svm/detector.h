@@ -70,6 +70,7 @@ namespace slib {
       
       bool selectTopN;
       int32 numToSelect;
+      bool keepAllDetections;
       bool useDecisionThresh;
       float overlap;
       float fixedDecisionThresh;
@@ -223,6 +224,10 @@ namespace slib {
       static Pair<int> PyramidPointToImagePoint(const slib::image::FeaturePyramid& pyramid, 
 						const Pair<int>& point, const int& level, 
 						const DetectionParameters& parameters);
+      // This is a slower method that computes the level for you as well, given a patch in an image.
+      static Triplet<int> ImagePointToPyramidLocation(const slib::image::FeaturePyramid& pyramid, 
+						      const Pair<Pair<float> >& point,
+						      const DetectionParameters& parameters);
       
       // These actually construct the associated matrices that are
       // normally stored in this class. Useful if you need to
