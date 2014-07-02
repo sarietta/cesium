@@ -123,6 +123,14 @@ namespace slib {
 
     // For situations where you want to define your own sorter.
     template <typename T>
+    vector<int> Sort(vector<T>* V, bool(&compare)(const STLIndexedEntry<T>& left, 
+						  const STLIndexedEntry<T>& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
+      sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    template <typename T>
     vector<int> Sort(const vector<T>& V, bool(&compare)(const T& left, const T& right)) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
       sort(VI.begin(), VI.end(), compare);
@@ -136,6 +144,40 @@ namespace slib {
 							const STLIndexedEntry<T>& right)) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
       sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+    
+    // The next couple of methods are the same as above but they are
+    // the stable sort versions.
+    template <typename T>
+    vector<int> StableSort(vector<T>* V) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
+      stable_sort(VI.begin(), VI.end(), AscendingOrder<T>);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    template <typename T>
+    vector<int> StableSort(const vector<T>& V) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      stable_sort(VI.begin(), VI.end(), AscendingOrder<T>);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    // For situations where you want to define your own sorter.
+    template <typename T>
+    vector<int> StableSort(const vector<T>& V, bool(&compare)(const T& left, const T& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      stable_sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    // This enables users to use the pre-defined sorters in this file
+    // directly as arguments.
+    template <typename T>
+    vector<int> StableSort(const vector<T>& V, bool(&compare)(const STLIndexedEntry<T>& left, 
+							      const STLIndexedEntry<T>& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      stable_sort(VI.begin(), VI.end(), compare);
       return UnwrapContainer<T>(VI, V);
     }
 
