@@ -71,6 +71,7 @@ namespace slib {
     Cesium* Cesium::GetInstance() {
       if (_singleton.get() == NULL) {
 	_singleton.reset(new Cesium);
+	google::InstallFailureSignalHandler();
       }
 
       return _singleton.get();
@@ -112,6 +113,27 @@ namespace slib {
     void Cesium::SetExecutionNodes(const vector<int>& nodes) { 
       InitializeInstance();
       _instance->available_processors = vector<int>(nodes);
+    }
+
+    map<string, vector<int> > Cesium::GetHostnameNodes() const {
+      JobController controller;
+      
+      map<string, vector<int> > info;
+
+      JobDescription hostname;
+      hostname.command = CESIUM_IDENTIFY_HOSTNAME_JOB_STRING;
+      for (int node = 0; node < _size; node++) {
+	if (node == MPI_ROOT_NODE) {
+	  info[_hostname].push_back(node);
+	  continue;
+	}
+	controller.StartJobOnNode(hostname, node);
+	const string hostname = JobNode::WaitForString(node);
+
+	info[hostname].push_back(node);
+      }
+
+      return info;
     }
 
     void Cesium::SetParametersIntelligently() {
@@ -557,12 +579,14 @@ namespace slib {
 	_instance->job_completion_mutex.unlock();
 	
 	// Poll the nodes to see if they have completed.
+	// TODO(sean): Would be better to have an IRQ-like interface.
 	controller.CheckForCompletion();
 	
 	// Wait for a little while so we don't overload the output.
 	if (FLAGS_cesium_export_log) {
 	  ExportLog(pid);
 	}
+	// TODO(sean): Horrible. Fix this sleep.
 	sleep(FLAGS_cesium_wait_interval);
       }
       
@@ -642,6 +666,11 @@ namespace slib {
 	  LOG(INFO) << "Node " << _rank << " finishing";
 	  JobNode::SendStringToNode(job.command, MPI_ROOT_NODE);
 	  break;
+	}
+
+	if (job.command == CESIUM_IDENTIFY_HOSTNAME_JOB_STRING) {
+	  JobNode::SendStringToNode(_hostname, MPI_ROOT_NODE);
+	  continue;
 	}
 
 	LOG(INFO) << "Received new job: " << job.command;

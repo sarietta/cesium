@@ -20,6 +20,7 @@
 
 #define CESIUM_FINISH_JOB_STRING "__CESIUM_FINISH_JOB__"
 #define CESIUM_NODE_DIED_JOB_STRING "__CESIUM_NODE_DIED__"
+#define CESIUM_IDENTIFY_HOSTNAME_JOB_STRING "__CESIUM_IDENTIFY_HOSTNAME_JOB_STRING__"
 
 #define CESIUM_CACHED_VARIABLES_FIELD "__CESIUM_CACHED_VARIABLES__"
 
@@ -158,6 +159,13 @@ namespace slib {
       // number of nodes than normal. This will only modify the
       // current CesiumInstance; it is not a permanant change.
       void SetExecutionNodes(const std::vector<int>& nodes);
+
+      // This is a method that assists in determining reasonable
+      // inputs to the method above. It will return a map where the
+      // keys are the hostnames of all the machines involved in the
+      // computation and the value is a list of node ids that belong
+      // to each hostname.
+      std::map<std::string, std::vector<int> > GetHostnameNodes() const;
 
       // This method should be called when all processes are
       // completed.

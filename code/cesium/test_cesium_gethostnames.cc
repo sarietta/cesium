@@ -1,0 +1,55 @@
+#define SLIB_NO_DEFINE_64BIT
+#define cimg_display 0
+
+#include "cesium.h"
+
+#include <common/scoped_ptr.h>
+#include <common/types.h>
+#undef Success
+#include <Eigen/Dense>
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+#include <iostream>
+#include <map>
+#include <mpi.h>
+#include <sstream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string>
+#include <string/stringutils.h>
+#include <util/assert.h>
+#include <util/directory.h>
+#include <util/matlab.h>
+#include <util/stl.h>
+#include <vector>
+
+using slib::mpi::Cesium;
+using slib::mpi::JobDescription;
+using slib::mpi::JobOutput;
+using slib::util::Directory;
+using slib::util::MatlabMatrix;
+using std::cin;
+using std::map;
+using std::string;
+using std::vector;
+
+typedef map<string, vector<int> >::const_iterator iterator;
+
+int main(int argc, char** argv) {
+  google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+
+  MPI_Init(&argc, &argv);
+
+  Cesium* instance = Cesium::GetInstance();
+  if (instance->Start() == slib::mpi::CesiumMasterNode) {
+    const map<string, vector<int> > nodes = instance->GetHostnameNodes();
+    for (iterator iter = nodes.begin(); iter != nodes.end(); ++iter) {
+      LOG(INFO) << (*iter).first << ": " << slib::util::PrintVector((*iter).second);
+    }
+  }
+
+  LOG(INFO) << "ALL TESTS PASSED";
+
+  return 0;
+}
