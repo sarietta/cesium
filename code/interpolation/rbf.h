@@ -8,16 +8,39 @@
 
 DECLARE_double(rbf_interpolation_radius);
 
-typedef float(*RadialBasisFunction_Function)(const float& r);
-typedef void(*RadialBasisFunction_AltFunction)(int n, double* r, double r0, double* v);
+typedef float(*RadialBasisFunction_FunctionPtr)(const float& epsilon, const float& r);
+typedef void(*RadialBasisFunction_AltFunctionPtr)(int n, double* r, double r0, double* v);
 
 namespace slib {
   namespace interpolation {
 
     class RadialBasisFunction {
     public:
-      RadialBasisFunction(RadialBasisFunction_Function rbf);
-      RadialBasisFunction(RadialBasisFunction_AltFunction rbf);
+      // Functor for RBF functions.
+      struct Function {
+	float epsilon;
+	RadialBasisFunction_FunctionPtr function;
+	bool valid;
+	Function() : valid(false) {}
+	Function(const float& epsilon_, RadialBasisFunction_FunctionPtr function_ptr) 
+	  : epsilon(epsilon_), function(function_ptr) {}
+
+	inline float evaluate(const float& r) {
+	  return (*function)(epsilon, r);
+	}
+      };
+
+      struct AltFunction {
+	float epsilon;
+	RadialBasisFunction_AltFunctionPtr function;
+	bool valid;
+	AltFunction() : valid(false) {}
+	AltFunction(const float& epsilon_, RadialBasisFunction_AltFunctionPtr function_ptr) 
+	  : epsilon(epsilon_), function(function_ptr) {}	
+      };
+
+      RadialBasisFunction(const Function& rbf);
+      RadialBasisFunction(const AltFunction& rbf);
       virtual ~RadialBasisFunction() {}
 
       void EnableConditionTest();
@@ -40,8 +63,8 @@ namespace slib {
 	return _w(idx);
       }
       
-      inline RadialBasisFunction_Function GetFunction() const {
-	return _rbf;
+      inline RadialBasisFunction_FunctionPtr GetFunction() const {
+	return _rbf.function;
       }
 
       inline int32 GetNumPoints() const {
@@ -55,8 +78,8 @@ namespace slib {
     private:
       int32 _dimensions;
       int32 _N;
-      RadialBasisFunction_Function _rbf;
-      RadialBasisFunction_AltFunction _alt_rbf;
+      Function _rbf;
+      AltFunction _alt_rbf;
       bool _normalized;
 
       bool _condition_test;
@@ -64,6 +87,43 @@ namespace slib {
       Eigen::VectorXf _w;
       Eigen::MatrixXf _points;
     };
+
+    // Some RBFs pre-defined.
+    inline float __InverseMultiQuadric__(const float& epsilon, const float& r) {
+      return (1.0f / sqrt(1.0f + epsilon * epsilon * r * r));
+    }    
+
+    inline float __MultiQuadric__(const float& epsilon, const float& r) {
+      return sqrt(r*r + epsilon);
+    }    
+
+    inline float __GaussianRBF__(const float& epsilon, const float& r) {
+      return exp(-(epsilon * r) * (epsilon * r));
+    }    
+
+    inline float __ThinPlateRBF__(const float& epsilon, const float& r) {
+      if (r <= 0) {
+	return 0;
+      }
+      const float value = r * r * log(r / epsilon);
+      return value;
+    }
+
+    inline RadialBasisFunction::Function InverseMultiQuadric(const float& epsilon) {
+      return RadialBasisFunction::Function(epsilon, __InverseMultiQuadric__);
+    }
+
+    inline RadialBasisFunction::Function MultiQuadric(const float& epsilon) {
+      return RadialBasisFunction::Function(epsilon, __MultiQuadric__);
+    }
+
+    inline RadialBasisFunction::Function GaussianRBF(const float& epsilon) {
+      return RadialBasisFunction::Function(epsilon, __GaussianRBF__);
+    }
+
+    inline RadialBasisFunction::Function ThinPlateRBF(const float& epsilon) {
+      return RadialBasisFunction::Function(epsilon, __ThinPlateRBF__);
+    }
 
   }  // namespace interpolation
 }  // namespace slib
