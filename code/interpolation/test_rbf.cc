@@ -27,6 +27,9 @@ DEFINE_bool(use_alt, true, "");
 DEFINE_bool(use_gaussian, true, "");
 DEFINE_bool(use_thinplate, false, "");
 
+DEFINE_bool(display_enabled, true, "");
+DEFINE_string(output_file, "", "If non-empty, interpolated output saved here.");
+
 using slib::interpolation::RadialBasisFunction;
 
 float MultiQuadric(const float& r) {
@@ -159,7 +162,14 @@ int main(int argc, char** argv) {
     interpolated_and_original_points.draw_circle(x + xmin, y + ymin, width / 80, color);
   }
   
-  (original_points, interpolated_points, interpolated_and_original_points).display();
+  if (FLAGS_display_enabled) {
+    (original_points, interpolated_points, interpolated_and_original_points).display();
+  }
+
+  if (FLAGS_output_file != "") {
+    interpolated_points.save(FLAGS_output_file.c_str());
+  }
+
 
   return 0;
 }
