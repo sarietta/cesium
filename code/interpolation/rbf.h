@@ -97,9 +97,14 @@ namespace slib {
       return sqrt(r*r + epsilon);
     }    
 
+#define __E_2_1 0.13533528323  // e^{-2}
     inline float __GaussianRBF__(const float& epsilon, const float& r) {
-      return exp(-(epsilon * r) * (epsilon * r));
-    }    
+      // I {\em think} this is from reading a bunch of papers on
+      // RBFs...
+      const double r1 = 2.0 * epsilon * epsilon * __E_2_1;
+      const float value = exp(-r * r / r1);
+      return value;
+    }
 
     inline float __ThinPlateRBF__(const float& epsilon, const float& r) {
       if (r <= 0) {

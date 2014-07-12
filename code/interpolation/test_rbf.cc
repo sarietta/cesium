@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include "../util/colormap.h"
 
-#define E_2_1 0.13533528323
-
 using namespace cimg_library;
 using namespace Eigen;
 
