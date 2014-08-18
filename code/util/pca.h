@@ -7,9 +7,13 @@
 namespace slib {
   namespace util {
 
-    // Compute num_components principal components of the
-    // samples. Samples should be row vectors so that the matrix
-    // samples is a num_samples X dimensions matrix.
+    /**
+       Computes principal components of a set of samples.
+
+       @parameter samples - a matrix of samples where each row represents one sample. Thus the dimensions of this matrix should be num_samples x dimensions.
+       @parameter num_components - the number of principle components to compute.
+       @parameter eigenvalues - returns the corresponding eigenvalues for the principle components as a vector. This should be pre-allocated to have num_components entries.
+    **/
     FloatMatrix ComputePrincipalComponents(const FloatMatrix& samples, const int& num_components,
 					   FloatMatrix* eigenvalues);
 

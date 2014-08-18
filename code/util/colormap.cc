@@ -40,7 +40,7 @@ namespace slib {
 	lookup = 0;
       }
       
-      const int index = static_cast<int>(lookup * _map_length);
+      const int index = static_cast<int>(lookup * (_map_length - 1));
       VLOG(3) << "Lookup index: " << index;
 
       return index;

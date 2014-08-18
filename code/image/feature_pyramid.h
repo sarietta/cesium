@@ -103,22 +103,18 @@ namespace slib {
 	return _original_image_size;
       }
 
-      static inline Pair<Pair<float> > GetPatchSizeInLevel(const Pair<int32>& patch_size, 
+      static inline Pair<Pair<float> > GetPatchSizeInLevel(const Pair<float>& patch_size, 
 							   const float& level_scale,
 							   const float& canonical_scale,
-							   const int32 bins) {
-	const float x2 = 
-	  round((((float) patch_size.x) + 2.0f) * ((float) bins) * level_scale / canonical_scale) 
-	  - 1.0f;
-	const float y2 = 
-	  round((((float) patch_size.y) + 2.0f) * ((float) bins) * level_scale / canonical_scale) 
-	  - 1.0f;
+							   const float& bins) {
+	const float x2 = round((patch_size.x + 2.0f) * bins * level_scale / canonical_scale) - 1.0f;
+	const float y2 = round((patch_size.y + 2.0f) * bins * level_scale / canonical_scale) - 1.0f;
       
 	return Pair<Pair<float> >(Pair<float>(0.0f, 0.0f), Pair<float>(x2, y2));
       }
 
-      inline Pair<Pair<float> > GetPatchSizeInLevel(const Pair<int32>& patch_size, const int32& level,
-						    const int32 bins) const {
+      inline Pair<Pair<float> > GetPatchSizeInLevel(const Pair<float>& patch_size, const int32& level,
+						    const float& bins) const {
 	ASSERT_LT((uint32) level, _scales.size());
 	const float level_scale = _scales[level];
 	const float canonical_scale = _canonical_scale;

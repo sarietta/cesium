@@ -13,8 +13,14 @@ else(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w1 -wd2196 -wd2536 -wd780 -mkl")
 endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++0x")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -std=c++0x")
+option(DEBUG_SYMBOLS "DEBUG_SYMBOLS" OFF)
+
+if(DEBUG_SYMBOLS)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -std=c++0x")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++0x")
+endif()
+
 add_definitions(-DSKIP_OPENCV)
 
 include_directories(./thirdparty/CImg)
@@ -104,6 +110,30 @@ set(MODULES util drawing string image gl interpolation svm cesium matrix kmeans)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./lib)
 
+# Temporary hack for decaf
+find_path(DECAF_INCLUDE_DIR NAMES decaf.h
+  HINTS   
+  ${CMAKE_INSTALL_PREFIX}/include
+  ${CMAKE_SYSTEM_INCLUDE_PATH}/include
+  PATH_SUFFIXES decaf)
+
+if (DECAF_INCLUDE_DIR MATCHES DECAF_INCLUDE_DIR-NOTFOUND)
+  message(WARNING, "\nCould not locate Decaf header file")
+else ()
+  add_definitions(-DDECAF_ENABLED)
+endif ()
+
+# CUDA (This is mainly for Caffe so we disable Caffe if we can't find it)
+find_package(CUDA QUIET)
+if (CUDA_FOUND)
+  include_directories(${CUDA_INCLUDE_DIRS})
+else ()
+  message(WARNING "\nCould not find CUDA library. Caffe features will be disabled.")
+  add_definitions(-DSKIP_CAFFE_FEATURE_COMPUTER)
+endif()
+
+option(BUILD_SHARED "BUILD_SHARED" OFF)
+
 # Compile each module
 set(TEST_FILES)
 foreach(MODULE ${MODULES}) 
@@ -122,10 +152,18 @@ foreach(MODULE ${MODULES})
     endif(${FILE} MATCHES "test")
   endforeach(FILE)
 
-  add_library(${MODULE} STATIC ${FILES})
+  if(BUILD_SHARED)
+    add_library(${MODULE} SHARED ${FILES})
+  else()
+    add_library(${MODULE} STATIC ${FILES})
+  endif()
+  
   set_target_properties(${MODULE} PROPERTIES LINKER_LANGUAGE CXX)
-
+  
 endforeach(MODULE) 
+
+##########################################################################################
+##########################################################################################
 
 # Build all the tests
 if(DEFINED ENV{MATLAB_LIB_DIR})
@@ -158,14 +196,6 @@ add_definitions(${MPI_CXX_COMPILE_FLAGS})
 
 add_definitions(-DMPICH_SKIP_MPICXX)
 add_definitions(-DOMPI_SKIP_MPICXX)
-
-find_package(ARPACK)
-if(ARPACK_FOUND)
-  list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
-else()
-  message(WARNING "\nCouldn't find an installation of ARPACK on this machine. Compilation is still possible, but fast eigen decomposition routines for large/sparse matrices will not be possible.")
-  add_definitions(-DOSKIP_ARPACK)
-endif()
 
 ## Google Flags
 if(DEFINED ENV{GFLAGS_INCLUDE_DIR} AND DEFINED ENV{GFLAGS_LIB_DIR})
@@ -245,7 +275,29 @@ else()
   message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}")
 endif()
 
-list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
+## Decaf
+# Temporary hack for decaf
+find_library(BOOST_PYTHON_LIBRARY NAMES python2.7 boost_python-py27 boost_numpy
+  HINTS
+  ${CMAKE_INSTALL_PREFIX}/lib
+  ${CMAKE_SYSTEM_INCLUDE_PATH}/lib})
+find_path(BOOST_PYTHON_INCLUDE_DIR NAMES pyconfig.h
+  HINTS   
+  ${CMAKE_INSTALL_PREFIX}/include/
+  ${CMAKE_SYSTEM_INCLUDE_PATH}/include
+  PATH_SUFFIXES python2.7)
+
+if (BOOST_PYTHON_LIBRARY MATCHES BOOST_PYTHON_LIBRARY-NOTFOUND OR BOOST_PYTHON_INCLUDE_DIR MATCHES BOOST_PYTHON_INCLUDE_DIR-NOTFOUND)
+  message(WARNING, "\nCould not locate Boost Python libraries")
+
+  list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
+else ()
+  list (APPEND TEST_LIBRARIES python2.7 boost_python-py27 boost_numpy)
+  add_library(decaf STATIC /home/sarietta/Development/silicon/code/vizstat/decaf.cc)
+  include_directories(${BOOST_PYTHON_INCLUDE_DIR})
+
+  list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation decaf -Wl,-end-group)
+endif ()
 
 list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f jpeg stdc++)
 
@@ -273,6 +325,15 @@ set_property(TARGET slib_matrix PROPERTY
 add_library(slib_interpolation STATIC IMPORTED)
 set_property(TARGET slib_interpolation PROPERTY
   IMPORTED_LOCATION lib/libinterpolation.a)
+
+## ARPACK
+find_package(ARPACK)
+if(ARPACK_FOUND)
+  list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
+else()
+  message(WARNING "\nCouldn't find an installation of ARPACK on this machine. Compilation is still possible, but fast eigen decomposition routines for large/sparse matrices will not be possible.")
+  add_definitions(-DOSKIP_ARPACK)
+endif()
 
 file(MAKE_DIRECTORY "tests")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tests")
