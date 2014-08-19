@@ -13,7 +13,11 @@ else
     exit 1;
 fi
 
-unzip $file;
+wget "http://ravi-server1.cs.berkeley.edu/store/${file}";
+mkdir ./MCR_2012a
+unzip -d ./MCR_2012a $file;
+
+cd ./MCR_2012a
 
 read -p "Where you like to install MATLAB runtime? [/usr/local/MATLAB/R2012a]" path
 if [ "$path" == "" ]; then
