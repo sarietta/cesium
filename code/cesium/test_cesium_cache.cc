@@ -32,7 +32,7 @@ using std::map;
 using std::string;
 using std::vector;
 
-DEFINE_int32(matrix_size, 15000, "Number of rows/cols of the matrix to test.");
+DEFINE_int32(matrix_size, 3000, "Number of rows/cols of the matrix to test.");
 
 MatlabMatrix cached_variable;
 
