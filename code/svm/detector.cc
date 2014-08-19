@@ -461,6 +461,14 @@ namespace slib {
 	  extra_dimensions = 9216;
 	}
       } else if (parameters.featureTypeCaffe) {
+#ifdef SKIP_CAFFE_FEATURE_COMPUTER
+	LOG(ERROR) << "Attempted to use Caffe feature computer, but it was not enabled. Falling back to HOG.";
+	patch_channels = 31;
+
+	if (parameters.useColor) {
+	  patch_channels += 2;
+	}
+#else
 	// Typical bins: 
 	//	conv1 :: 4
 	//	conv5 :: 16
@@ -470,6 +478,7 @@ namespace slib {
 	// patch_size = patchCanonicalSize / bins - 2
 	patch_size = CaffeFeatureComputer::GetPatchSize(parameters.patchCanonicalSize, bins);
 	patch_channels = CaffeFeatureComputer::GetPatchChannels();
+#endif
       }
       
       if (patch_size_out) {

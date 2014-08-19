@@ -7,6 +7,7 @@
 #undef Success
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <glog/logging.h>
 #include <map>
 #include <mat.h>
 #include <iostream>

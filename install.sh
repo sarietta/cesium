@@ -24,7 +24,7 @@ command -v cmake > /dev/null 2>&1 || ( \
 
 # Let's see if cmake can successfully compile slib.
 echo -e "*** Attempting to run cmake (output is disabled)...";
-cmake . -DSKIP_TESTS > /dev/null 2>&1;
+cmake . -DSKIP_TESTS=ON > /dev/null 2>&1;
 code=$?;
 
 autoresolve=0;
@@ -124,7 +124,7 @@ fi  # if [ $autoresolve -eq 1 ];
 
 # Try to run cmake again.
 echo -e "*** Attempting to run cmake (output is disabled)...";
-cmake . -DSKIP_TESTS > /dev/null 2>&1;
+cmake . -DSKIP_TESTS=ON > /dev/null 2>&1;
 
 if [ $? -ne 0 ]; then
     echo "Still can't run cmake. Are you missing libraries still?";
@@ -136,4 +136,13 @@ if [ $? -ne 0 ]; then
     echo "Make failed. Are you missing libraries still?";
     exit;
 fi
+
+echo "You might consider adding these to your ${HOME}/.bash_profile file: ";
+echo "export C_INCLUDE_PATH=/usr/include:/home/sarietta/Development/slib/code";
+echo "export CPLUS_INCLUDE_PATH=/usr/include:/home/sarietta/Development/slib/code";
+echo "export LIBRARY_PATH=/home/sarietta/Development/slib/lib";
+
+cwd=`pwd`;
+echo "export SLIB_INCLUDE_DIR=${cwd}/code";
+echo "export SLIB_LIB_DIR=${cwd}/lib";
 

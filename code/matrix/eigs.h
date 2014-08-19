@@ -1,6 +1,8 @@
 #ifndef __SLIB_MATRIX_EIGS_H__
 #define __SLIB_MATRIX_EIGS_H__
 
+#ifndef DISABLE_EIGS
+
 #include <common/scoped_ptr.h>
 #include <common/types.h>
 #undef Success
@@ -25,5 +27,7 @@ namespace slib {
     };
   }  // namespace matrix
 }  // namespace slib
+
+#endif  // DISABLE_EIGS
 
 #endif

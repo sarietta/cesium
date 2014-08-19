@@ -1,8 +1,14 @@
+#ifndef DISABLE_EIGS
+
 #include "eigs.h"
 
 #include <common/scoped_ptr.h>
 #include <glog/logging.h>
+#ifndef DISABLE_MKL_BLAS
 #include <mkl_cblas.h>
+#else
+#include <cblas.h>
+#endif  // DISABLE_MKL_BLAS
 #include <stdlib.h>
 #include <string.h>
 #include <util/random.h>
@@ -358,3 +364,5 @@ namespace slib {
     }
   }  // namespace matrix
 }  // namespace slib
+
+#endif  // DISABLE_EIGS

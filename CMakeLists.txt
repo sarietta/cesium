@@ -28,6 +28,8 @@ include_directories(./code)
 
 set(CMAKE_MODULE_PATH ./cmake)
 
+set(MODULES util string image interpolation svm cesium matrix kmeans)
+
 # Required libraries
 
 ## Boost
@@ -58,13 +60,13 @@ else(DEFINED ENV{EIGEN3_INCLUDE_DIR})
 endif(DEFINED ENV{EIGEN3_INCLUDE_DIR})
 
 ## MATLAB
-# SLIB_REQUIRED MATLAB manual
-# find_package(MATLAB)
+# SLIB_REQUIRED MATLAB bundle thirdparty/matlab
 if(DEFINED ENV{MATLAB_INCLUDE_DIR} AND EXISTS "$ENV{MATLAB_INCLUDE_DIR}/mat.h")
+  include_directories($ENV{MATLAB_INCLUDE_DIR})
 else()
-  message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR to the include directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/include/.")
+  add_definitions(-DDISABLE_MATLAB)
+  message(WARNING "\nMATLAB installation not found. It will be disabled.\n\nIf you have MATLAB installed, please set the environment variable MATLAB_INCLUDE_DIR to the include directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/include/.")
 endif()
-include_directories($ENV{MATLAB_INCLUDE_DIR})
 
 ## Google Flags
 # SLIB_REQUIRED GoogleFlags bundle thirdparty/gflags
@@ -101,6 +103,24 @@ else ()
   add_definitions(-DSKIP_FFTW)
 endif()
 
+## BLAS
+find_package(BLAS)
+if(BLAS_FOUND)
+  include_directories(${BLAS_INCLUDE_DIR})
+
+  if (NOT ${BLAS_INFO} MATCHES "mkl")
+    add_definitions(-DDISABLE_MKL_BLAS)
+
+    if(NOT EXISTS "${BLAS_INCLUDE_DIR}/cblas.h")
+      message(WARNING "\nCould not find CBLAS library. Fast eigenvector decomposition will be disabled.")
+      add_definitions(-DDISABLE_EIGS)
+    endif()
+  endif()
+else()
+    message(WARNING "\nCould not find CBLAS library. Fast eigenvector decomposition will be disabled.")
+    add_definitions(-DDISABLE_EIGS)
+endif()
+
 ## MPI
 # SLIB_REQUIRED MPI bundle thirdparty/mpich
 # SLIB_CHECK MPI "mpicc -v 2>&1 | grep -o 1.4.1p1"
@@ -118,8 +138,6 @@ else ()
   message(WARNING "\nCould not find CUDA library. Caffe features will be disabled.")
   add_definitions(-DSKIP_CAFFE_FEATURE_COMPUTER)
 endif()
-
-set(MODULES util drawing string image gl interpolation svm cesium matrix kmeans)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./lib)
@@ -156,8 +174,7 @@ endforeach(MODULE)
 
 option(SKIP_TESTS "SKIP_TESTS" OFF)
 
-if(SKIP_TESTS)
-else()
+if(NOT SKIP_TESTS)
 
 ######################################################################################
 ######################################################################################
@@ -221,9 +238,13 @@ else()
 endif()
 
 ## FFTW3
-find_package(FFTW3 REQUIRED)
-include_directories(${FFTW3_INCLUDE_DIRS})
-link_directories (${FFTW3_LIB_DIRS})
+find_package(FFTW3)
+if (FFTW3_FOUND)
+  include_directories(${FFTW3_INCLUDE_DIRS})
+  link_directories (${FFTW3_LIB_DIRS})
+
+  list (APPEND TEST_LIBRARIES fftw3f)
+endif()
 
 ## Boost
 if(DEFINED ENV{BOOST_INCLUDE_DIR})
@@ -272,31 +293,7 @@ else()
   message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}")
 endif()
 
-## Decaf
-# Temporary hack for decaf
-find_library(BOOST_PYTHON_LIBRARY NAMES python2.7 boost_python-py27 boost_numpy
-  HINTS
-  ${CMAKE_INSTALL_PREFIX}/lib
-  ${CMAKE_SYSTEM_INCLUDE_PATH}/lib})
-find_path(BOOST_PYTHON_INCLUDE_DIR NAMES pyconfig.h
-  HINTS   
-  ${CMAKE_INSTALL_PREFIX}/include/
-  ${CMAKE_SYSTEM_INCLUDE_PATH}/include
-  PATH_SUFFIXES python2.7)
-
-if (BOOST_PYTHON_LIBRARY MATCHES BOOST_PYTHON_LIBRARY-NOTFOUND OR BOOST_PYTHON_INCLUDE_DIR MATCHES BOOST_PYTHON_INCLUDE_DIR-NOTFOUND)
-  message(WARNING, "\nCould not locate Boost Python libraries")
-
-  list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
-else ()
-  list (APPEND TEST_LIBRARIES python2.7 boost_python-py27 boost_numpy)
-  add_library(decaf STATIC /home/sarietta/Development/silicon/code/vizstat/decaf.cc)
-  include_directories(${BOOST_PYTHON_INCLUDE_DIR})
-
-  list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation decaf -Wl,-end-group)
-endif ()
-
-list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f jpeg stdc++)
+list (APPEND TEST_LIBRARIES gfortran glog gflags jpeg stdc++)
 
 add_library(slib_svm STATIC IMPORTED)
 set_property(TARGET slib_svm PROPERTY
@@ -322,6 +319,8 @@ set_property(TARGET slib_matrix PROPERTY
 add_library(slib_interpolation STATIC IMPORTED)
 set_property(TARGET slib_interpolation PROPERTY
   IMPORTED_LOCATION lib/libinterpolation.a)
+
+list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_interpolation slib_matrix -Wl,-end-group)
 
 ## ARPACK
 find_package(ARPACK)
