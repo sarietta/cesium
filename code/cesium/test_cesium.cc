@@ -332,8 +332,6 @@ int main(int argc, char** argv) {
     instance->Finish();
   }
 
-  MPI_Finalize();
-
   LOG(INFO) << "ALL TESTS PASSED";
 
   return 0;

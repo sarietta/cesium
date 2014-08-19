@@ -83,11 +83,7 @@ int main(int argc, char** argv) {
       JobOutput output;
       instance->ExecuteJob(job, &output);
     }
-
-    instance->Finish();
   }
-
-  MPI_Finalize();
 
   LOG(INFO) << "ALL TESTS PASSED";
 

@@ -64,8 +64,6 @@ namespace slib {
 
     Cesium::~Cesium() {
       _singleton->Finish();
-      google::FlushLogFiles(google::GLOG_INFO);
-      MPI_Finalize();
     }
     
     Cesium* Cesium::GetInstance() {
@@ -231,6 +229,13 @@ namespace slib {
       if (_rank != MPI_ROOT_NODE) {
 	return;
       }
+
+      int finalized;
+      MPI_Finalized(&finalized);
+      if (finalized) {
+	return;
+      }
+
       JobController controller;
       
       JobDescription finish;
@@ -240,8 +245,12 @@ namespace slib {
 	  VLOG(1) << "Sending finish request to node: " << node;
 	  controller.StartJobOnNode(finish, node);
 	  JobNode::WaitForString(node);
+	  VLOG(1) << "Node finished cleanly: " << node;
 	}
       }
+
+      google::FlushLogFiles(google::GLOG_INFO);
+      MPI_Finalize();
     }
 
     // This is just a wrapper to avoid passing a pointer to a member
