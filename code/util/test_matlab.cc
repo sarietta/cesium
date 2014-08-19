@@ -17,6 +17,8 @@ DEFINE_int32(iterations, 1, "Iterations to test memory usage");
 DEFINE_bool(test_accessors, true, "");
 DEFINE_bool(test_mutators, true, "");
 
+DEFINE_string(test_file, "", "Path to .mat file to be used in the test.");
+
 using Eigen::MatrixXf;
 using slib::util::MatlabMatrix;
 using std::map;
@@ -25,10 +27,17 @@ using std::string;
 int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
+
+  if (FLAGS_test_file == "") {
+    LOG(ERROR) << "You must specify a test .mat file to use. One is provided in ${SLIB_CODE_DIR}/util/test.mat";
+    return 1;
+  }
+
+  FLAGS_logtostderr = true;
   
   if (FLAGS_test_accessors) {
     for (int i = 0; i < FLAGS_iterations; i++) {
-      MatlabMatrix matrix = MatlabMatrix::LoadFromFile("./test.mat");
+      MatlabMatrix matrix = MatlabMatrix::LoadFromFile(FLAGS_test_file);
       MatlabMatrix field1 = matrix.GetStructField("field1");
       MatlabMatrix field2 = matrix.GetStructField("field2");
       MatlabMatrix field3 = matrix.GetStructField("field3");
