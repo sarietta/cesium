@@ -25,10 +25,10 @@
   }									
 
 #define SAVE_PARAMETER(name)						\
-  params.SetStructField(#name, MatlabMatrix(static_cast<float>(_parameters.name)));
+  params.SetStructField(#name, MatlabMatrix(static_cast<float>(parameters.name)));
 
 #define SAVE_STRING_PARAMETER(name)					\
-  params.SetStructField(#name, MatlabMatrix(_parameters.name));
+  params.SetStructField(#name, MatlabMatrix(parameters.name));
 
 namespace slib {
   namespace svm {
@@ -70,6 +70,7 @@ namespace slib {
       
       bool selectTopN;
       int32 numToSelect;
+      bool keepAllDetections;
       bool useDecisionThresh;
       float overlap;
       float fixedDecisionThresh;
@@ -216,9 +217,17 @@ namespace slib {
       static Pair<int> ImagePointToPyramidPoint(const slib::image::FeaturePyramid& pyramid, 
 						const Pair<int>& point, const int& level, 
 						const DetectionParameters& parameters);
+
+      static Pair<int> PyramidPointToImagePoint(const float& level_scale, const float& canonical_scale,
+						const Pair<int>& point, const int& level, 
+						const DetectionParameters& parameters);
       static Pair<int> PyramidPointToImagePoint(const slib::image::FeaturePyramid& pyramid, 
 						const Pair<int>& point, const int& level, 
 						const DetectionParameters& parameters);
+      // This is a slower method that computes the level for you as well, given a patch in an image.
+      static Triplet<int> ImagePointToPyramidLocation(const slib::image::FeaturePyramid& pyramid, 
+						      const Pair<Pair<float> >& point,
+						      const DetectionParameters& parameters);
       
       // These actually construct the associated matrices that are
       // normally stored in this class. Useful if you need to
@@ -311,6 +320,7 @@ namespace slib {
       static Detector InitializeFromMatlabArray(const mxArray& array);
 
       static DetectionParameters LoadParametersFromMatlabMatrix(const mxArray* params);
+      static slib::util::MatlabMatrix ConvertParametersToMatlabMatrix(const DetectionParameters& parameters);
     };
     
   }  // namespace svm

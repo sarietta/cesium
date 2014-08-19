@@ -10,6 +10,7 @@
 #include <sstream>
 #include <svm/detector.h>
 #include <vector>
+#include <wchar.h>
 
 using slib::svm::DetectionMetadata;
 using slib::svm::DetectionResultSet;
@@ -305,21 +306,19 @@ namespace slib {
     }
 
     float MatlabMatrix::GetMatrixEntry(const int& row, const int& col) const {
-      if (_matrix != NULL && _type == MATLAB_MATRIX) {
-	const int dimensions = mxGetNumberOfDimensions(_matrix);
-	if (dimensions > 2) {
-	  LOG(ERROR) << "Only 2D matrices are supported";
-	  return 0.0f;
-	}
-	const int rows = mxGetM(_matrix);
-	const int cols = mxGetN(_matrix);
+      const mwIndex subscripts[2] = {row, col};
+      const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+      return GetMatrixEntry(index);
+    }
 
+    float MatlabMatrix::GetMatrixEntry(const int& index) const {
+      if (_matrix != NULL && _type == MATLAB_MATRIX) {
 	if (mxIsDouble(_matrix)) {
 	  const double* data = (double*) mxGetData(_matrix);
-	  return ((float) data[row + col * rows]);
+	  return ((float) data[index]);
 	} else if (mxIsSingle(_matrix)) {
 	  const float* data = (float*) mxGetData(_matrix);
-	  return data[row + col * rows];
+	  return data[index];
 	} else {
 	  LOG(ERROR) << "Only float and double matrices are supported";
 	}
@@ -328,6 +327,24 @@ namespace slib {
       }
 
       return 0.0f;
+    }
+
+    bool MatlabMatrix::HasStructField(const string& field, const int& row, const int& col) const {
+      const mwIndex subscripts[2] = {row, col};
+      const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+      return HasStructField(field, index);
+    }
+
+    bool MatlabMatrix::HasStructField(const string& field, const int& index) const {
+      if (_matrix != NULL && _type == MATLAB_STRUCT) {
+	if (mxGetFieldNumber(_matrix, field.c_str()) == -1) {
+	  return false;
+	} else {
+	  return true;
+	}
+      } else {
+	return false;
+      }
     }
 
     const MatlabMatrix MatlabMatrix::GetStructField(const string& field, const int& row, const int& col) const {
@@ -478,7 +495,7 @@ namespace slib {
       }
     }
 
-
+    // TODO(sean): Implement all conversions
     FloatMatrix MatlabMatrix::GetCopiedContents() const {
       FloatMatrix matrix;
       if (_matrix != NULL && _type == MATLAB_MATRIX) {
@@ -506,8 +523,22 @@ namespace slib {
 	      matrix(j, i) = data[j + i * rows];
 	    }
 	  }
+	} else if (mxIsUint8(_matrix)) {
+	  const unsigned char* data = (unsigned char*) mxGetData(_matrix);
+	  for (int i = 0; i < cols; i++) {
+	    for (int j = 0; j < rows; j++) {
+	      matrix(j, i) = data[j + i * rows];
+	    }
+	  }
+	} else if (mxIsUint16(_matrix)) {
+	  const unsigned short* data = (unsigned short*) mxGetData(_matrix);
+	  for (int i = 0; i < cols; i++) {
+	    for (int j = 0; j < rows; j++) {
+	      matrix(j, i) = data[j + i * rows];
+	    }
+	  }
 	} else {
-	  LOG(ERROR) << "Only float and double matrices are supported";
+	  LOG(ERROR) << "Only numeric matrices are supported (" << mxGetClassID(_matrix) << ")";
 	}
       } else {
 	VLOG(2) << "Attempted to access non-matrix";
@@ -590,7 +621,24 @@ namespace slib {
 	if (mxGetString(_matrix, characters.get(), length+1) == 0) {
 	  contents.assign(characters.get());
 	} else {
-	  VLOG(1) << "Couldn't find string";
+	  // If the string is multibyte encoded, mxGetString will fail.
+	  char* multibyte_string = mxArrayToString(_matrix);
+	  if (multibyte_string) {
+	    scoped_array<wchar_t> multibyte_characters(new wchar_t[length+1]);
+	    mbstowcs(multibyte_characters.get(), multibyte_string, length+1);
+
+	    for (int i = 0; i < wcslen(multibyte_characters.get()); ++i) {
+	      const int byte = wctob(multibyte_characters[i]);
+	      if (byte != EOF) {
+		contents.append((const char*) &byte);
+	      } else {
+		contents.append("-");
+	      }
+	    }
+	    mxFree(multibyte_string);
+	  } else {
+	    VLOG(1) << "Couldn't find string";
+	  }
 	}
       } else {
 	VLOG(1) << "Attempted to access non-string matrix";
@@ -916,6 +964,7 @@ namespace slib {
 	ss.write(reinterpret_cast<const char*>(&dimensions.y), sizeof(int));
 	// Write out the actual data.
 	const string contents = GetStringContents();
+	VLOG(2) << "Writing string: " << contents;
 	ss.write(contents.c_str(), sizeof(char) * (contents.length() + 1));
 	break;
       }
@@ -928,7 +977,7 @@ namespace slib {
       return ss.str();
     }
 
-    int MatlabMatrix::Deserialize(const string& str, const int& position) {
+    long long int MatlabMatrix::Deserialize(const string& str, const long long int& position) {
       // These methods mirror the above methods.
       const char* ss = str.c_str() + position;
 
@@ -936,7 +985,7 @@ namespace slib {
       char type;
       memcpy(&type, ss, sizeof(char)); ss += sizeof(char);
 
-      int offset = position + sizeof(char);
+      long long int offset = position + sizeof(char);
       switch (type) {
       case 'S': {  // Struct
 	VLOG(2) << "Found struct at offset: " << offset;
@@ -980,10 +1029,13 @@ namespace slib {
 	    const int index = j;
 	    // Deserialize the field and then save it.
 	    MatlabMatrix field_matrix;
-	    const int bytes_read = field_matrix.Deserialize(str, offset);
-	    if (bytes_read == 0) {
+	    const long long int bytes_read = field_matrix.Deserialize(str, offset);
+	    if (bytes_read == 0L) {
 	      LOG(ERROR) << "Malformed field: " << field << " (index: " << index << ")";
+#if 1
+#else
 	      return 0;
+#endif
 	    }
 	    offset += bytes_read;
 	    SetStructField(field, index, field_matrix);
@@ -1008,8 +1060,8 @@ namespace slib {
 	  const int index = j;
 	  // Deserialize the field and then save it.
 	  MatlabMatrix cell_matrix;
-	  const int bytes_read = cell_matrix.Deserialize(str, offset);
-	  if (bytes_read == 0) {
+	  const long long int bytes_read = cell_matrix.Deserialize(str, offset);
+	  if (bytes_read == 0L) {
 	    LOG(ERROR) << "Malformed cell at index: " << index;
 	    return 0;
 	  }
@@ -1069,10 +1121,24 @@ namespace slib {
       }
       default:
 	LOG(ERROR) << "Unknown matrix type: " << type << " (Offset: " << offset << ")";
-	return 0;
+	//return 0;
       }
 
-      return offset - position;
+      return (offset - position);
+    }
+
+    /**
+       MatlabConverter 
+     **/
+
+    int MatlabConverter::_matlab_offset = 1;
+
+    void MatlabConverter::EnableMatlabOffset() {
+      _matlab_offset = 1;
+    }
+
+    void MatlabConverter::DisableMatlabOffset() {
+      _matlab_offset = 0;
     }
 
     MatlabMatrix MatlabConverter::ConvertModelToMatrix(const Model& model) {
@@ -1099,10 +1165,10 @@ namespace slib {
       for (int i = 0; i < (int) metadata.size(); i++) {
 	const DetectionMetadata entry = metadata[i];
 	matrix.SetStructField("im", i, MatlabMatrix(entry.image_path));
-	matrix.SetStructField("x1", i, MatlabMatrix((float) entry.x1 + 1));
-	matrix.SetStructField("x2", i, MatlabMatrix((float) entry.x2 + 1));
-	matrix.SetStructField("y1", i, MatlabMatrix((float) entry.y1 + 1));
-	matrix.SetStructField("y2", i, MatlabMatrix((float) entry.y2 + 1));
+	matrix.SetStructField("x1", i, MatlabMatrix((float) entry.x1 + _matlab_offset));
+	matrix.SetStructField("x2", i, MatlabMatrix((float) entry.x2 + _matlab_offset));
+	matrix.SetStructField("y1", i, MatlabMatrix((float) entry.y1 + _matlab_offset));
+	matrix.SetStructField("y2", i, MatlabMatrix((float) entry.y2 + _matlab_offset));
 
 	if (minimal) {
 	  continue;
@@ -1115,15 +1181,15 @@ namespace slib {
 	size.SetStructField("nrows", MatlabMatrix(entry.image_size.y));
 	matrix.SetStructField("size", i, size);
 
-	matrix.SetStructField("imidx", i, MatlabMatrix((float) entry.image_index + 1));
-	matrix.SetStructField("setidx", i, MatlabMatrix((float) entry.image_set_index + 1));
+	matrix.SetStructField("imidx", i, MatlabMatrix((float) entry.image_index + _matlab_offset));
+	matrix.SetStructField("setidx", i, MatlabMatrix((float) entry.image_set_index + _matlab_offset));
 
 	// The original order is <level, x, y>, but MATLAB expects <level, y, x>. Also have to add one.
 	FloatMatrix pyramid_offset(1, 3);
 	pyramid_offset << 
-	  (float) entry.pyramid_offset.x + 1
-	  , (float) entry.pyramid_offset.z + 1
-	  , (float) entry.pyramid_offset.y + 1;
+	  (float) entry.pyramid_offset.x + _matlab_offset
+	  , (float) entry.pyramid_offset.z + _matlab_offset
+	  , (float) entry.pyramid_offset.y + _matlab_offset;
 	matrix.SetStructField("pyramid", i, MatlabMatrix(pyramid_offset));
       }
 
@@ -1146,10 +1212,10 @@ namespace slib {
 	for (int j = 0; j < (int) detections.model_detections[i].detections.size(); j++) {
 	  const DetectionMetadata metadata = detections.model_detections[i].detections[j].metadata;
 	  MatlabMatrix position(MATLAB_STRUCT, Pair<int>(1,1));
-	  position.SetStructField("x1", MatlabMatrix((float) metadata.x1 + 1));
-	  position.SetStructField("x2", MatlabMatrix((float) metadata.x2 + 1));
-	  position.SetStructField("y1", MatlabMatrix((float) metadata.y1 + 1));
-	  position.SetStructField("y2", MatlabMatrix((float) metadata.y2 + 1));
+	  position.SetStructField("x1", MatlabMatrix((float) metadata.x1 + _matlab_offset));
+	  position.SetStructField("x2", MatlabMatrix((float) metadata.x2 + _matlab_offset));
+	  position.SetStructField("y1", MatlabMatrix((float) metadata.y1 + _matlab_offset));
+	  position.SetStructField("y2", MatlabMatrix((float) metadata.y2 + _matlab_offset));
 
 	  int current_image_index = 0;
 	  if (image_indices.size() == 0) {
@@ -1170,8 +1236,9 @@ namespace slib {
 	  matrix.SetStructField("decision", current_index, 
 				MatlabMatrix(detections.model_detections[i].detections[j].score));
 	  matrix.SetStructField("pos", current_index, position);
-	  matrix.SetStructField("imidx", current_index, MatlabMatrix((float) (current_image_index + 1)));
-	  matrix.SetStructField("detector", current_index, MatlabMatrix((float) (detector + 1)));
+	  matrix.SetStructField("imidx", current_index, 
+				MatlabMatrix((float) (current_image_index + _matlab_offset)));
+	  matrix.SetStructField("detector", current_index, MatlabMatrix((float) (detector + _matlab_offset)));
 
 	  if (detections.model_detections[i].features.rows() > 0 
 	      && detections.model_detections[i].features.cols()) {

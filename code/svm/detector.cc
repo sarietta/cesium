@@ -207,6 +207,8 @@ namespace slib {
 	parameters.gradientSumThreshold = (float) mxGetScalar(field);
       }
 
+      LOAD_PARAMETER(keepAllDetections, bool);
+
       LOAD_PARAMETER(featureTypeHistogram, bool);
       LOAD_PARAMETER(featureTypeDecaf, bool);
       LOAD_PARAMETER(featureTypeCaffe, bool);
@@ -220,63 +222,65 @@ namespace slib {
       return parameters;
     }
 
-    void Detector::SaveParametersToMatlabMatrix(mxArray** matrix) const {
+    MatlabMatrix DetectorFactory::ConvertParametersToMatlabMatrix(const DetectionParameters& parameters) {
       MatlabMatrix params(slib::util::MATLAB_STRUCT, Pair<int>(1,1));
 
-      MatlabMatrix category(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, _parameters.category.size()));
-      for (int i = 0; i < (int) _parameters.category.size(); i++) {
+      MatlabMatrix category(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1, parameters.category.size()));
+      for (int i = 0; i < (int) parameters.category.size(); i++) {
 	MatlabMatrix cell(slib::util::MATLAB_CELL_ARRAY, Pair<int>(1,1));
-	cell.SetCell(0, MatlabMatrix(_parameters.category[i]));
+	cell.SetCell(0, MatlabMatrix(parameters.category[i]));
 	category.SetCell(i, cell);
       }
 
       params.SetStructField("basePatchSize", 
-			    MatlabMatrix(static_cast<vector<float> >(_parameters.basePatchSize), false));
+			    MatlabMatrix(static_cast<vector<float> >(parameters.basePatchSize), false));
       params.SetStructField("category", category);
       params.SetStructField("imageCanonicalSize", 
-			    MatlabMatrix(static_cast<float>(_parameters.imageCanonicalSize)));
-      params.SetStructField("levelFactor", MatlabMatrix(static_cast<float>(_parameters.levelFactor)));
-      params.SetStructField("maxClusterSize", MatlabMatrix(static_cast<float>(_parameters.maxClusterSize)));
-      params.SetStructField("maxLevels", MatlabMatrix(static_cast<float>(_parameters.maxLevels)));
-      params.SetStructField("minClusterSize", MatlabMatrix(static_cast<float>(_parameters.minClusterSize)));
-      params.SetStructField("nThNeg", MatlabMatrix(static_cast<float>(_parameters.nThNeg)));
-      params.SetStructField("numPatchClusters", MatlabMatrix(static_cast<float>(_parameters.numPatchClusters)));
-      params.SetStructField("overlapThreshold", MatlabMatrix(static_cast<float>(_parameters.overlapThreshold)));
+			    MatlabMatrix(static_cast<float>(parameters.imageCanonicalSize)));
+      params.SetStructField("levelFactor", MatlabMatrix(static_cast<float>(parameters.levelFactor)));
+      params.SetStructField("maxClusterSize", MatlabMatrix(static_cast<float>(parameters.maxClusterSize)));
+      params.SetStructField("maxLevels", MatlabMatrix(static_cast<float>(parameters.maxLevels)));
+      params.SetStructField("minClusterSize", MatlabMatrix(static_cast<float>(parameters.minClusterSize)));
+      params.SetStructField("nThNeg", MatlabMatrix(static_cast<float>(parameters.nThNeg)));
+      params.SetStructField("numPatchClusters", MatlabMatrix(static_cast<float>(parameters.numPatchClusters)));
+      params.SetStructField("overlapThreshold", MatlabMatrix(static_cast<float>(parameters.overlapThreshold)));
       params.SetStructField("patchCanonicalSize", 
-			    MatlabMatrix(static_cast<vector<float> >(_parameters.patchCanonicalSize), false));
+			    MatlabMatrix(static_cast<vector<float> >(parameters.patchCanonicalSize), false));
       params.SetStructField("patchOverlapThreshold", 
-			    MatlabMatrix(static_cast<float>(_parameters.patchOverlapThreshold)));
+			    MatlabMatrix(static_cast<float>(parameters.patchOverlapThreshold)));
       params.SetStructField("patchScaleIntervals", 
-			    MatlabMatrix(static_cast<float>(_parameters.patchScaleIntervals)));
+			    MatlabMatrix(static_cast<float>(parameters.patchScaleIntervals)));
       params.SetStructField("patchSize", 
-			    MatlabMatrix(static_cast<vector<float> >(_parameters.patchSize), false));
+			    MatlabMatrix(static_cast<vector<float> >(parameters.patchSize), false));
       SAVE_PARAMETER(sBins);
-      params.SetStructField("scaleIntervals", MatlabMatrix(static_cast<float>(_parameters.scaleIntervals)));
-      params.SetStructField("svmflags", MatlabMatrix(_parameters.svmflags));
+      params.SetStructField("scaleIntervals", MatlabMatrix(static_cast<float>(parameters.scaleIntervals)));
+      params.SetStructField("svmflags", MatlabMatrix(parameters.svmflags));
       params.SetStructField("topNOverlapThresh", 
-			    MatlabMatrix(static_cast<float>(_parameters.topNOverlapThresh)));
+			    MatlabMatrix(static_cast<float>(parameters.topNOverlapThresh)));
       params.SetStructField("featureTypePatchOnly", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypePatchOnly)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypePatchOnly)));
       params.SetStructField("featureTypeHOG", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypeHOG)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypeHOG)));
       params.SetStructField("featureTypeSparse", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypeSparse)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypeSparse)));
       params.SetStructField("featureTypeFisher", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypeFisher)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypeFisher)));
       params.SetStructField("featureTypePatchOnly", 
-			    MatlabMatrix(static_cast<float>(_parameters.featureTypePatchOnly)));
-      params.SetStructField("useColor", MatlabMatrix(static_cast<float>(_parameters.useColor)));
-      params.SetStructField("selectTopN", MatlabMatrix(static_cast<float>(_parameters.selectTopN)));
-      params.SetStructField("numToSelect", MatlabMatrix(static_cast<float>(_parameters.numToSelect)));
-      params.SetStructField("useDecisionThresh", MatlabMatrix(static_cast<float>(_parameters.useDecisionThresh)));
-      params.SetStructField("overlap", MatlabMatrix(static_cast<float>(_parameters.overlap)));
+			    MatlabMatrix(static_cast<float>(parameters.featureTypePatchOnly)));
+      params.SetStructField("useColor", MatlabMatrix(static_cast<float>(parameters.useColor)));
+      params.SetStructField("selectTopN", MatlabMatrix(static_cast<float>(parameters.selectTopN)));
+      params.SetStructField("numToSelect", MatlabMatrix(static_cast<float>(parameters.numToSelect)));
+      params.SetStructField("useDecisionThresh", MatlabMatrix(static_cast<float>(parameters.useDecisionThresh)));
+      params.SetStructField("overlap", MatlabMatrix(static_cast<float>(parameters.overlap)));
       params.SetStructField("fixedDecisionThresh", 
-			    MatlabMatrix(static_cast<float>(_parameters.fixedDecisionThresh)));
-      params.SetStructField("removeFeatures", MatlabMatrix(static_cast<float>(_parameters.removeFeatures)));
+			    MatlabMatrix(static_cast<float>(parameters.fixedDecisionThresh)));
+      params.SetStructField("removeFeatures", MatlabMatrix(static_cast<float>(parameters.removeFeatures)));
       params.SetStructField("gradientSumThreshold", 
-			    MatlabMatrix(static_cast<float>(_parameters.gradientSumThreshold)));
+			    MatlabMatrix(static_cast<float>(parameters.gradientSumThreshold)));
       params.SetStructField("sampleBig", 
-			    MatlabMatrix(static_cast<float>(_parameters.sampleBig)));
+			    MatlabMatrix(static_cast<float>(parameters.sampleBig)));
+
+      SAVE_PARAMETER(keepAllDetections);
 
       SAVE_PARAMETER(featureTypeHistogram);
       SAVE_PARAMETER(featureTypeDecaf);
@@ -288,6 +292,11 @@ namespace slib {
       SAVE_PARAMETER(removeDuplicateImageDetections);
       SAVE_PARAMETER(removeDuplicatePanoramaDetections);
 
+      return params;
+    }
+
+    void Detector::SaveParametersToMatlabMatrix(mxArray** matrix) const {
+      MatlabMatrix params = DetectorFactory::ConvertParametersToMatlabMatrix(_parameters);
       (*matrix) = mxDuplicateArray(&params.GetMatlabArray());
     }
         
@@ -382,6 +391,52 @@ namespace slib {
 	return (lhs.value > rhs.value);
       }
     };
+
+    Triplet<int> Detector::ImagePointToPyramidLocation(const FeaturePyramid& pyramid, 
+						       const Pair<Pair<float> >& point,
+						       const DetectionParameters& parameters) {
+      const float x1 = point.first().x;
+      const float y1 = point.first().y;
+      const float x2 = point.second().x;
+      const float y2 = point.second().y;
+
+      const float width = x2 - x1;
+      const float height = y2 - y1;
+      const float area = width * height;
+
+      Pair<float> patch_size;
+      Detector::GetFeatureDimensions(parameters, &patch_size);      
+      const float sbins = parameters.sBins;     
+
+      // This is NOT exact. It tries to find the closest size patches
+      // in the pyramid wrt to the input patch. However, because
+      // patches can be cropped, this may not be the actual pyramid
+      // location.
+      const int num_levels = pyramid.GetNumLevels();
+      int level = 0;
+      float diff = -1;
+      for (int i = 0; i < num_levels; i++) {
+	const Pair<Pair<float> > level_patch = pyramid.GetPatchSizeInLevel(patch_size, i, sbins);
+	const float x1 = level_patch.first().x;
+	const float y1 = level_patch.first().y;
+	const float x2 = level_patch.second().x;
+	const float y2 = level_patch.second().y;
+	
+	const float level_patch_width = x2 - x1;
+	const float level_patch_height = y2 - y1;	
+	
+	const float level_patch_area = level_patch_width * level_patch_height;
+
+	const float level_diff = (level_patch_area - area) * (level_patch_area - area);
+	if (i == 0 || level_diff < diff) {
+	  level = i;
+	  diff = level_diff;
+	}
+      }
+
+      const Pair<int> pyramid_point = ImagePointToPyramidPoint(pyramid, Pair<int>(x1, y1), level, parameters);
+      return Triplet<int>(level, pyramid_point.x, pyramid_point.y);
+    }
     
     Pair<int> Detector::ImagePointToPyramidPoint(const FeaturePyramid& pyramid, 
 						 const Pair<int>& point, const int& level, 
@@ -405,18 +460,17 @@ namespace slib {
       return Pair<int>(x1, y1);
     }
 
-    Pair<int> Detector::PyramidPointToImagePoint(const FeaturePyramid& pyramid, 
+    // Mirrors pyridx2pos.m
+    Pair<int> Detector::PyramidPointToImagePoint(const float& level_scale, const float& canonical_scale,
 						 const Pair<int>& point, const int& level, 
 						 const DetectionParameters& parameters) {
-      const float canonical_scale = pyramid.GetCanonicalScale();
-
       Pair<float> patch_size;
       Detector::GetFeatureDimensions(parameters, &patch_size);
       
       const float sbins = parameters.sBins;
-      const Pair<Pair<float> > levelPatch = pyramid.GetPatchSizeInLevel(patch_size, level, sbins);
+      const Pair<Pair<float> > levelPatch 
+	= FeaturePyramid::GetPatchSizeInLevel(patch_size, level_scale, canonical_scale, sbins);
 	
-      const float level_scale = pyramid.GetScales()[level];
       const float x1 = point.x;
       const float y1 = point.y;
       const float xoffset = floor(x1 * sbins * level_scale / canonical_scale);
@@ -429,6 +483,15 @@ namespace slib {
       return image_point;
     }
 
+    Pair<int> Detector::PyramidPointToImagePoint(const FeaturePyramid& pyramid, 
+						 const Pair<int>& point, const int& level, 
+						 const DetectionParameters& parameters) {
+      const float canonical_scale = pyramid.GetCanonicalScale();
+      const float level_scale = pyramid.GetScales()[level];
+
+      return Detector::PyramidPointToImagePoint(level_scale, canonical_scale, point, level, parameters);
+    }
+
     int32 Detector::GetFeatureDimensions(const DetectionParameters& parameters,
 					 Pair<float>* patch_size_out) {
       Pair<float> patch_size;
@@ -439,8 +502,7 @@ namespace slib {
       int32 patch_channels = 0;
 
       if (parameters.featureTypeHOG) {
-	patch_channels = 31;
-
+	patch_channels = HOGFeatureComputer::GetPatchChannels();
 	if (parameters.useColor) {
 	  patch_channels += 2;
 	}
@@ -814,10 +876,15 @@ namespace slib {
 	  }
 	  VLOG(2) << "Time spent collating the metadata: " << Timer::Stop();
 	  
-	  Timer::Start();
-	  vector<int32> final_indices
-	    = SelectViaNonMaxSuppression(metadata, selected_indices, detections.col(i), _parameters.overlap);
-	  VLOG(2) << "Time spent performing non-maximum suppression: " << Timer::Stop();
+	  vector<int32> final_indices;
+	  if (_parameters.keepAllDetections) {
+	    final_indices = slib::util::Range(0, (int) selected_indices.size());
+	  } else {
+	    Timer::Start();
+	    final_indices = SelectViaNonMaxSuppression(metadata, selected_indices, 
+						       detections.col(i), _parameters.overlap);
+	    VLOG(2) << "Time spent performing non-maximum suppression: " << Timer::Stop();
+	  }
 	  
 	  VLOG(1) << "Final number of detections: " << final_indices.size();
 
@@ -920,6 +987,7 @@ namespace slib {
       parameters.useColor = true;
       parameters.selectTopN = false;
       parameters.numToSelect = 0;
+      parameters.keepAllDetections = false;
       parameters.useDecisionThresh = true;
       parameters.overlap = parameters.overlapThreshold;
       parameters.fixedDecisionThresh = -1.002;
@@ -1063,7 +1131,7 @@ namespace slib {
 	numy = features.height();
 	
 	if (parameters.useColor) {
-	  FloatImage concatenated_features(features.width(), features.height(), 1, 31 + 1 + 1);
+	  FloatImage concatenated_features(features.width(), features.height(), 1, features.spectrum() + 2);
 	  // First C dimensions are from the already-computed features.
 	  cimg_forXYC(features, x, y, c) {
 	    concatenated_features(x, y, c) = features(x, y, c);

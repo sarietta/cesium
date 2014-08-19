@@ -75,6 +75,11 @@ namespace slib {
       
       return patch_size;
     }
+
+    int HOGFeatureComputer::GetPatchChannels() {
+      // TODO(sean): Does this really need to be hard-coded?
+      return 31;
+    }
     
     FloatImage HOGFeatureComputer::ComputeHOGFeatures(const FloatImage& image, const int32& bins) const {
       const FloatImage imageT = image.get_transpose();

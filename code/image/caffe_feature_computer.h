@@ -18,6 +18,11 @@ DECLARE_string(caffe_trained_network_filename);
 DECLARE_int32(caffe_feature_computer_upsample_factor);
 DECLARE_int32(caffe_feature_computer_padding);
 
+// EXPERIMENTAL flags for Caffe + HOG
+DECLARE_bool(caffe_feature_computer_include_hog);
+DECLARE_int32(caffe_feature_computer_hog_bins);
+DECLARE_double(caffe_feature_computer_hog_weight);
+
 namespace caffe {
   template <typename T> class Blob;
 }

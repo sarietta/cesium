@@ -66,9 +66,11 @@ namespace slib {
     // you want to use the default argument list.
     template <typename T>
     vector<T> Range(const T& start, const T& end, const T& step = 1) {
-      vector<T> values(end - start);
-      for (T value = start; value < end; value += step) {
-	values[value - start] = value;
+      const int num = static_cast<int>((end - start) / step);
+      const T num_T = static_cast<T>(num);
+      vector<T> values(num);
+      for (int i = 0; i < num; ++i) {
+	values[i] = start + step * static_cast<T>(i);
       }
       return values;
     }
@@ -76,6 +78,38 @@ namespace slib {
     // Sorts a vector in ascending order. The return vector are a
     // mapping from the sorted vector to the original vector such that
     // vector<int> i = Sort(V_original) --> V_sorted = V_original(i).
+    template <typename T>
+    vector<T> Intersect(const vector<T>& V1, const vector<T>& V2) {
+      vector<T> V1_(V1);
+      vector<T> V2_(V2);
+      
+      vector<T> intersection(V1_.size() + V2_.size());
+      
+      std::sort(V1_.begin(), V1_.end());
+      std::sort(V2_.begin(), V2_.end());
+      typename vector<T>::iterator it = std::set_intersection(V1_.begin(), V1_.end(),
+							      V2_.begin(), V2_.end(),
+							      intersection.begin());
+      intersection.resize(it - intersection.begin());
+      return intersection;
+    }
+
+    template <typename T>
+    vector<T> SetDifference(const vector<T>& V1, const vector<T>& V2) {
+      vector<T> V1_(V1);
+      vector<T> V2_(V2);
+
+      vector<T> difference(V1_.size() + V2_.size());
+
+      std::sort(V1_.begin(), V1_.end());
+      std::sort(V2_.begin(), V2_.end());
+      typename vector<T>::iterator it = std::set_difference(V1_.begin(), V1_.end(),
+							    V2_.begin(), V2_.end(),
+							    difference.begin());
+      difference.resize(it - difference.begin());
+      return difference;
+    }
+
     template <typename T>
     vector<int> Sort(vector<T>* V) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
@@ -105,12 +139,47 @@ namespace slib {
       return UnwrapContainer<T>(VI, V);
     }
 
-    // Same as above except you get to pass your own compare function in.
+    // This enables users to use the pre-defined sorters in this file
+    // directly as arguments.
     template <typename T>
-    vector<int> Sort(const vector<T>& V, 
-		     bool(&compare)(const STLIndexedEntry<T>& left, const STLIndexedEntry<T>& right)) {
+    vector<int> Sort(const vector<T>& V, bool(&compare)(const STLIndexedEntry<T>& left, 
+							const STLIndexedEntry<T>& right)) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
       sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+    
+    // The next couple of methods are the same as above but they are
+    // the stable sort versions.
+    template <typename T>
+    vector<int> StableSort(vector<T>* V) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
+      stable_sort(VI.begin(), VI.end(), AscendingOrder<T>);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    template <typename T>
+    vector<int> StableSort(const vector<T>& V) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      stable_sort(VI.begin(), VI.end(), AscendingOrder<T>);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    // For situations where you want to define your own sorter.
+    template <typename T>
+    vector<int> StableSort(const vector<T>& V, bool(&compare)(const T& left, const T& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      stable_sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    // This enables users to use the pre-defined sorters in this file
+    // directly as arguments.
+    template <typename T>
+    vector<int> StableSort(const vector<T>& V, bool(&compare)(const STLIndexedEntry<T>& left, 
+							      const STLIndexedEntry<T>& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      stable_sort(VI.begin(), VI.end(), compare);
       return UnwrapContainer<T>(VI, V);
     }
 

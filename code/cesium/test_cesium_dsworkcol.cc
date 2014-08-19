@@ -70,10 +70,11 @@ int main(int argc, char** argv) {
 
   CESIUM_REGISTER_COMMAND(TestFunction);
 
-  FLAGS_cesium_intelligent_parameters = false;
   FLAGS_cesium_working_directory = "/tmp/dsworkcol";
 
   Cesium* instance = Cesium::GetInstance();
+  instance->DisableIntelligentParameters();
+
   instance->SetBatchSize(1);
   if (instance->Start() == slib::mpi::CesiumMasterNode) {
     FLAGS_logtostderr = true;

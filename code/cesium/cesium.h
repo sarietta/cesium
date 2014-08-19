@@ -14,20 +14,23 @@
 #include <util/matlab.h>
 #include <vector>
 
-#define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
+//#define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
+#define CESIUM_REGISTER_COMMAND(function) \
+  static slib::mpi::CesiumCommandRegistrator __CESIUM_##function(#function, function);
 
 #define CESIUM_FINISH_JOB_STRING "__CESIUM_FINISH_JOB__"
 #define CESIUM_NODE_DIED_JOB_STRING "__CESIUM_NODE_DIED__"
+#define CESIUM_IDENTIFY_HOSTNAME_JOB_STRING "__CESIUM_IDENTIFY_HOSTNAME_JOB_STRING__"
 
 #define CESIUM_CACHED_VARIABLES_FIELD "__CESIUM_CACHED_VARIABLES__"
+
+#define CESIUM_CONFIG_ALL_INDICES_FIELD "__CESIUM_ALL_INDICES__"
 
 DECLARE_string(cesium_working_directory);
 DECLARE_string(cesium_temporary_directory);
 DECLARE_bool(cesium_export_log);
 DECLARE_int32(cesium_wait_interval);
 DECLARE_bool(cesium_checkpoint_variables);
-DECLARE_bool(cesium_all_indices_at_once);
-DECLARE_bool(cesium_intelligent_parameters);
 DECLARE_int32(cesium_partial_variable_chunk_size);
 DECLARE_bool(cesium_debug_mode);
 DECLARE_int32(cesium_debug_mode_node);
@@ -54,6 +57,8 @@ namespace slib {
       CesiumComputeNode
     };
 
+    // TODO(sean): ?Convert this to a ProtocolBuffer implementation for
+    // ease of extending?
     struct CesiumExecutionInstance {
       int total_indices;
 
@@ -93,15 +98,28 @@ namespace slib {
       // loading each part of the partial variable until we execute
       // the job.
       std::map<std::string, std::pair<slib::util::MatlabMatrix, FILE*> > partial_variables;
+
+      // Whether the indices that are sent to the workers should be
+      // processed all at once. Set via
+      // Cesium::{Enable,Disable}AllIndicesAtOnce().
+      bool process_all_indices_at_once;
+
+      // Whether the batch size, etc is automatically determined. Set
+      // via Cesium::{Enable,Disable}IntellientParameters().
+      bool use_intelligent_parameters;
     };  // struct CesiumExecutionInstance
 
     class Cesium {
     public:
-      virtual ~Cesium() {}
+      virtual ~Cesium();
 
       static Cesium* GetInstance();
 
       static void RegisterCommand(const std::string& command, const Function& function);     
+      static std::map<std::string, Function>& GetAvailableCommands() {
+	static std::map<std::string, Function> available_commands;
+	return available_commands;
+      }
       
       // This MUST be called before any other operations. It starts up
       // the framework across the available nodes (automatically
@@ -120,6 +138,36 @@ namespace slib {
       // time. Make sure to disable intelligent parameters if you want
       // this to take effect.
       void SetBatchSize(const int& batch_size);
+
+      // Indicates that the indices that are sent to the workers
+      // should be processed all at once. This will only modify the
+      // current CesiumInstance; it is not a permanant change. Default
+      // is disabled.
+      void EnableAllIndicesAtOnce();
+      void DisableAllIndicesAtOnce();
+
+      // Determines whether parameters will be set "intelligently",
+      // i.e. whether the batch size, etc is automatically
+      // determined. This will only modify the current CesiumInstance;
+      // it is not a permanant change. Default is enabled.
+      void EnableIntelligentParameters();
+      void DisableIntelligentParameters();
+
+      // Sets the nodes that will be involved in the NEXT Execute*
+      // call. This can be useful if there are jobs that have steep
+      // resource requirements and need to be processed by a smaller
+      // number of nodes than normal. This will only modify the
+      // current CesiumInstance; it is not a permanant change.
+      void SetExecutionNodes(const std::vector<int>& nodes);
+
+      // This is a method that assists in determining reasonable
+      // inputs to the method above. It will return a map where the
+      // keys are the hostnames of all the machines involved in the
+      // computation and the value is a list of node ids that belong
+      // to each hostname.
+      std::map<std::string, std::vector<int> > GetHostnameNodes() const;
+      // Same as above but a list of hostnames, one for each node (the inverse).
+      std::vector<std::string> GetNodeHostnames() const;
 
       // This method should be called when all processes are
       // completed.
@@ -238,12 +286,18 @@ namespace slib {
       int _stripped_feature_dimensions;
 
       static scoped_ptr<Cesium> _singleton;
-      static std::map<std::string, Function> _available_commands;
 
       static std::map<int, bool> _dead_processors;
 
       friend class TestCesiumCommunication;
     };  // class Cesium
+
+    class CesiumCommandRegistrator {
+    public:
+      CesiumCommandRegistrator(const std::string& command, const Function& function) {
+	slib::mpi::Cesium::RegisterCommand(command, function);
+      }
+    };  // class CesiumCommandRegistrator
 
   }  // namespace mpi
 }  // namespace slib

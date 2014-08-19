@@ -36,6 +36,21 @@ namespace slib {
       static const double _pixelsPerLonRadian;
     };
 
+    class GoogleMapsConverter {
+    public:
+      GoogleMapsConverter(const int& zoom, const LatLon& southwest, const LatLon& northeast);
+
+      // Converts a latitude/longitude position to an (x,y) position
+      // in the map. This is obviously dependent on the map size,
+      // which is implicitly set via the constructor's zoom parameter.
+      Point2D ConvertLocationToMapPoint(const LatLon& location);
+
+    private:
+      int _num_tiles;
+      double _map_min_x;
+      double _map_min_y;
+    };
+
   }  // namespace util
 }  // namespace slib
 

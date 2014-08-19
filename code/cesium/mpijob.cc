@@ -63,6 +63,7 @@ namespace slib {
       MPI_Initialized(&flag);
       if (!flag) {
 	LOG(ERROR) << "You tried to create a JobController before calling MPI_Init. Shame on you. Fix it!";
+	LOG(ERROR) << "You can fix this error by calling MPI_Init(&argc, &argv) at the start of your main method.";
       }
 
       MPI_Comm_create_errhandler(MPIErrorHandler, &_error_handler_mpi);
