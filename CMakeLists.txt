@@ -31,6 +31,7 @@ set(CMAKE_MODULE_PATH ./cmake)
 # Required libraries
 
 ## Boost
+# SLIB_REQUIRED Boost pkg libboost-all-dev
 find_package(Boost COMPONENTS program_options REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 
@@ -44,6 +45,7 @@ else ()
 endif ()
 
 ## Eigen3
+# SLIB_REQUIRED Eigen3 bundle thirdparty/eigen
 if(DEFINED ENV{EIGEN3_INCLUDE_DIR})
   include_directories($ENV{EIGEN3_INCLUDE_DIR})
 else(DEFINED ENV{EIGEN3_INCLUDE_DIR})
@@ -56,13 +58,16 @@ else(DEFINED ENV{EIGEN3_INCLUDE_DIR})
 endif(DEFINED ENV{EIGEN3_INCLUDE_DIR})
 
 ## MATLAB
-if(DEFINED ENV{MATLAB_INCLUDE_DIR})
-else(DEFINED ENV{MATLAB_INCLUDE_DIR})
+# SLIB_REQUIRED MATLAB manual
+# find_package(MATLAB)
+if(DEFINED ENV{MATLAB_INCLUDE_DIR} AND EXISTS "$ENV{MATLAB_INCLUDE_DIR}/mat.h")
+else()
   message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR to the include directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/include/.")
-endif(DEFINED ENV{MATLAB_INCLUDE_DIR})
+endif()
 include_directories($ENV{MATLAB_INCLUDE_DIR})
 
 ## Google Flags
+# SLIB_REQUIRED GoogleFlags bundle thirdparty/gflags
 if(DEFINED ENV{GFLAGS_INCLUDE_DIR})
   include_directories($ENV{GFLAGS_INCLUDE_DIR})
 else(DEFINED ENV{GFLAGS_INCLUDE_DIR})
@@ -75,6 +80,7 @@ else(DEFINED ENV{GFLAGS_INCLUDE_DIR})
 endif(DEFINED ENV{GFLAGS_INCLUDE_DIR})
 
 ## Google Logging
+# SLIB_REQUIRED GoogleLogging bundle thirdparty/glog
 if(DEFINED ENV{GLOG_INCLUDE_DIR})
   include_directories($ENV{GLOG_INCLUDE_DIR})
 else(DEFINED ENV{GLOG_INCLUDE_DIR})
@@ -95,33 +101,14 @@ else ()
   add_definitions(-DSKIP_FFTW)
 endif()
 
-## BLAS
-#if(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
-#  find_package(BLAS REQUIRED)
-#  include_directories(${BLAS_INCLUDE_DIRS})
-#endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
-
 ## MPI
-find_package(MPI QUIET)
+# SLIB_REQUIRED MPI bundle thirdparty/mpich
+# SLIB_CHECK MPI "mpicc -v 2>&1 | grep -o 1.4.1p1"
+find_package(MPI REQUIRED CXX)
 include_directories(${MPI_CXX_INCLUDE_PATH})
-
-set(MODULES util drawing string image gl interpolation svm cesium matrix kmeans)
-
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./lib)
-
-# Temporary hack for decaf
-find_path(DECAF_INCLUDE_DIR NAMES decaf.h
-  HINTS   
-  ${CMAKE_INSTALL_PREFIX}/include
-  ${CMAKE_SYSTEM_INCLUDE_PATH}/include
-  PATH_SUFFIXES decaf)
-
-if (DECAF_INCLUDE_DIR MATCHES DECAF_INCLUDE_DIR-NOTFOUND)
-  message(WARNING, "\nCould not locate Decaf header file")
-else ()
-  add_definitions(-DDECAF_ENABLED)
-endif ()
+add_definitions(${MPI_CXX_COMPILE_FLAGS})
+add_definitions(-DMPICH_SKIP_MPICXX)
+add_definitions(-DOMPI_SKIP_MPICXX)
 
 # CUDA (This is mainly for Caffe so we disable Caffe if we can't find it)
 find_package(CUDA QUIET)
@@ -131,6 +118,11 @@ else ()
   message(WARNING "\nCould not find CUDA library. Caffe features will be disabled.")
   add_definitions(-DSKIP_CAFFE_FEATURE_COMPUTER)
 endif()
+
+set(MODULES util drawing string image gl interpolation svm cesium matrix kmeans)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./lib)
 
 option(BUILD_SHARED "BUILD_SHARED" OFF)
 
@@ -162,8 +154,13 @@ foreach(MODULE ${MODULES})
   
 endforeach(MODULE) 
 
-##########################################################################################
-##########################################################################################
+option(SKIP_TESTS "SKIP_TESTS" OFF)
+
+if(SKIP_TESTS)
+else()
+
+######################################################################################
+######################################################################################
 
 # Build all the tests
 if(DEFINED ENV{MATLAB_LIB_DIR})
@@ -354,3 +351,5 @@ foreach(TEST_FILE ${TEST_FILES})
 endforeach()
 
 add_custom_target(tests DEPENDS ${TEST_BINARIES})
+
+endif()
