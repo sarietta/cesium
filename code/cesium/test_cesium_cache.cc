@@ -22,9 +22,9 @@
 #include <util/matlab.h>
 #include <vector>
 
-using slib::mpi::Cesium;
-using slib::mpi::JobDescription;
-using slib::mpi::JobOutput;
+using slib::cesium::Cesium;
+using slib::cesium::JobDescription;
+using slib::cesium::JobOutput;
 using slib::util::Directory;
 using slib::util::MatlabMatrix;
 using std::cin;
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
   Cesium* instance = Cesium::GetInstance();
   instance->DisableIntelligentParameters();
   instance->SetBatchSize(1);
-  if (instance->Start() == slib::mpi::CesiumMasterNode) {
+  if (instance->Start() == slib::cesium::CesiumMasterNode) {
     FLAGS_logtostderr = true;
 
     const FloatMatrix A = FloatMatrix::Random(FLAGS_matrix_size, FLAGS_matrix_size);
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
       JobDescription job;
       job.command = "TestFunction";
       job.variables["cached"] = large_matrix;
-      instance->SetVariableType("cached", large_matrix, slib::mpi::CACHED_VARIABLE);
+      instance->SetVariableType("cached", large_matrix, slib::cesium::CACHED_VARIABLE);
 
       job.indices.push_back(0);
       job.indices.push_back(1);

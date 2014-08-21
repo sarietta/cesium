@@ -49,7 +49,7 @@ using std::string;
 using std::vector;
 
 namespace slib {
-  namespace mpi {
+  namespace cesium {
 
     scoped_ptr<Cesium> Cesium::_singleton;
     map<int, bool> Cesium::_dead_processors;
@@ -628,7 +628,7 @@ namespace slib {
 	const string name = (*iter).first;
 	const VariableType type = (*iter).second;
 
-	if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+	if (type == slib::cesium::PARTIAL_VARIABLE_ROWS || type == slib::cesium::PARTIAL_VARIABLE_COLS) {
 	  if (_instance->partial_output_indices[name].size() > 0) {
 	    LOG(INFO) << "***********************************************";
 	    LOG(INFO) << "Saving chunk for partial variable: " << name;
@@ -897,7 +897,7 @@ namespace slib {
 				       const string& name, const VariableType& type) {
       const Pair<int> dimensions = matrix.GetDimensions();
 
-      if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+      if (type == slib::cesium::PARTIAL_VARIABLE_ROWS || type == slib::cesium::PARTIAL_VARIABLE_COLS) {
 	// Save current outputs and output indices.
 	_instance->final_outputs[name].Merge(matrix);
 	_instance->partial_output_indices[name].insert(_instance->partial_output_indices[name].end(), 
@@ -918,7 +918,7 @@ namespace slib {
 	  _instance->partial_output_unique_int++;
 	}
 	return true;
-      } else if (type == slib::mpi::DSWORK_COLUMN) {
+      } else if (type == slib::cesium::DSWORK_COLUMN) {
 	if (_instance->processors_completed_one.size() == 0) {
 	  const string directory = FLAGS_cesium_working_directory + "/" + name;
 	  System::ExecuteSystemCommand("rm -rf " + directory);
@@ -984,11 +984,11 @@ namespace slib {
 	
       // If it's a partial variable, wait to load it when the job
       // starts so we don't have to keep the whole thing in memory.
-      if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
+      if (type == slib::cesium::FEATURE_STRIPPED_ROW_VARIABLE) {
 	const string feature_filename = StringUtils::Replace(".mat", filename, ".features.bin");
 	_instance->partial_variables[variable_name] = make_pair(input, fopen(feature_filename.c_str(),"rb"));
 	_instance->input_variable_types[variable_name] = type;
-      } else if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+      } else if (type == slib::cesium::PARTIAL_VARIABLE_ROWS || type == slib::cesium::PARTIAL_VARIABLE_COLS) {
 	_instance->partial_variables[variable_name] = make_pair(input, (FILE*) NULL);
 	_instance->input_variable_types[variable_name] = type;
       }
@@ -1004,12 +1004,12 @@ namespace slib {
 				 const VariableType& type) {
       InitializeInstance();
 
-      if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+      if (type == slib::cesium::PARTIAL_VARIABLE_ROWS || type == slib::cesium::PARTIAL_VARIABLE_COLS) {
 	_instance->partial_variables[variable_name] = make_pair(input, (FILE*) NULL);
 	_instance->input_variable_types[variable_name] = type;
-      } else if (type == slib::mpi::COMPLETE_VARIABLE) {
+      } else if (type == slib::cesium::COMPLETE_VARIABLE) {
 	LOG(INFO) << "You don't need to set the type for complete variables (" << variable_name << ")";
-      } else if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
+      } else if (type == slib::cesium::FEATURE_STRIPPED_ROW_VARIABLE) {
 	LOG(WARNING) << "Use the method LoadInputVariable* for variable type FEATURE_STRIPPED_ROW_VARIABLE "
 		     << "(" << variable_name << ")";
       } else if (!(type >> MPIJOB_CACHED_VARIABLE_BITMASK)) {
@@ -1022,5 +1022,5 @@ namespace slib {
       }
     }
     
-  }  // namespace mpi
+  }  // namespace cesium
 }  // namespace slib

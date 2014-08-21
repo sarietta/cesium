@@ -23,9 +23,9 @@
 #include <util/stl.h>
 #include <vector>
 
-using slib::mpi::Cesium;
-using slib::mpi::JobDescription;
-using slib::mpi::JobOutput;
+using slib::cesium::Cesium;
+using slib::cesium::JobDescription;
+using slib::cesium::JobOutput;
 using slib::util::Directory;
 using slib::util::MatlabMatrix;
 using std::cin;
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
   MPI_Init(&argc, &argv);
 
   Cesium* instance = Cesium::GetInstance();
-  if (instance->Start() == slib::mpi::CesiumMasterNode) {
+  if (instance->Start() == slib::cesium::CesiumMasterNode) {
     const map<string, vector<int> > hostnames = instance->GetHostnameNodes();
     for (iterator iter = hostnames.begin(); iter != hostnames.end(); ++iter) {
       LOG(INFO) << (*iter).first << ": " << slib::util::PrintVector((*iter).second);

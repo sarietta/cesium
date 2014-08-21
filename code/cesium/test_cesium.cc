@@ -22,9 +22,9 @@
 #include <util/matlab.h>
 #include <vector>
 
-using slib::mpi::Cesium;
-using slib::mpi::JobDescription;
-using slib::mpi::JobOutput;
+using slib::cesium::Cesium;
+using slib::cesium::JobDescription;
+using slib::cesium::JobOutput;
 using slib::util::Directory;
 using slib::util::MatlabMatrix;
 using std::cin;
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
   CESIUM_REGISTER_COMMAND(TestFunction5);
 
   Cesium* instance = Cesium::GetInstance();
-  if (instance->Start() == slib::mpi::CesiumMasterNode) {
+  if (instance->Start() == slib::cesium::CesiumMasterNode) {
     FLAGS_logtostderr = true;
 #if 0
     {
@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
       instance->SetBatchSize(1);
 
       JobOutput output;
-      output.SetVariableType("output", slib::mpi::PARTIAL_VARIABLE_COLS);
+      output.SetVariableType("output", slib::cesium::PARTIAL_VARIABLE_COLS);
 
       instance->ExecuteJob(job, &output);
       VLOG(1) << "\n\nOUTPUT :: TestFunction3_1";
@@ -236,7 +236,7 @@ int main(int argc, char** argv) {
 
       FLAGS_cesium_working_directory = "/tmp";
       MatlabMatrix partial_variable = instance->LoadInputVariable("output", 
-								  slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE);
+								  slib::cesium::FEATURE_STRIPPED_ROW_VARIABLE);
       instance->SetStrippedFeatureDimensions(9);
       job2.variables["output"] = partial_variable;
       job2.indices.push_back(0);
@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
       partial.SaveToFile("/tmp/partial.mat");
       
       FLAGS_cesium_working_directory = "/tmp";
-      MatlabMatrix partial_load = instance->LoadInputVariable("partial", slib::mpi::PARTIAL_VARIABLE_ROWS);
+      MatlabMatrix partial_load = instance->LoadInputVariable("partial", slib::cesium::PARTIAL_VARIABLE_ROWS);
       job.variables["partial"] = partial_load;
       
       FLAGS_cesium_intelligent_parameters = false;
@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
       partial.SetCell(3, MatlabMatrix(3.0f));
       
       FLAGS_cesium_working_directory = "/tmp";
-      instance->SetVariableType("partial", partial, slib::mpi::PARTIAL_VARIABLE_COLS);
+      instance->SetVariableType("partial", partial, slib::cesium::PARTIAL_VARIABLE_COLS);
       
       instance->DisableIntelligentParameters();
       instance->SetBatchSize(1);

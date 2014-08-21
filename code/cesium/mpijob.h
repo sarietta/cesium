@@ -22,7 +22,7 @@ namespace slib {
 }
 
 namespace slib {
-  namespace mpi {
+  namespace cesium {
 
     enum VariableType {
       // Rows are partially sent, but all cols are sent
@@ -71,7 +71,7 @@ namespace slib {
 
     typedef JobData JobDescription;
     typedef JobData JobOutput;
-    typedef void (*CompletionHandler)(const slib::mpi::JobOutput&, const int&);
+    typedef void (*CompletionHandler)(const slib::cesium::JobOutput&, const int&);
     typedef void (*CommunicationErrorHandler)(const int& error_code, const int& node);
 
     typedef std::map<int, MPI_Request>::iterator RequestIterator;
@@ -86,7 +86,7 @@ namespace slib {
       // must implement and set such a method.
       // 
       // The signature for the CompletionHandler is: 
-      // void CompletionHandler(const slib::mpi::JobOutput&, const int&);
+      // void CompletionHandler(const slib::cesium::JobOutput&, const int&);
       void SetCompletionHandler(CompletionHandler handler);
 
       // Set a new error handler if you want to do anything other than
@@ -170,7 +170,7 @@ namespace slib {
       static bool _initialized;
       static bool CheckInitialized();
     };
-  }  // namespace util
+  }  // namespace cesium
 }  // namespace slib
 
 #endif

@@ -16,7 +16,7 @@ using std::string;
 using std::vector;
 
 namespace slib {
-  namespace mpi {
+  namespace cesium {
 
     bool JobNode::_initialized = false;
 
@@ -451,5 +451,5 @@ namespace slib {
       }
     }
 
-  }  // namespace util
+  }  // namespace cesium
 }  // namespace slib

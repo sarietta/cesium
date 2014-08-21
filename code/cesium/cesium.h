@@ -14,9 +14,9 @@
 #include <util/matlab.h>
 #include <vector>
 
-//#define CESIUM_REGISTER_COMMAND(function) slib::mpi::Cesium::RegisterCommand(#function, function);
+//#define CESIUM_REGISTER_COMMAND(function) slib::cesium::Cesium::RegisterCommand(#function, function);
 #define CESIUM_REGISTER_COMMAND(function) \
-  static slib::mpi::CesiumCommandRegistrator __CESIUM_##function(#function, function);
+  static slib::cesium::CesiumCommandRegistrator __CESIUM_##function(#function, function);
 
 #define CESIUM_FINISH_JOB_STRING "__CESIUM_FINISH_JOB__"
 #define CESIUM_NODE_DIED_JOB_STRING "__CESIUM_NODE_DIED__"
@@ -40,9 +40,9 @@ DECLARE_int32(cesium_debug_mode_process_single_index);
 DECLARE_string(cesium_checkpointed_variables);
 
 namespace slib {
-  namespace mpi {
+  namespace cesium {
     class Kernel;
-    typedef void (*Function)(const slib::mpi::JobDescription&, JobOutput* output);
+    typedef void (*Function)(const slib::cesium::JobDescription&, JobOutput* output);
   }
   namespace util {
     class MatlabMatrix;
@@ -50,7 +50,7 @@ namespace slib {
 }
 
 namespace slib {
-  namespace mpi {
+  namespace cesium {
 
     enum CesiumNodeType {
       CesiumMasterNode,
@@ -295,11 +295,11 @@ namespace slib {
     class CesiumCommandRegistrator {
     public:
       CesiumCommandRegistrator(const std::string& command, const Function& function) {
-	slib::mpi::Cesium::RegisterCommand(command, function);
+	slib::cesium::Cesium::RegisterCommand(command, function);
       }
     };  // class CesiumCommandRegistrator
 
-  }  // namespace mpi
+  }  // namespace cesium
 }  // namespace slib
 
 #endif
