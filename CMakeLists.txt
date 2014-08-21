@@ -293,6 +293,11 @@ else()
   message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}")
 endif()
 
+ # Caffe
+if (CUDA_FOUND)
+  list (APPEND TEST_LIBRARIES caffe PyramidStitcher)
+endif()
+
 list (APPEND TEST_LIBRARIES gfortran glog gflags jpeg stdc++)
 
 add_library(slib_svm STATIC IMPORTED)
