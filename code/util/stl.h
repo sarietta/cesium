@@ -64,8 +64,12 @@ namespace slib {
     // step. The templated type must be well-defined for the operators
     // < and ++, and must be able to cast the value 1 appropriately if
     // you want to use the default argument list.
-    template <typename T>
-    vector<T> Range(const T& start, const T& end, const T& step = 1) {
+    //
+    // There are two template parameters to handle the case where
+    // start and end might not be exactly the same type, but are both
+    // compatible with int.
+    template <typename T, typename U>
+    vector<T> Range(const T& start, const U& end, const T& step = 1) {
       const int num = static_cast<int>((end - start) / step);
       const T num_T = static_cast<T>(num);
       vector<T> values(num);
