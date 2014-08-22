@@ -22,11 +22,9 @@ typedef int64_t int64;
 typedef uint64_t uint64;
 #endif
 
-#ifdef cimg_version
-typedef cimg_library::CImg<float> FloatImage;
-typedef cimg_library::CImg<double> DoubleImage;
-typedef cimg_library::CImg<uint8> UInt8Image;
-#endif
+#define FloatImage cimg_library::CImg<float>
+#define DoubleImage cimg_library::CImg<double> 
+#define UInt8Image cimg_library::CImg<uint8>
 
 #define FloatMatrix Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
 #define SparseFloatMatrix Eigen::SparseMatrix<float, Eigen::RowMajor>
