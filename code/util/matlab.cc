@@ -762,7 +762,7 @@ namespace slib {
     MatlabMatrix& MatlabMatrix::SetStructEntry(const int& index, const MatlabMatrix& contents) {
       if (contents.GetMatrixType() != MATLAB_STRUCT) {
 	LOG(ERROR) << "Attempted to access non-struct matrix";
-	return;
+	return (*this);
       }
       if (contents.GetNumberOfElements() != 1) {
 	LOG(WARNING) << "There should only be one entry in the inserted struct";
