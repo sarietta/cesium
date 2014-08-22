@@ -203,8 +203,8 @@ namespace slib {
       int flag;
       MPI_Initialized(&flag);
       if (!flag) {
-	LOG(ERROR) << "Attempted to start a Cesium job before calling MPI_Init. "
-		   << "You must call MPI_Init before any Cesium methods.";
+	LOG(INFO) << "Initializing MPI";
+	MPI_Init(NULL, NULL);
       }
       MPI_Comm_rank(MPI_COMM_WORLD, &_rank);
       MPI_Comm_size(MPI_COMM_WORLD, &_size);
@@ -214,6 +214,7 @@ namespace slib {
 	gethostname(buf, sizeof(char) * 32);
 	_hostname = string(buf);
       }
+      LOG(INFO) << "Joining the job as processor: " << _rank << " (" << _hostname << ")";
       
       if (_rank == MPI_ROOT_NODE) {	
 	// Create directories as needed.
@@ -872,7 +873,7 @@ namespace slib {
 	}
 	_instance->node_indices.erase(node);
 	
-	LOG(INFO) << "Node " << node << " output indices: " << output_indices_list << "]";
+	LOG(INFO) << "Node " << node << " output indices: " << output_indices_list << " ]";
 	for (map<string, MatlabMatrix>::const_iterator it = output.variables.begin(); 
 	     it != output.variables.end(); 
 	     it++) {

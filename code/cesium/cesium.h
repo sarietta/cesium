@@ -127,6 +127,14 @@ namespace slib {
       // will block until the Finish method is called. On the master
       // node, this method immediately returns a value of
       // CesiumMasterNode.
+      //
+      // IMPORTANT NOTE: You can call this function WITHOUT first
+      // calling MPI_Init, but doing so will not guarantee how
+      // arguments get passed to your program. This is not a problem
+      // if you're using a GoogleFlags or some other library that
+      // doesn't depend on knowing the exact position of command-line
+      // arguments, but if you are then you should really call
+      // MPI_Init as the very first operation in your program.
       CesiumNodeType Start();
 
       // You can set the working directory this way or by modifying
