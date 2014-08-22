@@ -470,18 +470,18 @@ namespace slib {
       return 0.0f;
     }
 
-    void MatlabMatrix::SetScalar(const float& scalar) {
+    MatlabMatrix& MatlabMatrix::SetScalar(const float& scalar) {
       if (_matrix != NULL && _type == MATLAB_MATRIX) {
 	const int dimensions = mxGetNumberOfDimensions(_matrix);
 	if (dimensions > 2) {
 	  LOG(ERROR) << "Only 2D matrices are supported";
-	  return;
+	  return (*this);
 	}
 	const int rows = mxGetM(_matrix);
 	const int cols = mxGetN(_matrix);
 	if (rows != 1 || cols != 1) {
 	  LOG(ERROR) << "Attempted to access non-scalar matrix";
-	  return;
+	  return (*this);
 	}
 
 	if (mxIsSingle(_matrix)) {
@@ -493,8 +493,94 @@ namespace slib {
       } else {
 	VLOG(2) << "Attempted to access non-matrix";
       }
+      return (*this);
     }
 
+    MatlabMatrix MatlabMatrix::CellToMatrix() const {
+      MatlabMatrix matrix;
+
+      if (GetNumberOfElements() == 0) {
+	return matrix;
+      }
+
+      if (GetMatrixType() != MATLAB_CELL_ARRAY) {
+	LOG(ERROR) << "Attempted to convert a non-cell array.";
+	return matrix;
+      }
+
+      // Determine the type of the cells.
+      MatlabMatrixType type = MATLAB_NO_TYPE;
+      for (int i = 0; i < GetNumberOfElements(); i++) {
+	if (GetCell(i).GetMatrixType() != MATLAB_NO_TYPE && type == MATLAB_NO_TYPE) {
+	  type = GetCell(i).GetMatrixType();
+	} else if (GetCell(i).GetMatrixType() != MATLAB_NO_TYPE && type != MATLAB_NO_TYPE) {
+	  // Make sure all of the non-empty cells are the same type.
+	  if (GetCell(i).GetMatrixType() != type) {
+	    LOG(ERROR) << "Cell arrays can only be converted to matrices if all cells are the same type: " << i;
+	    return matrix;
+	  }
+	}
+      }
+
+      int total_elements = 0;
+      int cols = 0;
+      for (int i = 0; i < GetNumberOfElements(); i++) {
+	const int M = GetCell(i).rows();
+	total_elements += M;
+	
+	if (cols == 0 && GetCell(i).GetMatrixType() != MATLAB_NO_TYPE && GetCell(i).cols() != 0) {
+	  cols = GetCell(i).cols();
+	} else if (cols != 0 && 
+		   GetCell(i).GetMatrixType() != MATLAB_NO_TYPE && 
+		   GetCell(i).cols() != 0 && 
+		   GetCell(i).cols() != cols) {
+	  LOG(ERROR) << "All cell entries must have the same number of columns.";
+	  return matrix;
+	}
+      }
+      VLOG(2) << "Well-formed cell array: " << total_elements << "x" << cols;
+
+      if (type == MATLAB_STRUCT) {
+	matrix.Assign(MatlabMatrix(MATLAB_STRUCT, total_elements, 1));
+  
+	int offset = 0;
+	for (int i = 0; i < GetNumberOfElements(); i++) {
+	  const MatlabMatrix& cell = GetCell(i);
+	  if (cell.GetMatrixType() == MATLAB_NO_TYPE || cell.cols() == 0) {
+	    continue;
+	  }
+
+	  for (int j = 0; j < cell.GetNumberOfElements(); j++) {
+	    matrix.Set(offset, 0, cell.Get(j, 0));
+	    offset++;
+	  }
+	}
+      } else if (type == MATLAB_MATRIX) {
+	FloatMatrix output_data(total_elements, cols);
+
+	int offset = 0;
+	for (int i = 0; i < GetNumberOfElements(); i++) {
+	  const MatlabMatrix& cell = GetCell(i);
+	  if (cell.GetMatrixType() == MATLAB_NO_TYPE || cell.cols() == 0) {
+	    continue;
+	  }
+
+	  const FloatMatrix data = cell.GetCopiedContents();
+	  for (int j = 0; j < cell.rows(); j++) {
+	    output_data.row(offset) = data.row(j);
+	    offset++;
+	  }
+	}
+	
+	matrix.Assign(MatlabMatrix(output_data));
+      } else {
+	LOG(ERROR) << "Cannot flatten non-struct or non-matrix";
+	return matrix;
+      }
+
+      return matrix;
+    }
+    
     // TODO(sean): Implement all conversions
     FloatMatrix MatlabMatrix::GetCopiedContents() const {
       FloatMatrix matrix;
@@ -540,6 +626,8 @@ namespace slib {
 	} else {
 	  LOG(ERROR) << "Only numeric matrices are supported (" << mxGetClassID(_matrix) << ")";
 	}
+      } else if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
+	matrix = CellToMatrix().GetCopiedContents();
       } else {
 	VLOG(2) << "Attempted to access non-matrix";
       }
@@ -665,13 +753,13 @@ namespace slib {
       return entry;
     }
 
-    void MatlabMatrix::SetStructEntry(const int& row, const int& col, const MatlabMatrix& contents) {
+    MatlabMatrix& MatlabMatrix::SetStructEntry(const int& row, const int& col, const MatlabMatrix& contents) {
       	const mwIndex subscripts[2] = {row, col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
-	SetStructEntry(index, contents);
+	return SetStructEntry(index, contents);
     }
 
-    void MatlabMatrix::SetStructEntry(const int& index, const MatlabMatrix& contents) {
+    MatlabMatrix& MatlabMatrix::SetStructEntry(const int& index, const MatlabMatrix& contents) {
       if (contents.GetMatrixType() != MATLAB_STRUCT) {
 	LOG(ERROR) << "Attempted to access non-struct matrix";
 	return;
@@ -685,14 +773,22 @@ namespace slib {
 	const string field = fields[i];
 	SetStructField(field, index, contents.GetCopiedStructField(field));
       }
+
+      return (*this);
     }
 
-    void MatlabMatrix::SetStructField(const string& field, const MatlabMatrix& contents) {
-      SetStructField(field, 0, contents);
+    MatlabMatrix& MatlabMatrix::SetStructField(const string& field, const int& row, const int& col, 
+				      const MatlabMatrix& contents) {
+      	const mwIndex subscripts[2] = {row, col};
+	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+	return SetStructField(field, index, contents);
     }
 
-    void MatlabMatrix::SetStructField(const string& field, 
-				      const int& index, const MatlabMatrix& contents) {
+    MatlabMatrix& MatlabMatrix::SetStructField(const string& field, const MatlabMatrix& contents) {
+      return SetStructField(field, 0, contents);
+    }
+
+    MatlabMatrix& MatlabMatrix::SetStructField(const string& field, const int& index, const MatlabMatrix& contents) {
       if (_matrix != NULL && _type == MATLAB_STRUCT) {
 	// Check to see if the field already exists.
 	if (mxGetFieldNumber(_matrix, field.c_str()) != -1) {
@@ -707,7 +803,7 @@ namespace slib {
 	if (contents._matrix == NULL) {
 	  VLOG(3) << "Attempted to insert empty matrix into struct field: " << field 
 		  << " (index: " << index << ")";
-	  return;
+	  return (*this);
 	}
 
 	// Deep copy.
@@ -716,15 +812,17 @@ namespace slib {
       } else {
 	VLOG(2) << "Attempted to access non-struct (field: " << field << ")";
       }
+
+      return (*this);
     }
 
-    void MatlabMatrix::SetCell(const int& row, const int& col, const MatlabMatrix& contents) {
+    MatlabMatrix& MatlabMatrix::SetCell(const int& row, const int& col, const MatlabMatrix& contents) {
       	const mwIndex subscripts[2] = {row, col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
-	SetCell(index, contents);
+	return SetCell(index, contents);
     }
 
-    void MatlabMatrix::SetCell(const int& index, const MatlabMatrix& contents) {
+    MatlabMatrix& MatlabMatrix::SetCell(const int& index, const MatlabMatrix& contents) {
       if (_matrix != NULL && _type == MATLAB_CELL_ARRAY) {
 	// Check to see if the cell has already been set.
 	if (mxGetCell(_matrix, index) != NULL) {
@@ -735,7 +833,7 @@ namespace slib {
 
 	if (contents._matrix == NULL) {
 	  VLOG(3) << "Attempted to insert empty matrix into cell: " << index;
-	  return;
+	  return (*this);
 	}
 
 	// Deep copy.
@@ -744,9 +842,11 @@ namespace slib {
       } else {
 	VLOG(2) << "Attempted to access non-cell array (" << index << ")";
       }
+
+      return *(this);
     }
 
-    void MatlabMatrix::SetContents(const FloatMatrix& contents) {
+    MatlabMatrix& MatlabMatrix::SetContents(const FloatMatrix& contents) {
       if (_type == MATLAB_MATRIX) {
 	// Overwrite the already existing data if necessary.
 	if (_matrix != NULL) {
@@ -763,9 +863,11 @@ namespace slib {
       } else {
 	LOG(WARNING) << "Attempted to access non-matrix";
       }
+
+      return (*this);
     }
 
-    void MatlabMatrix::SetContents(const float* contents, const int& length, const bool& iscol) {
+    MatlabMatrix& MatlabMatrix::SetContents(const float* contents, const int& length, const bool& iscol) {
       const int rows = iscol ? length : 1;
       const int cols = iscol ? 1 : length;
       if (_type == MATLAB_MATRIX) {
@@ -780,9 +882,11 @@ namespace slib {
       } else {
 	LOG(WARNING) << "Attempted to access non-matrix";
       }
+
+      return (*this);
     }
 
-    void MatlabMatrix::SetStringContents(const string& contents) {
+    MatlabMatrix& MatlabMatrix::SetStringContents(const string& contents) {
       if (_type == MATLAB_STRING) {
 	// Overwrite the already existing data if necessary.
 	if (_matrix != NULL) {
@@ -793,6 +897,8 @@ namespace slib {
       } else {
 	LOG(WARNING) << "Attempted to access non-string matrix";
       }
+
+      return (*this);
     }
         
     void MatlabMatrix::LoadMatrixFromFile(const string& filename, const bool& multivariable) {

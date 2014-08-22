@@ -157,14 +157,30 @@ namespace slib {
       float GetScalar() const;
       std::string GetStringContents() const;
 
-      void SetStructField(const std::string& field, const MatlabMatrix& contents);
-      void SetStructField(const std::string& field, const int& index, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructField(const std::string& field, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructField(const std::string& field, const int& index, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructField(const std::string& field, const int& row, const int& col, 
+				   const MatlabMatrix& contents);
       // Sets the entire struct at the specified index. 
-      void SetStructEntry(const int& index, const MatlabMatrix& contents);
-      void SetStructEntry(const int& row, const int& col, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructEntry(const int& index, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructEntry(const int& row, const int& col, const MatlabMatrix& contents);
 
-      void SetCell(const int& row, const int& col, const MatlabMatrix& contents);
-      void SetCell(const int& index, const MatlabMatrix& contents);
+      MatlabMatrix& SetCell(const int& row, const int& col, const MatlabMatrix& contents);
+      MatlabMatrix& SetCell(const int& index, const MatlabMatrix& contents);
+
+      // This method will convert a MATLAB_CELL_ARRAY to a matrix. All
+      // non-MATLAB_NO_TYPE cells must be the same type. Additionally,
+      // if the cells have type MATLAB_MATRIX, all of the cells must
+      // contain the same number of columns (although 0 columns is
+      // fine).
+      //
+      // The resulting matrix will either be a MATLAB_MATRIX or a
+      // MATLAB_STRUCT depending on what the cells contain. <em>In
+      // both cases, the cell array is flattened in column-major
+      // order.</em> The total size of the resulting matrix will be
+      // (total_rows, cols), where total_rows = \sum_i^N cell_i.rows
+      // and cols = cell_i.cols \forall i.
+      MatlabMatrix CellToMatrix() const;
 
       // This is what you would expect to call for a 'normal' matrix,
       // and it's relatively efficient all things considered, but it's
@@ -174,19 +190,19 @@ namespace slib {
       // Note this only works for regular matrices, not cell nor
       // struct.
       template <typename T>
-      inline void Set(const int& row, const int& col, const T& value) {
-	SetMatrixEntry(row, col, value);
+      inline MatlabMatrix& Set(const int& row, const int& col, const T& value) {
+	return SetMatrixEntry(row, col, value);
       }
 
       template <typename T>
-      inline void SetMatrixEntry(const int& row, const int& col, const T& value) {
+      inline MatlabMatrix& SetMatrixEntry(const int& row, const int& col, const T& value) {
 	const mwIndex subscripts[2] = {row, col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
-	SetMatrixEntry(index, value);
+	return SetMatrixEntry(index, value);
       }
 
       template <typename T>
-      inline void SetMatrixEntry(const int& index, const T& value) {
+      inline MatlabMatrix& SetMatrixEntry(const int& index, const T& value) {
 	if (_matrix != NULL && _type == MATLAB_MATRIX) {
 	  if (mxIsDouble(_matrix)) {
 	    ((double*) mxGetData(_matrix))[index] = static_cast<double>(value);
@@ -198,14 +214,16 @@ namespace slib {
 	} else {
 	  VLOG(2) << "Attempted to access non-matrix";
 	}
+	
+	return (*this);
       }
 
-      void SetContents(const FloatMatrix& contents);
+      MatlabMatrix& SetContents(const FloatMatrix& contents);
       // iscol = is this a column-vector, i.e. rows = length
-      void SetContents(const float* contents, const int& length, const bool& iscol = false);
-      void SetStringContents(const std::string& contents);
+      MatlabMatrix& SetContents(const float* contents, const int& length, const bool& iscol = false);
+      MatlabMatrix& SetStringContents(const std::string& contents);
 
-      void SetScalar(const float& scalar);
+      MatlabMatrix& SetScalar(const float& scalar);
 
       // Although the return type is a "string", the contents of that
       // string will be fwrite-style bytes.
@@ -266,7 +284,7 @@ namespace slib {
 	}
       }
 
-      inline void Set(const int& row, const int& col, const MatlabMatrix& contents) {
+      inline MatlabMatrix& Set(const int& row, const int& col, const MatlabMatrix& contents) {
 	if (_type == MATLAB_CELL_ARRAY) {
 	  SetCell(row, col, contents);
 	} else if (_type == MATLAB_STRUCT) {
@@ -279,6 +297,8 @@ namespace slib {
 	    ((float*) mxGetData(_matrix))[row + col * rows] = (float) contents.GetScalar();
 	  }
 	}
+
+	return (*this);
       }
 
       // Print a friendly version of the matrix based on the type.
