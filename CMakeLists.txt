@@ -7,7 +7,7 @@ set (slib_VERSION_MINOR 12)
 # Standard configuration parameters
 find_program(INTEL_CC "icc")
 if(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-deprecated-register")
 else(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
   set(CMAKE_CXX_COMPILER "icc")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w1 -wd2196 -wd2536 -wd780 -mkl -Qoption,cpp,--rvalue_ctor_is_not_copy_ctor")
