@@ -17,9 +17,9 @@
 namespace slib {
   namespace svm {
     class Detector;
-    class DetectionMetadata;
-    class DetectionResultSet;
-    class Model;
+    struct DetectionMetadata;
+    struct DetectionResultSet;
+    struct Model;
   }
 }
 
@@ -196,7 +196,7 @@ namespace slib {
 
       template <typename T>
       inline MatlabMatrix& SetMatrixEntry(const int& row, const int& col, const T& value) {
-	const mwIndex subscripts[2] = {row, col};
+	const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
 	return SetMatrixEntry(index, value);
       }

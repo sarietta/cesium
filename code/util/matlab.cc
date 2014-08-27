@@ -306,7 +306,7 @@ namespace slib {
     }
 
     float MatlabMatrix::GetMatrixEntry(const int& row, const int& col) const {
-      const mwIndex subscripts[2] = {row, col};
+      const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
       const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
       return GetMatrixEntry(index);
     }
@@ -330,7 +330,7 @@ namespace slib {
     }
 
     bool MatlabMatrix::HasStructField(const string& field, const int& row, const int& col) const {
-      const mwIndex subscripts[2] = {row, col};
+      const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
       const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
       return HasStructField(field, index);
     }
@@ -348,7 +348,7 @@ namespace slib {
     }
 
     const MatlabMatrix MatlabMatrix::GetStructField(const string& field, const int& row, const int& col) const {
-      const mwIndex subscripts[2] = {row, col};
+      const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
       const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
       return GetStructField(field, index);
     }
@@ -370,7 +370,7 @@ namespace slib {
     }
     
     const MatlabMatrix MatlabMatrix::GetCell(const int& row, const int& col) const {
-      const mwIndex subscripts[2] = {row, col};
+      const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
       const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
       return GetCell(index);
     }
@@ -386,7 +386,7 @@ namespace slib {
     }
 
     void MatlabMatrix::GetMutableCell(const int& row, const int& col, MatlabMatrix* cell) const {
-      const mwIndex subscripts[2] = {row, col};
+      const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
       const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
       GetMutableCell(index, cell);
     }
@@ -401,7 +401,7 @@ namespace slib {
     }
 
     MatlabMatrix MatlabMatrix::GetCopiedStructField(const string& field, const int& row, const int& col) const {
-      const mwIndex subscripts[2] = {row, col};
+      const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
       const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
       return GetCopiedStructField(field, index);
     }
@@ -423,7 +423,7 @@ namespace slib {
     }
 
     MatlabMatrix MatlabMatrix::GetCopiedCell(const int& row, const int& col) const {
-      const mwIndex subscripts[2] = {row, col};
+      const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
       const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
       return GetCopiedCell(index);
     }
@@ -736,7 +736,7 @@ namespace slib {
     }
 
     MatlabMatrix MatlabMatrix::GetCopiedStructEntry(const int& row, const int& col) const {
-      	const mwIndex subscripts[2] = {row, col};
+      	const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
 	return GetCopiedStructEntry(index);
     }
@@ -754,7 +754,7 @@ namespace slib {
     }
 
     MatlabMatrix& MatlabMatrix::SetStructEntry(const int& row, const int& col, const MatlabMatrix& contents) {
-      	const mwIndex subscripts[2] = {row, col};
+      	const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
 	return SetStructEntry(index, contents);
     }
@@ -779,7 +779,7 @@ namespace slib {
 
     MatlabMatrix& MatlabMatrix::SetStructField(const string& field, const int& row, const int& col, 
 				      const MatlabMatrix& contents) {
-      	const mwIndex subscripts[2] = {row, col};
+      	const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
 	return SetStructField(field, index, contents);
     }
@@ -817,7 +817,7 @@ namespace slib {
     }
 
     MatlabMatrix& MatlabMatrix::SetCell(const int& row, const int& col, const MatlabMatrix& contents) {
-      	const mwIndex subscripts[2] = {row, col};
+      	const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
 	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
 	return SetCell(index, contents);
     }
