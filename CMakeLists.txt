@@ -296,6 +296,7 @@ endif()
  # Caffe
 if (CUDA_FOUND)
   list (APPEND TEST_LIBRARIES caffe PyramidStitcher)
+  link_directories(${CUDA_TOOLKIT_ROOT_DIR}/lib64)
 endif()
 
 list (APPEND TEST_LIBRARIES gfortran glog gflags jpeg stdc++)
