@@ -231,6 +231,12 @@ namespace slib {
       return V;
     }
 
+    // Just a convenience method for appending one vector to another.
+    template <typename T>
+    void Append(const vector<T>& to_add, vector<T>* target) {
+      target->insert(target->end(), to_add.begin(), to_add.end());
+    }
+
   }  // namespace util
 }  // namespace slib
 
