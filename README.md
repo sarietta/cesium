@@ -1,4 +1,6 @@
-Cesium - A Distributed Visual Processing Framework
+![Image of Yaktocat](https://octodex.github.com/images/yaktocat.png)
+
+![Image of Yaktocat](https://octodex.github.com/images/yaktocat.png) | Cesium
 
 Cesium is a distributed visual processing framework.
 
