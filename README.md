@@ -1,4 +1,4 @@
-![](https://github.com/ucb-silicon/cesium/tree/better_readme/assets/logo.100.png) | Cesium
+![](assets/logo.100.png) | Cesium
 
 Cesium is a distributed visual processing framework.
 
