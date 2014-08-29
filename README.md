@@ -1,6 +1,4 @@
-![Image of Yaktocat](https://octodex.github.com/images/yaktocat.png)
-
-![Image of Yaktocat](https://octodex.github.com/images/yaktocat.png) | Cesium
+![Image of Yaktocat](http://cdn.flaticon.com/png/256/33359.png) | Cesium
 
 Cesium is a distributed visual processing framework.
 
