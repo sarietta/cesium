@@ -188,6 +188,14 @@ namespace slib {
     }
 
     template <typename T>
+    vector<int> StableSort(vector<T>* V, 
+			   bool(&compare)(const STLIndexedEntry<T>& left, const STLIndexedEntry<T>& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
+      sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    template <typename T>
     std::string PrintVector(const vector<T>& V) {
       stringstream s(stringstream::out);
       s << "[";
