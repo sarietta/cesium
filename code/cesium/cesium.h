@@ -222,6 +222,10 @@ namespace slib {
 	_stripped_feature_dimensions = dimensions;
       }
 
+      inline int GetNumProcessingNodes() const {
+	return _size - 1;
+      }
+
       bool ExecuteJob(const JobDescription& job, JobOutput* output);
 #if 0
       void ExecuteKernel(const Kernel& kernel, const JobDescription& job, JobOutput* output);
