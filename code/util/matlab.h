@@ -116,6 +116,7 @@ namespace slib {
       // inconsistent results across different platforms. This method
       // is much safer.
       void Assign(const MatlabMatrix& other);
+      void Assign(const FloatMatrix& other);
 
       static MatlabMatrix LoadFromFile(const std::string& filename, const bool& multivariable = false);
       static MatlabMatrix LoadFromBinaryFile(const std::string& filename);
@@ -189,6 +190,11 @@ namespace slib {
       //
       // Note this only works for regular matrices, not cell nor
       // struct.
+      template <typename T>
+      inline MatlabMatrix& Set(const int& index, const T& value) {
+	return SetMatrixEntry(index, value);
+      }
+
       template <typename T>
       inline MatlabMatrix& Set(const int& row, const int& col, const T& value) {
 	return SetMatrixEntry(row, col, value);
