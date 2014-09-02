@@ -22,6 +22,10 @@ namespace slib {
 
     // ******* JobData Methods ****** //
     MatlabMatrix empty_matrix;
+    const MatlabMatrix& JobData::GetVariable(const string& name) const {
+      return GetInputByName(name);
+    }
+
     const MatlabMatrix& JobData::GetInputByName(const string& name) const {
       map<string, MatlabMatrix>::const_iterator iter = variables.find(name);
       if (iter == variables.end()) {

@@ -49,8 +49,14 @@ namespace slib {
       std::map<std::string, slib::util::MatlabMatrix> variables;
       std::map<std::string, VariableType> variable_types;
 
+      // These two methods are exactly the same.
+      const slib::util::MatlabMatrix& GetVariable(const std::string& name) const; 
       const slib::util::MatlabMatrix& GetInputByName(const std::string& name) const; 
+
       bool HasInput(const std::string& name) const; 
+      inline int GetJobIndex() const {
+	return indices.size() > 0 ? indices[0] : -1;
+      }
 
       VariableType GetVariableType(const std::string& variable_name) const;
       void SetVariableType(const std::string& variable_name, const VariableType& type);
