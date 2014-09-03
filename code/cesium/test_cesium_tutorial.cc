@@ -26,10 +26,13 @@ void TestFunction(const JobDescription& input, JobOutput* output) {
 
   // Allocate an output matrix large enough to store an output at the
   // job index.
-  output->variables["bar"].Assign(MatlabMatrix(slib::util::MATLAB_CELL_ARRAY, job_index + 1, 1));
+  MatlabMatrix bar(slib::util::MATLAB_CELL_ARRAY, job_index + 1, 1);
+  bar.SetCell(job_index, MatlabMatrix(foo.GetMatrixEntry(job_index)));
   
-  // Save some data to an output variable.
-  output->variables["bar"].SetCell(job_index, MatlabMatrix(foo.GetMatrixEntry(job_index)));
+  // Save some data to an output variable. While you can access the
+  // output variables directly, it's often a better idea to merge data
+  // generated in your function with the potentially existing data.
+  output->variables["bar"].Merge(bar);
 
   // Indicate that we have processed the index.
   output->indices.push_back(job_index);
