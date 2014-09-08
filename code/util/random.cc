@@ -100,11 +100,11 @@ namespace slib {
       VectorXf cumulative_inverse(size);
       int index = 0;
       for (int i = 0; i < size; i++) {
-	if (steps[i] < cumulative(index)) {
+	if (steps[i] + std::numeric_limits<float>::epsilon() < cumulative(index)) {
 	  cumulative_inverse(i) = (float) index;
 	} else {
 	  while (index < size - 1
-		 && steps[i] > cumulative(index) + std::numeric_limits<float>::epsilon()) {
+		 && steps[i] + std::numeric_limits<float>::epsilon() > cumulative(index)) {
 	    index++;
 	  }
 	  cumulative_inverse(i) = (float) index;

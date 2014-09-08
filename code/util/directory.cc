@@ -1,12 +1,17 @@
+#include <fstream>
 #include <glob.h>
 #include <glog/logging.h>
+#include <iostream>
 #include <stdio.h>
 #include <string>
 #include <sys/stat.h>
 #include <vector>
 #include <unistd.h>
 #include <util/directory.h>
+#include <util/system.h>
 
+using slib::util::System;
+using std::ifstream;
 using std::string;
 using std::vector;
 
@@ -102,6 +107,11 @@ namespace slib {
       return (stat(path.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode));
     }
 
+    bool Directory::Create(const string& path) {
+      System::ExecuteSystemCommand("mkdir -p " + path);
+      return true;
+    }
+
     bool File::Exists(const string& path) {
       return (access(path.c_str(), F_OK) == 0);
     }
@@ -114,6 +124,21 @@ namespace slib {
 	return "";
       }
     }    
-    
+
+    string File::GetContentsAsString(const string& path) {
+      ifstream in(path.c_str(), std::ios::in | std::ios::binary);
+      if (in) {
+	string contents;
+	in.seekg(0, std::ios::end);
+	contents.resize(in.tellg());
+	in.seekg(0, std::ios::beg);
+	in.read(&contents[0], contents.size());
+	in.close();
+	return(contents);
+      } else {
+	return "";
+      }
+    }
+  
   }  // namespace util
 }  // namespace slib

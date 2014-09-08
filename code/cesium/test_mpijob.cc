@@ -21,11 +21,11 @@ DEFINE_bool(test_partial_variables, false, "");
 DEFINE_bool(test_comm_error, false, "");
 
 using Eigen::MatrixXf;
-using slib::mpi::JobController;
-using slib::mpi::JobDescription;
-using slib::mpi::JobNode;
-using slib::mpi::JobOutput;
-using slib::mpi::VariableType;
+using slib::cesium::JobController;
+using slib::cesium::JobDescription;
+using slib::cesium::JobNode;
+using slib::cesium::JobOutput;
+using slib::cesium::VariableType;
 using slib::util::MatlabMatrix;
 using std::map;
 using std::string;
@@ -121,8 +121,8 @@ int main(int argc, char** argv) {
 
     if (FLAGS_test_partial_variables) {
       map<string, VariableType> variable_types;
-      variable_types["input3"] = slib::mpi::PARTIAL_VARIABLE_ROWS;
-      variable_types["input4"] = slib::mpi::PARTIAL_VARIABLE_COLS;
+      variable_types["input3"] = slib::cesium::PARTIAL_VARIABLE_ROWS;
+      variable_types["input4"] = slib::cesium::PARTIAL_VARIABLE_COLS;
       
       MatlabMatrix input3(slib::util::MATLAB_CELL_ARRAY, Pair<int>(dim1, dim1));
       MatlabMatrix input4(slib::util::MATLAB_CELL_ARRAY, Pair<int>(dim2, dim2));
@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
     }
   } else {
     {
-      JobDescription job = slib::mpi::JobNode::WaitForJobData();
+      JobDescription job = slib::cesium::JobNode::WaitForJobData();
       LOG(INFO) << "Command: " << job.command;
       stringstream indices;
       for (uint32 i = 0; i < job.indices.size(); i++) {
@@ -169,7 +169,7 @@ int main(int argc, char** argv) {
     }
 
     if (FLAGS_test_comm_error) {
-      JobDescription job = slib::mpi::JobNode::WaitForJobData();
+      JobDescription job = slib::cesium::JobNode::WaitForJobData();
       LOG(INFO) << "Command: " << job.command;
       int* segfault = new int[10];
       const int fault = segfault[100000] * segfault[1000];
@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
     }
 
     if (FLAGS_test_partial_variables) {
-      JobDescription job = slib::mpi::JobNode::WaitForJobData();
+      JobDescription job = slib::cesium::JobNode::WaitForJobData();
       LOG(INFO) << "Command: " << job.command;
       stringstream indices;
       for (uint32 i = 0; i < job.indices.size(); i++) {

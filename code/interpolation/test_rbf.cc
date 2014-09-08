@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include "../util/colormap.h"
 
-#define E_2_1 0.13533528323
-
 using namespace cimg_library;
 using namespace Eigen;
 
@@ -27,38 +25,10 @@ DEFINE_bool(use_alt, true, "");
 DEFINE_bool(use_gaussian, true, "");
 DEFINE_bool(use_thinplate, false, "");
 
+DEFINE_bool(display_enabled, true, "");
+DEFINE_string(output_file, "", "If non-empty, interpolated output saved here.");
+
 using slib::interpolation::RadialBasisFunction;
-
-float MultiQuadric(const float& r) {
-  return sqrt(r*r + FLAGS_radius);
-}
-
-inline float GaussianRBF(const float& r) {
-  const double r1 = 2.0 * FLAGS_radius * FLAGS_radius * E_2_1;
-  const float value = exp(-r * r / r1);
-  return value;
-}
-
-inline float ThinPlateRBF(const float& r) {
-  if (r <= 0) {
-    return 0;
-  }
-  const float value = r * r * log(r / FLAGS_radius);
-  return value;
-}
-
-inline void MultiQuadricAlt(int n, double* r, double r0, double* v) {
-  for (int i = 0; i < n; i++) {
-    v[i] = sqrt(r[i] * r[i] + r0);
-  }
-}
-
-inline void GaussianRBFAlt(int n, double* r, double r0, double* v) {
-  const double r1 = 2.0 * r0 * r0 * E_2_1;
-  for (int i = 0; i < n; i++) {
-    v[i] = exp(-r[i] * r[i] / r1);
-  }
-}
 
 int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -109,18 +79,20 @@ int main(int argc, char** argv) {
   RadialBasisFunction* rbf;
   if (FLAGS_use_alt) {
     FLAGS_rbf_interpolation_radius = FLAGS_radius;
+#if 0
     if (FLAGS_use_gaussian) {
-      rbf = new RadialBasisFunction(&GaussianRBFAlt);
+      rbf = new RadialBasisFunction(slib::interpolation::GaussianRBF(FLAGS_radius));
     } else {
-      rbf = new RadialBasisFunction(&MultiQuadricAlt);
+      rbf = new RadialBasisFunction(slib::interpolation::MultiQuadricAlt);
     }
+#endif
   } else {
     if (FLAGS_use_gaussian) {
-      rbf = new RadialBasisFunction(&GaussianRBF);
+      rbf = new RadialBasisFunction(slib::interpolation::GaussianRBF(FLAGS_radius));
     } else if (FLAGS_use_thinplate) {
-      rbf = new RadialBasisFunction(&ThinPlateRBF);
+      rbf = new RadialBasisFunction(slib::interpolation::ThinPlateRBF(FLAGS_radius));
     } else {
-      rbf = new RadialBasisFunction(&MultiQuadric);
+      rbf = new RadialBasisFunction(slib::interpolation::MultiQuadric(FLAGS_radius));
     }
   }
 
@@ -158,8 +130,13 @@ int main(int argc, char** argv) {
     interpolated_and_original_points.draw_circle(x + xmin, y + ymin, width / 80 + 2, black);
     interpolated_and_original_points.draw_circle(x + xmin, y + ymin, width / 80, color);
   }
-  
-  (original_points, interpolated_points, interpolated_and_original_points).display();
+  if (FLAGS_display_enabled) {
+    (original_points, interpolated_points, interpolated_and_original_points).display();
+  }
+
+  if (FLAGS_output_file != "") {
+    interpolated_points.save(FLAGS_output_file.c_str());
+  }
 
   return 0;
 }

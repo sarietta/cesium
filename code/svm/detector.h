@@ -25,10 +25,10 @@
   }									
 
 #define SAVE_PARAMETER(name)						\
-  params.SetStructField(#name, MatlabMatrix(static_cast<float>(_parameters.name)));
+  params.SetStructField(#name, MatlabMatrix(static_cast<float>(parameters.name)));
 
 #define SAVE_STRING_PARAMETER(name)					\
-  params.SetStructField(#name, MatlabMatrix(_parameters.name));
+  params.SetStructField(#name, MatlabMatrix(parameters.name));
 
 namespace slib {
   namespace svm {
@@ -62,6 +62,7 @@ namespace slib {
       bool featureTypeSparse;
       bool featureTypeFisher;
       bool featureTypeDecaf;
+      bool featureTypeCaffe;
       int patchStride;
       bool useColor;  // Whether the color channels should be added to the feature.
 
@@ -69,6 +70,7 @@ namespace slib {
       
       bool selectTopN;
       int32 numToSelect;
+      bool keepAllDetections;
       bool useDecisionThresh;
       float overlap;
       float fixedDecisionThresh;
@@ -97,10 +99,12 @@ namespace slib {
       
       int32 image_index;
       int32 image_set_index;
+      bool cropped;
 
       DetectionMetadata() : x1(0), x2(0), y1(0), y2(0)
 			  , image_size(0,0), pyramid_offset(0,0,0)
-			  , image_path(""), image_index(0), image_set_index(0) {}
+			  , image_path(""), image_index(0), image_set_index(0)
+			  , cropped(false) {}
     };
     
     // A DetectionResult is a single fire of a Model.
@@ -140,7 +144,7 @@ namespace slib {
       // have. Note that this is different than the number of channels in
       // the levels of the feature pyramid.
       static int32 GetFeatureDimensions(const DetectionParameters& parameters,
-					Pair<int32>* patch_size_out = NULL);
+					Pair<float>* patch_size_out = NULL);
       // We allocate the memory via a deep copy. You are in charge of destroying the pointer.
       void SaveParametersToMatlabMatrix(mxArray** matrix) const;
       
@@ -163,8 +167,10 @@ namespace slib {
 								 const std::vector<int32>& levels,
 								 const DetectionParameters& parameters);
       
-      // Outputs one DetectionResultSet per model.
-      DetectionResultSet DetectInImage(const FloatImage& image);
+      // Outputs one DetectionResultSet per model. The filename
+      // parameter is only used for extracting decaf features since at
+      // the moment
+      DetectionResultSet DetectInImage(const FloatImage& image, const std::string& filename = "");
 
       // Helper function to remove any detections that from the same image.
       static std::vector<int32> SelectUniqueDetectionImages(const std::vector<DetectionMetadata>& metadata, 
@@ -211,9 +217,17 @@ namespace slib {
       static Pair<int> ImagePointToPyramidPoint(const slib::image::FeaturePyramid& pyramid, 
 						const Pair<int>& point, const int& level, 
 						const DetectionParameters& parameters);
+
+      static Pair<int> PyramidPointToImagePoint(const float& level_scale, const float& canonical_scale,
+						const Pair<int>& point, const int& level, 
+						const DetectionParameters& parameters);
       static Pair<int> PyramidPointToImagePoint(const slib::image::FeaturePyramid& pyramid, 
 						const Pair<int>& point, const int& level, 
 						const DetectionParameters& parameters);
+      // This is a slower method that computes the level for you as well, given a patch in an image.
+      static Triplet<int> ImagePointToPyramidLocation(const slib::image::FeaturePyramid& pyramid, 
+						      const Pair<Pair<float> >& point,
+						      const DetectionParameters& parameters);
       
       // These actually construct the associated matrices that are
       // normally stored in this class. Useful if you need to
@@ -306,6 +320,7 @@ namespace slib {
       static Detector InitializeFromMatlabArray(const mxArray& array);
 
       static DetectionParameters LoadParametersFromMatlabMatrix(const mxArray* params);
+      static slib::util::MatlabMatrix ConvertParametersToMatlabMatrix(const DetectionParameters& parameters);
     };
     
   }  // namespace svm

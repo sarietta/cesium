@@ -24,6 +24,11 @@ namespace slib {
     }
 
     template <typename T>
+    bool DescendingOrder(const STLIndexedEntry<T>& left, const STLIndexedEntry<T>& right) {
+      return (left.value > right.value);
+    }
+
+    template <typename T>
     vector<STLIndexedEntry<T> > CreateIndexedContainer(const vector<T>& V) {
       vector<STLIndexedEntry<T> > VI(V.size());
       for (int i = 0; i < (int) V.size(); i++) {
@@ -59,13 +64,54 @@ namespace slib {
     // step. The templated type must be well-defined for the operators
     // < and ++, and must be able to cast the value 1 appropriately if
     // you want to use the default argument list.
-    template <typename T>
-    vector<T> Range(const T& start, const T& end, const T& step = 1) {
-      vector<T> values(end - start);
-      for (T value = start; value < end; value += step) {
-	values[value - start] = value;
+    //
+    // There are two template parameters to handle the case where
+    // start and end might not be exactly the same type, but are both
+    // compatible with int.
+    template <typename T, typename U>
+    vector<T> Range(const T& start, const U& end, const T& step = 1) {
+      const int num = static_cast<int>((end - start) / step);
+      const T num_T = static_cast<T>(num);
+      vector<T> values(num);
+      for (int i = 0; i < num; ++i) {
+	values[i] = start + step * static_cast<T>(i);
       }
       return values;
+    }
+
+    // Sorts a vector in ascending order. The return vector are a
+    // mapping from the sorted vector to the original vector such that
+    // vector<int> i = Sort(V_original) --> V_sorted = V_original(i).
+    template <typename T>
+    vector<T> Intersect(const vector<T>& V1, const vector<T>& V2) {
+      vector<T> V1_(V1);
+      vector<T> V2_(V2);
+      
+      vector<T> intersection(V1_.size() + V2_.size());
+      
+      std::sort(V1_.begin(), V1_.end());
+      std::sort(V2_.begin(), V2_.end());
+      typename vector<T>::iterator it = std::set_intersection(V1_.begin(), V1_.end(),
+							      V2_.begin(), V2_.end(),
+							      intersection.begin());
+      intersection.resize(it - intersection.begin());
+      return intersection;
+    }
+
+    template <typename T>
+    vector<T> SetDifference(const vector<T>& V1, const vector<T>& V2) {
+      vector<T> V1_(V1);
+      vector<T> V2_(V2);
+
+      vector<T> difference(V1_.size() + V2_.size());
+
+      std::sort(V1_.begin(), V1_.end());
+      std::sort(V2_.begin(), V2_.end());
+      typename vector<T>::iterator it = std::set_difference(V1_.begin(), V1_.end(),
+							    V2_.begin(), V2_.end(),
+							    difference.begin());
+      difference.resize(it - difference.begin());
+      return difference;
     }
 
     template <typename T>
@@ -75,6 +121,10 @@ namespace slib {
       return UnwrapContainer<T>(VI, V);
     }
 
+    // Returns the sorted indices (ascending order) but doesn't
+    // actually sort the vector (hence the const). This is useful if
+    // you just want to know how to reorder a vector without actually
+    // reordering it.
     template <typename T>
     vector<int> Sort(const vector<T>& V) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
@@ -82,9 +132,65 @@ namespace slib {
       return UnwrapContainer<T>(VI, V);
     }
 
+    // Same as above except you get to pass your own compare function
+    // in.  TODO(sean): Make it so users can just specify a functor on
+    // const T& rather than the IndexedEntry.
     template <typename T>
-    vector<int> Sort(const vector<T>& V, bool(&compare)(const T& left, const T& right)) {
+    vector<int> Sort(vector<T>* V, 
+		     bool(&compare)(const STLIndexedEntry<T>& left, const STLIndexedEntry<T>& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
+      sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    // This enables users to use the pre-defined sorters in this file
+    // directly as arguments.
+    template <typename T>
+    vector<int> Sort(const vector<T>& V, bool(&compare)(const STLIndexedEntry<T>& left, 
+							const STLIndexedEntry<T>& right)) {
       vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+    
+    // The next couple of methods are the same as above but they are
+    // the stable sort versions.
+    template <typename T>
+    vector<int> StableSort(vector<T>* V) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
+      stable_sort(VI.begin(), VI.end(), AscendingOrder<T>);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    template <typename T>
+    vector<int> StableSort(const vector<T>& V) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      stable_sort(VI.begin(), VI.end(), AscendingOrder<T>);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    // For situations where you want to define your own sorter.
+    template <typename T>
+    vector<int> StableSort(const vector<T>& V, bool(&compare)(const T& left, const T& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      stable_sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    // This enables users to use the pre-defined sorters in this file
+    // directly as arguments.
+    template <typename T>
+    vector<int> StableSort(const vector<T>& V, bool(&compare)(const STLIndexedEntry<T>& left, 
+							      const STLIndexedEntry<T>& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(V);
+      stable_sort(VI.begin(), VI.end(), compare);
+      return UnwrapContainer<T>(VI, V);
+    }
+
+    template <typename T>
+    vector<int> StableSort(vector<T>* V, 
+			   bool(&compare)(const STLIndexedEntry<T>& left, const STLIndexedEntry<T>& right)) {
+      vector<STLIndexedEntry<T> > VI = CreateIndexedContainer<T>(*V);
       sort(VI.begin(), VI.end(), compare);
       return UnwrapContainer<T>(VI, V);
     }
@@ -131,6 +237,23 @@ namespace slib {
 	V[i] = array[i];
       }
       return V;
+    }
+
+    // Just a convenience method for appending one vector to another.
+    template <typename T>
+    void Append(const vector<T>& to_add, vector<T>* target) {
+      target->insert(target->end(), to_add.begin(), to_add.end());
+    }
+
+    // Convenience methods for max/min.
+    template <typename T>
+    const T& Max(const vector<T>& V) {
+      return *std::max_element(V.begin(), V.end());
+    }
+
+    template <typename T>
+    const T& Min(const vector<T>& V) {
+      return *std::min_element(V.begin(), V.end());
     }
 
   }  // namespace util

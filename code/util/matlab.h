@@ -7,6 +7,7 @@
 #undef Success
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <glog/logging.h>
 #include <map>
 #include <mat.h>
 #include <iostream>
@@ -16,15 +17,17 @@
 namespace slib {
   namespace svm {
     class Detector;
-    class DetectionMetadata;
-    class DetectionResultSet;
-    class Model;
+    struct DetectionMetadata;
+    struct DetectionResultSet;
+    struct Model;
   }
 }
 
 namespace slib {
   namespace util {
 
+    // TODO(sean): Create types MATLAB_FLOAT_MATRIX, etc. so that we
+    // can avoid the calls to mxIsDouble, etc.
     enum MatlabMatrixType {
       MATLAB_STRUCT, MATLAB_CELL_ARRAY, MATLAB_MATRIX, 
       MATLAB_STRING, MATLAB_NO_TYPE, MATLAB_MATRIX_SPARSE
@@ -113,11 +116,15 @@ namespace slib {
       // inconsistent results across different platforms. This method
       // is much safer.
       void Assign(const MatlabMatrix& other);
+      void Assign(const FloatMatrix& other);
 
       static MatlabMatrix LoadFromFile(const std::string& filename, const bool& multivariable = false);
       static MatlabMatrix LoadFromBinaryFile(const std::string& filename);
       bool SaveToFile(const std::string& filename, const bool& struct_format = false) const;
       bool SaveToBinaryFile(const std::string& filename) const;
+
+      bool HasStructField(const std::string& file, const int& index = 0) const;
+      bool HasStructField(const std::string& file, const int& row, const int& col) const;
 
       // TODO(sarietta): Slowly transition this to be GetMutable* and Get*.
 
@@ -137,32 +144,92 @@ namespace slib {
       const MatlabMatrix GetStructField(const std::string& field, const int& row, const int& col) const;
       const MatlabMatrix GetCell(const int& row, const int& col) const;
       const MatlabMatrix GetCell(const int& index) const;
+      // No bounds checking happens on the next two methods.
       float GetMatrixEntry(const int& row, const int& col) const;
+      float GetMatrixEntry(const int& index) const;
       const float* GetContents() const;
 
       // Mutable access. Use these at your own risk. You can seriously
       // corrupt the hierarchy of the matrices if you mess around.
       void GetMutableCell(const int& index, MatlabMatrix* cell) const;
       void GetMutableCell(const int& row, const int& col, MatlabMatrix* cell) const;
-      //MatlabMatrix* GetMutableStructField(const std::string& field, const int& index = 0) const;
+      //void GetMutableStructField(const std::string& field, const int& index, MatlabMatrix* struct_field) const;
 
       float GetScalar() const;
       std::string GetStringContents() const;
 
-      void SetStructField(const std::string& field, const MatlabMatrix& contents);
-      void SetStructField(const std::string& field, const int& index, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructField(const std::string& field, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructField(const std::string& field, const int& index, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructField(const std::string& field, const int& row, const int& col, 
+				   const MatlabMatrix& contents);
       // Sets the entire struct at the specified index. 
-      void SetStructEntry(const int& index, const MatlabMatrix& contents);
-      void SetStructEntry(const int& row, const int& col, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructEntry(const int& index, const MatlabMatrix& contents);
+      MatlabMatrix& SetStructEntry(const int& row, const int& col, const MatlabMatrix& contents);
 
-      void SetCell(const int& row, const int& col, const MatlabMatrix& contents);
-      void SetCell(const int& index, const MatlabMatrix& contents);
-      void SetContents(const FloatMatrix& contents);
+      MatlabMatrix& SetCell(const int& row, const int& col, const MatlabMatrix& contents);
+      MatlabMatrix& SetCell(const int& index, const MatlabMatrix& contents);
+
+      // This method will convert a MATLAB_CELL_ARRAY to a matrix. All
+      // non-MATLAB_NO_TYPE cells must be the same type. Additionally,
+      // if the cells have type MATLAB_MATRIX, all of the cells must
+      // contain the same number of columns (although 0 columns is
+      // fine).
+      //
+      // The resulting matrix will either be a MATLAB_MATRIX or a
+      // MATLAB_STRUCT depending on what the cells contain. <em>In
+      // both cases, the cell array is flattened in column-major
+      // order.</em> The total size of the resulting matrix will be
+      // (total_rows, cols), where total_rows = \sum_i^N cell_i.rows
+      // and cols = cell_i.cols \forall i.
+      MatlabMatrix CellToMatrix() const;
+
+      // This is what you would expect to call for a 'normal' matrix,
+      // and it's relatively efficient all things considered, but it's
+      // probably best if you can initialize larger chunks in
+      // FloatMatrix and then set the contents.
+      //
+      // Note this only works for regular matrices, not cell nor
+      // struct.
+      template <typename T>
+      inline MatlabMatrix& Set(const int& index, const T& value) {
+	return SetMatrixEntry(index, value);
+      }
+
+      template <typename T>
+      inline MatlabMatrix& Set(const int& row, const int& col, const T& value) {
+	return SetMatrixEntry(row, col, value);
+      }
+
+      template <typename T>
+      inline MatlabMatrix& SetMatrixEntry(const int& row, const int& col, const T& value) {
+	const mwIndex subscripts[2] = {(mwIndex) row, (mwIndex) col};
+	const int index = mxCalcSingleSubscript(_matrix, 2, subscripts);
+	return SetMatrixEntry(index, value);
+      }
+
+      template <typename T>
+      inline MatlabMatrix& SetMatrixEntry(const int& index, const T& value) {
+	if (_matrix != NULL && _type == MATLAB_MATRIX) {
+	  if (mxIsDouble(_matrix)) {
+	    ((double*) mxGetData(_matrix))[index] = static_cast<double>(value);
+	  } else if (mxIsSingle(_matrix)) {
+	    ((float*) mxGetData(_matrix))[index] = static_cast<float>(value);
+	  } else {
+	    LOG(ERROR) << "Only float and double matrices are supported";
+	  }
+	} else {
+	  VLOG(2) << "Attempted to access non-matrix";
+	}
+	
+	return (*this);
+      }
+
+      MatlabMatrix& SetContents(const FloatMatrix& contents);
       // iscol = is this a column-vector, i.e. rows = length
-      void SetContents(const float* contents, const int& length, const bool& iscol = false);
-      void SetStringContents(const std::string& contents);
+      MatlabMatrix& SetContents(const float* contents, const int& length, const bool& iscol = false);
+      MatlabMatrix& SetStringContents(const std::string& contents);
 
-      void SetScalar(const float& scalar);
+      MatlabMatrix& SetScalar(const float& scalar);
 
       // Although the return type is a "string", the contents of that
       // string will be fwrite-style bytes.
@@ -171,7 +238,7 @@ namespace slib {
       // recursive and needs to be able to start reading from the
       // correct position in the stream. A calling method does not
       // need to worry with these details... just use the default.
-      int Deserialize(const std::string& str, const int& position = 0);
+      long long int Deserialize(const std::string& str, const long long int& position = 0L);
 
       Pair<int> GetDimensions() const;
       std::vector<std::string> GetStructFieldNames() const;
@@ -181,18 +248,22 @@ namespace slib {
 	return (dimensions.x * dimensions.y);
       }
 
+      inline int size() const {
+	return GetNumberOfElements();
+      }
+
       // Try to avoid this. It's more efficient to get them both via
       // GetDimensions().
       inline int cols() const {
 	const Pair<int> dimensions = GetDimensions();
-	return dimensions.x;
+	return dimensions.y;
       }
 
       // Try to avoid this. It's more efficient to get them both via
       // GetDimensions().
       inline int rows() const {
 	const Pair<int> dimensions = GetDimensions();
-	return dimensions.y;
+	return dimensions.x;
       }
 
       inline MatlabMatrixType GetMatrixType() const {
@@ -219,7 +290,7 @@ namespace slib {
 	}
       }
 
-      inline void Set(const int& row, const int& col, const MatlabMatrix& contents) {
+      inline MatlabMatrix& Set(const int& row, const int& col, const MatlabMatrix& contents) {
 	if (_type == MATLAB_CELL_ARRAY) {
 	  SetCell(row, col, contents);
 	} else if (_type == MATLAB_STRUCT) {
@@ -232,23 +303,31 @@ namespace slib {
 	    ((float*) mxGetData(_matrix))[row + col * rows] = (float) contents.GetScalar();
 	  }
 	}
+
+	return (*this);
       }
 
       // Print a friendly version of the matrix based on the type.
       friend std::ostream& operator<<(std::ostream& os, const MatlabMatrix& obj) {
 	const Pair<int> dimensions = obj.GetDimensions();
 	if (obj.GetMatrixType() == MATLAB_MATRIX) {
-	  os << "Matrix Format:" << std::endl;
+	  if (FLAGS_v >= 1) {
+	    os << "Matrix Format:" << std::endl;
+	  }
 	  os << obj.GetCopiedContents();
 	} else if (obj.GetMatrixType() == MATLAB_CELL_ARRAY) {
-	  os << "Cell Format:" << std::endl;
+	  if (FLAGS_v >= 1) {
+	    os << "Cell Format:" << std::endl;
+	  }
 	  for (int i = 0; i < dimensions.x; i++) {
 	    for (int j = 0; j < dimensions.y; j++) {
-	      os << "{" << i << "," << j << "}: " << std::endl << obj.GetCell(i, j) << std::endl << std::endl;
+	      os << "{" << i << "," << j << "}: " << std::endl << obj.GetCell(i, j) << std::endl;
 	    }
 	  }
 	} else if (obj.GetMatrixType() == MATLAB_STRUCT) {
-	  os << "Struct Format:" << std::endl;
+	  if (FLAGS_v >= 1) {
+	    os << "Struct Format:" << std::endl;
+	  }
 	  const std::vector<std::string> fields = obj.GetStructFieldNames();
 	  for (int i = 0; i < dimensions.x; i++) {
 	    for (int j = 0; j < dimensions.y; j++) {
@@ -264,6 +343,29 @@ namespace slib {
 	}
 	os << std::endl;
 	return os;
+      }
+
+      // Casting operator to std::vector type. This is a bit dangerous
+      // to use as the type of the underlying MatlabMatrix is not
+      // known at compile time, so static casting can still miss
+      // potential runtime errors.
+      template <typename T>
+      operator std::vector<T>() {
+	std::vector<T> result(size());
+
+	if (_type == MATLAB_CELL_ARRAY) {
+	  // TODO(sean): Implement me. This is a tricky implementation
+	  // because we are potentially mixing compilation and runtime
+	  // attributes.
+	} else if (_type == MATLAB_STRUCT) {
+	  // TODO(sean): Implement me
+	} else if (_type == MATLAB_MATRIX) {
+	  for (int i = 0; i < size(); i++) {
+	    result[i] = static_cast<T>(GetMatrixEntry(i));
+	  }
+	}
+
+	return result;
       }
 
     private:
@@ -287,6 +389,17 @@ namespace slib {
 
     class MatlabConverter {
     public:
+      // Determine whether indices (as appropriate) should be offset
+      // for use in MATLAB.  Default is that this is enabled.
+      //
+      // TODO(sean): This should be probably be a parameter to all
+      // routines to avoid people missing this setting.
+      static void EnableMatlabOffset();
+      static void DisableMatlabOffset();
+      static inline int GetMatlabOffset() {
+	return _matlab_offset;
+      }
+
       static MatlabMatrix ConvertModelToMatrix(const slib::svm::Model& model);
       static MatlabMatrix ConvertMetadataToMatrix(const std::vector<slib::svm::DetectionMetadata>& metadata,
 						  const bool& minimal = false);
@@ -299,6 +412,9 @@ namespace slib {
 
       static slib::svm::Detector ConvertMatrixToDetector(const MatlabMatrix& matrix);
       static MatlabMatrix ConvertDetectorToMatrix(const slib::svm::Detector& detector);
+
+    private:
+      static int _matlab_offset;
     };    
 
   }  // namespace util

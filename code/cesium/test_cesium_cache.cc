@@ -22,9 +22,9 @@
 #include <util/matlab.h>
 #include <vector>
 
-using slib::mpi::Cesium;
-using slib::mpi::JobDescription;
-using slib::mpi::JobOutput;
+using slib::cesium::Cesium;
+using slib::cesium::JobDescription;
+using slib::cesium::JobOutput;
 using slib::util::Directory;
 using slib::util::MatlabMatrix;
 using std::cin;
@@ -32,7 +32,7 @@ using std::map;
 using std::string;
 using std::vector;
 
-DEFINE_int32(matrix_size, 15000, "Number of rows/cols of the matrix to test.");
+DEFINE_int32(matrix_size, 3000, "Number of rows/cols of the matrix to test.");
 
 MatlabMatrix cached_variable;
 
@@ -62,11 +62,10 @@ int main(int argc, char** argv) {
 
   CESIUM_REGISTER_COMMAND(TestFunction);
 
-  FLAGS_cesium_intelligent_parameters = false;
-
   Cesium* instance = Cesium::GetInstance();
+  instance->DisableIntelligentParameters();
   instance->SetBatchSize(1);
-  if (instance->Start() == slib::mpi::CesiumMasterNode) {
+  if (instance->Start() == slib::cesium::CesiumMasterNode) {
     FLAGS_logtostderr = true;
 
     const FloatMatrix A = FloatMatrix::Random(FLAGS_matrix_size, FLAGS_matrix_size);
@@ -76,7 +75,7 @@ int main(int argc, char** argv) {
       JobDescription job;
       job.command = "TestFunction";
       job.variables["cached"] = large_matrix;
-      instance->SetVariableType("cached", large_matrix, slib::mpi::CACHED_VARIABLE);
+      instance->SetVariableType("cached", large_matrix, slib::cesium::CACHED_VARIABLE);
 
       job.indices.push_back(0);
       job.indices.push_back(1);
@@ -84,11 +83,7 @@ int main(int argc, char** argv) {
       JobOutput output;
       instance->ExecuteJob(job, &output);
     }
-
-    instance->Finish();
   }
-
-  MPI_Finalize();
 
   LOG(INFO) << "ALL TESTS PASSED";
 

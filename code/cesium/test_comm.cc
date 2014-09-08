@@ -19,11 +19,11 @@
 DEFINE_string(matrix_file, "", "If you want to see if a particular file can be sent, specify it here.");
 
 using Eigen::MatrixXf;
-using slib::mpi::JobController;
-using slib::mpi::JobDescription;
-using slib::mpi::JobNode;
-using slib::mpi::JobOutput;
-using slib::mpi::VariableType;
+using slib::cesium::JobController;
+using slib::cesium::JobDescription;
+using slib::cesium::JobNode;
+using slib::cesium::JobOutput;
+using slib::cesium::VariableType;
 using slib::util::MatlabMatrix;
 using std::map;
 using std::string;
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
       controller.StartJobOnNode(job, i);
     }
   } else {
-    JobDescription job = slib::mpi::JobNode::WaitForJobData();
+    JobDescription job = slib::cesium::JobNode::WaitForJobData();
     LOG(INFO) << "Command: " << job.command;
 
     for (map<string, MatlabMatrix>::const_iterator it = job.variables.begin(); 

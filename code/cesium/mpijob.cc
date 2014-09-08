@@ -16,12 +16,16 @@ using std::string;
 using std::vector;
 
 namespace slib {
-  namespace mpi {
+  namespace cesium {
 
     bool JobNode::_initialized = false;
 
     // ******* JobData Methods ****** //
     MatlabMatrix empty_matrix;
+    const MatlabMatrix& JobData::GetVariable(const string& name) const {
+      return GetInputByName(name);
+    }
+
     const MatlabMatrix& JobData::GetInputByName(const string& name) const {
       map<string, MatlabMatrix>::const_iterator iter = variables.find(name);
       if (iter == variables.end()) {
@@ -63,6 +67,7 @@ namespace slib {
       MPI_Initialized(&flag);
       if (!flag) {
 	LOG(ERROR) << "You tried to create a JobController before calling MPI_Init. Shame on you. Fix it!";
+	LOG(ERROR) << "You can fix this error by calling MPI_Init(&argc, &argv) at the start of your main method.";
       }
 
       MPI_Comm_create_errhandler(MPIErrorHandler, &_error_handler_mpi);
@@ -450,5 +455,5 @@ namespace slib {
       }
     }
 
-  }  // namespace util
+  }  // namespace cesium
 }  // namespace slib

@@ -17,6 +17,16 @@ namespace slib {
       return sqrt(sum);
     }
 
+    template <class T> T EuclideanDistanceSquared(const T* v, const T* u, const int32& N) {
+      T sum = 0;
+      for (int32 i = 0; i < N; i++) {
+	T d = (v[i] - u[i]);
+	sum += (d*d);
+      }
+
+      return sum;
+    }
+
     double HaversineDistance(const LatLon& u, const LatLon& v, const double& radius = 6373.0) {
       const double lat1 = u.lat;
       const double lon1 = u.lon;

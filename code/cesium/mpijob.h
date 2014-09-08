@@ -22,7 +22,7 @@ namespace slib {
 }
 
 namespace slib {
-  namespace mpi {
+  namespace cesium {
 
     enum VariableType {
       // Rows are partially sent, but all cols are sent
@@ -49,8 +49,14 @@ namespace slib {
       std::map<std::string, slib::util::MatlabMatrix> variables;
       std::map<std::string, VariableType> variable_types;
 
+      // These two methods are exactly the same.
+      const slib::util::MatlabMatrix& GetVariable(const std::string& name) const; 
       const slib::util::MatlabMatrix& GetInputByName(const std::string& name) const; 
+
       bool HasInput(const std::string& name) const; 
+      inline int GetJobIndex() const {
+	return indices.size() > 0 ? indices[0] : -1;
+      }
 
       VariableType GetVariableType(const std::string& variable_name) const;
       void SetVariableType(const std::string& variable_name, const VariableType& type);
@@ -71,7 +77,7 @@ namespace slib {
 
     typedef JobData JobDescription;
     typedef JobData JobOutput;
-    typedef void (*CompletionHandler)(const slib::mpi::JobOutput&, const int&);
+    typedef void (*CompletionHandler)(const slib::cesium::JobOutput&, const int&);
     typedef void (*CommunicationErrorHandler)(const int& error_code, const int& node);
 
     typedef std::map<int, MPI_Request>::iterator RequestIterator;
@@ -86,7 +92,7 @@ namespace slib {
       // must implement and set such a method.
       // 
       // The signature for the CompletionHandler is: 
-      // void CompletionHandler(const slib::mpi::JobOutput&, const int&);
+      // void CompletionHandler(const slib::cesium::JobOutput&, const int&);
       void SetCompletionHandler(CompletionHandler handler);
 
       // Set a new error handler if you want to do anything other than
@@ -170,7 +176,7 @@ namespace slib {
       static bool _initialized;
       static bool CheckInitialized();
     };
-  }  // namespace util
+  }  // namespace cesium
 }  // namespace slib
 
 #endif

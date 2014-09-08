@@ -16,7 +16,8 @@ using std::vector;
 
 namespace slib {
   namespace util {
-    
+
+    /** GoogleMaps Implementation **/    
     const double GoogleMaps::_tileSize = 256;
     const Point2D GoogleMaps::_pixelOrigin(_tileSize / 2.0, _tileSize / 2.0);
     const double GoogleMaps::_pixelsPerLonDegree = _tileSize / 360.0;
@@ -129,7 +130,31 @@ namespace slib {
       
       return map;
     }
+    /** GoogleMaps Implementation **/
+
+    /** GoogleMapsConverter Implementation **/
     
+    GoogleMapsConverter::GoogleMapsConverter(const int& zoom, const LatLon& southwest, const LatLon& northeast) {
+      const LatLonBounds map_bounds = GoogleMaps::GetMapBounds(southwest, northeast, zoom);
+      _num_tiles = 1 << zoom;
+      const Point2D min_point = GoogleMaps::ConvertFromLatLonToPoint(LatLon(map_bounds.northeast.lat,
+									    map_bounds.southwest.lon));
+      _map_min_x = min_point.x * _num_tiles;
+      _map_min_y = min_point.y * _num_tiles;
+    }
+
+    // Converts a latitude/longitude position to an (x,y) position
+    // in the map. This is obviously dependent on the map size,
+    // which is implicitly set via the constructor's zoom parameter.
+    Point2D GoogleMapsConverter::ConvertLocationToMapPoint(const LatLon& location) {
+      Point2D point = GoogleMaps::ConvertFromLatLonToPoint(location);
+      point.x = point.x * _num_tiles - _map_min_x;
+      point.y = point.y * _num_tiles - _map_min_y;
+
+      return point;
+    }
+
+    /** GoogleMapsConverter Implementation **/
     
   }  // namespace util
 }  // namespace slib

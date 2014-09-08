@@ -16,12 +16,12 @@
 #include <util/assert.h>
 #include <util/matlab.h>
 
-using slib::mpi::Cesium;
-using slib::mpi::JobController;
-using slib::mpi::JobDescription;
-using slib::mpi::JobNode;
-using slib::mpi::JobOutput;
-using slib::mpi::VariableType;
+using slib::cesium::Cesium;
+using slib::cesium::JobController;
+using slib::cesium::JobDescription;
+using slib::cesium::JobNode;
+using slib::cesium::JobOutput;
+using slib::cesium::VariableType;
 using slib::util::MatlabMatrix;
 using std::map;
 using std::string;
@@ -67,12 +67,12 @@ void HandleError(const int& error_code, const int& node) {
 }
 
 namespace slib {
-  namespace mpi {
+  namespace cesium {
     class TestCesiumCommunication {
     public:
       void Run() {
 	Cesium* instance = Cesium::GetInstance();
-	if (instance->Start() == slib::mpi::CesiumMasterNode) {
+	if (instance->Start() == slib::cesium::CesiumMasterNode) {
 	  // Inject error by tricking the framework into thinking
 	  // there are more nodes than there are.
 	  instance->_size = instance->_size + 1;
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   CESIUM_REGISTER_COMMAND(TestFunction);
-  slib::mpi::TestCesiumCommunication tester;
+  slib::cesium::TestCesiumCommunication tester;
   tester.Run();
 
   MPI_Finalize();

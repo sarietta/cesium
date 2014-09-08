@@ -22,9 +22,9 @@
 #include <util/matlab.h>
 #include <vector>
 
-using slib::mpi::Cesium;
-using slib::mpi::JobDescription;
-using slib::mpi::JobOutput;
+using slib::cesium::Cesium;
+using slib::cesium::JobDescription;
+using slib::cesium::JobOutput;
 using slib::util::Directory;
 using slib::util::MatlabMatrix;
 using std::cin;
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
   CESIUM_REGISTER_COMMAND(TestFunction);
 
   Cesium* instance = Cesium::GetInstance();
-  if (instance->Start() == slib::mpi::CesiumMasterNode) {
+  if (instance->Start() == slib::cesium::CesiumMasterNode) {
     FLAGS_logtostderr = true;
 
     const FloatMatrix A = FloatMatrix::Random(10, 10);

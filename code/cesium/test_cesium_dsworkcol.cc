@@ -22,9 +22,9 @@
 #include <util/matlab.h>
 #include <vector>
 
-using slib::mpi::Cesium;
-using slib::mpi::JobDescription;
-using slib::mpi::JobOutput;
+using slib::cesium::Cesium;
+using slib::cesium::JobDescription;
+using slib::cesium::JobOutput;
 using slib::util::Directory;
 using slib::util::MatlabMatrix;
 using std::cin;
@@ -70,12 +70,13 @@ int main(int argc, char** argv) {
 
   CESIUM_REGISTER_COMMAND(TestFunction);
 
-  FLAGS_cesium_intelligent_parameters = false;
   FLAGS_cesium_working_directory = "/tmp/dsworkcol";
 
   Cesium* instance = Cesium::GetInstance();
+  instance->DisableIntelligentParameters();
+
   instance->SetBatchSize(1);
-  if (instance->Start() == slib::mpi::CesiumMasterNode) {
+  if (instance->Start() == slib::cesium::CesiumMasterNode) {
     FLAGS_logtostderr = true;
 
     const FloatMatrix A = FloatMatrix::Random(10, 10);
@@ -90,7 +91,7 @@ int main(int argc, char** argv) {
       job.indices.push_back(1);
 
       JobOutput output;
-      output.SetVariableType("dswork", slib::mpi::DSWORK_COLUMN);
+      output.SetVariableType("dswork", slib::cesium::DSWORK_COLUMN);
       instance->ExecuteJob(job, &output);
     }
 

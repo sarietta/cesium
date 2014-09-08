@@ -17,11 +17,11 @@ using std::string;
 namespace slib {
   namespace interpolation {
 
-    RadialBasisFunction::RadialBasisFunction(RadialBasisFunction_Function rbf) 
-      : _rbf(rbf), _alt_rbf(NULL), _condition_test(false) {}
+    RadialBasisFunction::RadialBasisFunction(const Function& rbf) 
+      : _rbf(rbf), _alt_rbf(), _condition_test(false) {}
 
-    RadialBasisFunction::RadialBasisFunction(RadialBasisFunction_AltFunction rbf) 
-      : _rbf(NULL), _alt_rbf(rbf), _condition_test(false) {}
+    RadialBasisFunction::RadialBasisFunction(const AltFunction& rbf) 
+      : _rbf(), _alt_rbf(rbf), _condition_test(false) {}
 
     void RadialBasisFunction::EnableConditionTest() {
       _condition_test = true;
@@ -35,7 +35,7 @@ namespace slib {
 
     void RadialBasisFunction::ComputeWeightsAlt(const VectorXf& values, const bool& normalized) {
       ASSERT_EQ(values.size(), _N);
-      ASSERT_NOT_NULL(_alt_rbf);
+      ASSERT_EQ(_alt_rbf.valid, true);
 
       const int M = _dimensions;
       const int ND = _N;
@@ -52,7 +52,7 @@ namespace slib {
 	FD[i] = (double) values(i);
       }
 
-      scoped_array<double> w(rbf_weight(M, ND, XD.get(), R0, _alt_rbf, FD.get()));
+      scoped_array<double> w(rbf_weight(M, ND, XD.get(), R0, _alt_rbf.function, FD.get()));
 
       _w.resize(ND);
       for (int i = 0; i < ND; i++) {
@@ -85,13 +85,14 @@ namespace slib {
 	XI[i] = (double) point(i);
       }
 
-      scoped_array<double> interpolated(rbf_interp_nd(M, ND, XD.get(), R0, _alt_rbf, W.get(), NI, XI.get()));
+      scoped_array<double> interpolated(rbf_interp_nd(M, ND, XD.get(), R0, _alt_rbf.function, 
+						      W.get(), NI, XI.get()));
       return interpolated[0];
     }
 
     // Input is a (w, h) = (dimensions, N) matrix of points. Values is a vector of length N.
     void RadialBasisFunction::ComputeWeights(const VectorXf& values, const bool& normalized) {
-      if (_rbf == NULL && _alt_rbf != NULL) {
+      if (!_rbf.valid && _alt_rbf.valid) {
 	ComputeWeightsAlt(values, normalized);
 	return;
       }
@@ -106,7 +107,7 @@ namespace slib {
 	float sum = 0.0f;
 	for (int32 j = 0; j < _N; j++) {
 	  const VectorXf difference = _points.row(i)-_points.row(j);
-	  const float distance = (*_rbf)(difference.norm());
+	  const float distance = _rbf.evaluate(difference.norm());
 	  sum += distance;
 	  rbf(i, j) = distance;
 	}
@@ -134,7 +135,7 @@ namespace slib {
     }
 
     float RadialBasisFunction::Interpolate(const VectorXf& point) {
-      if (_rbf == NULL && _alt_rbf != NULL) {
+      if (!_rbf.valid && _alt_rbf.valid) {
 	return InterpolateAlt(point);
       }
 
@@ -147,11 +148,11 @@ namespace slib {
 	if (_dimensions == 2) {
 	  const float d0 = _points(i,0) - point(0);
 	  const float d1 = _points(i,1) - point(1);
-	  value = (*_rbf)(sqrt(d0*d0 + d1*d1));
+	  value = _rbf.evaluate(sqrt(d0*d0 + d1*d1));
 	} else {
 	  const VectorXf row = _points.row(i);
 	  const VectorXf difference = point - row;	
-	  value = (*_rbf)(difference.norm());
+	  value = _rbf.evaluate(difference.norm());
 	}
 	weight_sum += _w(i) * value;
 	sum += value;

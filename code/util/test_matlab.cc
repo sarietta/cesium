@@ -1,3 +1,4 @@
+#include "assert.h"
 #include <CImg.h>
 #include <common/types.h>
 #undef Success
@@ -14,21 +15,35 @@
 
 DEFINE_int32(iterations, 1, "Iterations to test memory usage");
 
-DEFINE_bool(test_accessors, true, "");
-DEFINE_bool(test_mutators, true, "");
+DEFINE_bool(test_accessors, false, "");
+DEFINE_bool(test_mutators, false, "");
+DEFINE_bool(test_celltomatrix, false, "");
+
+DEFINE_string(test_file, "", "Path to .mat file to be used in the test.");
 
 using Eigen::MatrixXf;
 using slib::util::MatlabMatrix;
 using std::map;
 using std::string;
 
+bool TEST_MATLAB_MATRIX_EQUAL(const MatlabMatrix& A, const MatlabMatrix& B) {
+  return (A.Serialize() == B.Serialize());
+}
+
 int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
+
+  FLAGS_logtostderr = true;
   
   if (FLAGS_test_accessors) {
+    if (FLAGS_test_file == "") {
+      LOG(ERROR) << "You must specify a test .mat file to use. One is provided in ${SLIB_CODE_DIR}/util/test.mat";
+      return 1;
+    }
+
     for (int i = 0; i < FLAGS_iterations; i++) {
-      MatlabMatrix matrix = MatlabMatrix::LoadFromFile("./test.mat");
+      MatlabMatrix matrix = MatlabMatrix::LoadFromFile(FLAGS_test_file);
       MatlabMatrix field1 = matrix.GetStructField("field1");
       MatlabMatrix field2 = matrix.GetStructField("field2");
       MatlabMatrix field3 = matrix.GetStructField("field3");
@@ -195,6 +210,47 @@ int main(int argc, char** argv) {
     A = MatlabMatrix();
     mapp["test"] = MatlabMatrix();
   }
+
+  if (FLAGS_test_celltomatrix) {
+    LOG(INFO) << "Testing CellToMatrix";
+
+    MatlabMatrix A(slib::util::MATLAB_CELL_ARRAY, 3, 2);
+    A.SetCell(0, 0, MatlabMatrix((float[]){1.0f, 2.0f, 3.0f}, 1, 3));
+    A.SetCell(0, 1, MatlabMatrix((float[]){4.0f, 5.0f, 6.0f}, 1, 3));
+    A.SetCell(1, 0, MatlabMatrix((float[]){7.0f, 8.0f, 9.0f}, 1, 3));
+    A.SetCell(1, 1, MatlabMatrix((float[]){10.0f, 11.0f, 12.0f}, 1, 3));
+    A.SetCell(2, 0, MatlabMatrix());
+    A.SetCell(2, 1, MatlabMatrix());
+
+    MatlabMatrix golden((float[]){1.0f, 2.0f, 3.0f, 7.0f, 8.0f, 9.0f, 4.0f, 5.0f, 6.0f, 10.0f, 11.0f, 12.0f}, 4, 3);
+    MatlabMatrix flattened = A.CellToMatrix();
+    ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(golden, flattened));
+
+    A.SetCell(0, 0, MatlabMatrix((float[]){1.0f, 2.0f}, 1, 2));
+    flattened = A.CellToMatrix();
+    ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(MatlabMatrix(), flattened));
+
+    A.SetCell(0, 0, MatlabMatrix((float[]){1.0f, 2.0f, 3.0f}, 1, 3));
+
+    MatlabMatrix B(slib::util::MATLAB_CELL_ARRAY, 3, 2);
+    B.SetCell(0, 0, MatlabMatrix(slib::util::MATLAB_STRUCT, 1, 1).SetStructField("field", A.GetCell(0, 0)));
+    B.SetCell(0, 1, MatlabMatrix(slib::util::MATLAB_STRUCT, 1, 1).SetStructField("field", A.GetCell(0, 1)));
+    B.SetCell(1, 0, MatlabMatrix(slib::util::MATLAB_STRUCT, 1, 1).SetStructField("field", A.GetCell(1, 0)));
+    B.SetCell(1, 1, MatlabMatrix(slib::util::MATLAB_STRUCT, 1, 1).SetStructField("field", A.GetCell(1, 1)));
+    B.SetCell(2, 0, MatlabMatrix());
+    B.SetCell(2, 1, MatlabMatrix());
+
+    MatlabMatrix golden2(slib::util::MATLAB_STRUCT, 4, 1);
+    golden2.SetStructField("field", 0, A.GetCell(0, 0));
+    golden2.SetStructField("field", 1, A.GetCell(1, 0));
+    golden2.SetStructField("field", 2, A.GetCell(0, 1));
+    golden2.SetStructField("field", 3, A.GetCell(1, 1));
+
+    flattened = B.CellToMatrix();
+    ASSERT_TRUE(TEST_MATLAB_MATRIX_EQUAL(golden2, flattened));
+  }
+
+  LOG(INFO) << "All tests passed";
   
   return 0;
 }

@@ -23,9 +23,6 @@ DEFINE_string(cesium_checkpointed_variables, "",
 	      "A comma-separated liste of variable names that should be loaded via checkpoints");
 
 DEFINE_bool(cesium_checkpoint_variables, true, "Set to false if you don't want to checkpoint variables.");
-DEFINE_bool(cesium_all_indices_at_once, false,
-	    "Whether the indices that are sent to the workers should be processed together or separately.");
-DEFINE_bool(cesium_intelligent_parameters, true, "Automatically sets batch size and checkpoint interval.");
 DEFINE_int32(cesium_partial_variable_chunk_size, 50, 
 	     "The size of each chunk of a partial variable. "
 	     "If a variable is NxM and is a partial row variable, "
@@ -52,10 +49,9 @@ using std::string;
 using std::vector;
 
 namespace slib {
-  namespace mpi {
+  namespace cesium {
 
     scoped_ptr<Cesium> Cesium::_singleton;
-    map<string, Function> Cesium::_available_commands;
     map<int, bool> Cesium::_dead_processors;
     
     Cesium::Cesium() 
@@ -65,10 +61,15 @@ namespace slib {
       , _batch_size(-1)
       , _checkpoint_interval(-1)
       , _stripped_feature_dimensions(-1) {}
+
+    Cesium::~Cesium() {
+      _singleton->Finish();
+    }
     
     Cesium* Cesium::GetInstance() {
       if (_singleton.get() == NULL) {
 	_singleton.reset(new Cesium);
+	google::InstallFailureSignalHandler();
       }
 
       return _singleton.get();
@@ -79,12 +80,79 @@ namespace slib {
 	LOG(ERROR) << "Attempted to register a job under the protected name: " << CESIUM_FINISH_JOB_STRING;
 	LOG(ERROR) << "Please rename your function to avoid this collision";
       } else {
-	_available_commands[command] = function;
+	GetAvailableCommands()[command] = function;
       }
     }
 
     void Cesium::SetBatchSize(const int& batch_size)  {
       _batch_size = batch_size;
+    }
+
+    void Cesium::EnableAllIndicesAtOnce() {
+      InitializeInstance();
+      _instance->process_all_indices_at_once = true;
+    }
+
+    void Cesium::DisableAllIndicesAtOnce() {
+      InitializeInstance();
+      _instance->process_all_indices_at_once = false;
+    }
+
+    void Cesium::EnableIntelligentParameters() {
+      InitializeInstance();
+      _instance->use_intelligent_parameters = true;
+    }
+
+    void Cesium::DisableIntelligentParameters() {
+      InitializeInstance();
+      _instance->use_intelligent_parameters = false;
+    }
+
+    void Cesium::SetExecutionNodes(const vector<int>& nodes) { 
+      InitializeInstance();
+      _instance->available_processors = vector<int>(nodes);
+    }
+
+    map<string, vector<int> > Cesium::GetHostnameNodes() const {
+      JobController controller;
+      
+      map<string, vector<int> > info;
+
+      JobDescription hostname;
+      hostname.command = CESIUM_IDENTIFY_HOSTNAME_JOB_STRING;
+      for (int node = 0; node < _size; node++) {
+	if (node == MPI_ROOT_NODE) {
+	  info[_hostname].push_back(node);
+	  continue;
+	}
+	controller.StartJobOnNode(hostname, node);
+	const string hostname = JobNode::WaitForString(node);
+
+	info[hostname].push_back(node);
+      }
+
+      return info;
+    }
+
+    vector<string> Cesium::GetNodeHostnames() const {
+      JobController controller;
+      
+      vector<string> info(_size);
+
+      JobDescription hostname;
+      hostname.command = CESIUM_IDENTIFY_HOSTNAME_JOB_STRING;
+      for (int node = 0; node < _size; node++) {
+	if (node == MPI_ROOT_NODE) {
+	  info[node] = _hostname;
+	  continue;
+	}
+	controller.StartJobOnNode(hostname, node);
+	const string hostname = JobNode::WaitForString(node);
+
+	info[node] = hostname;
+      }
+
+      return info;
     }
 
     void Cesium::SetParametersIntelligently() {
@@ -135,8 +203,8 @@ namespace slib {
       int flag;
       MPI_Initialized(&flag);
       if (!flag) {
-	LOG(ERROR) << "Attempted to start a Cesium job before calling MPI_Init. "
-		   << "You must call MPI_Init before any Cesium methods.";
+	LOG(INFO) << "Initializing MPI";
+	MPI_Init(NULL, NULL);
       }
       MPI_Comm_rank(MPI_COMM_WORLD, &_rank);
       MPI_Comm_size(MPI_COMM_WORLD, &_size);
@@ -146,6 +214,7 @@ namespace slib {
 	gethostname(buf, sizeof(char) * 32);
 	_hostname = string(buf);
       }
+      LOG(INFO) << "Joining the job as processor: " << _rank << " (" << _hostname << ")";
       
       if (_rank == MPI_ROOT_NODE) {	
 	// Create directories as needed.
@@ -161,6 +230,13 @@ namespace slib {
       if (_rank != MPI_ROOT_NODE) {
 	return;
       }
+
+      int finalized;
+      MPI_Finalized(&finalized);
+      if (finalized) {
+	return;
+      }
+
       JobController controller;
       
       JobDescription finish;
@@ -170,8 +246,12 @@ namespace slib {
 	  VLOG(1) << "Sending finish request to node: " << node;
 	  controller.StartJobOnNode(finish, node);
 	  JobNode::WaitForString(node);
+	  VLOG(1) << "Node finished cleanly: " << node;
 	}
       }
+
+      google::FlushLogFiles(google::GLOG_INFO);
+      MPI_Finalize();
     }
 
     // This is just a wrapper to avoid passing a pointer to a member
@@ -223,6 +303,8 @@ namespace slib {
 	_instance.reset(new CesiumExecutionInstance());
 	_instance->total_indices = 0;
 	_instance->partial_output_unique_int = 0;
+	_instance->process_all_indices_at_once = false;
+	_instance->use_intelligent_parameters = true;
       }
     }
 
@@ -269,6 +351,10 @@ namespace slib {
       JobDescription mutable_job = job;
 
       InitializeInstance();
+
+      if (_instance->process_all_indices_at_once) {
+	mutable_job.variables[CESIUM_CONFIG_ALL_INDICES_FIELD] = MatlabMatrix(true);
+      }
 
       // Determine the cached variables so we can indicate to the
       // processors what they should cache.
@@ -318,27 +404,31 @@ namespace slib {
       controller.SetCompletionHandler(&__HandleJobCompletedWrapper__);
       controller.SetCommunicationErrorHandler(&__HandleCommunicationErrorWrapper__);
 
-      // Setup the available processors information. Do in reverse order
-      // in case the job size is less than the number of nodes.
-      for (int node = _size - 1; node >= 1; node--) {
-	if (FLAGS_cesium_debug_mode) {
-	  if (node == FLAGS_cesium_debug_mode_node) {	  
+      // Setup the available processors information. Do in reverse
+      // order in case the job size is less than the number of
+      // nodes. Note that a user can specify these directly via a call
+      // to SetExecutionNodes().
+      if (_instance->available_processors.size() == 0) {
+	for (int node = _size - 1; node >= 1; node--) {
+	  if (FLAGS_cesium_debug_mode) {
+	    if (node == FLAGS_cesium_debug_mode_node) {	  
+	      _instance->available_processors.push_back(node);
+	    }
+	  } else {
 	    _instance->available_processors.push_back(node);
 	  }
-	} else {
-	  _instance->available_processors.push_back(node);
 	}
       }
       VLOG(1) << "Available processors: " << _instance->available_processors.size();
 
-      if (FLAGS_cesium_intelligent_parameters) {
+      if (_instance->use_intelligent_parameters) {
 	SetParametersIntelligently();
       }
       
       const int last_node = _size - 1;
       
       LOG(INFO) << "***********************************************";
-      LOG(INFO) << "Entering Main Computation Loop";
+      LOG(INFO) << "Entering Main Computation Loop [" << mutable_job.command << "]";
       LOG(INFO) << "***********************************************";
       
       while ((int) _instance->completed_indices.size() < _instance->total_indices) {
@@ -520,12 +610,14 @@ namespace slib {
 	_instance->job_completion_mutex.unlock();
 	
 	// Poll the nodes to see if they have completed.
+	// TODO(sean): Would be better to have an IRQ-like interface.
 	controller.CheckForCompletion();
 	
 	// Wait for a little while so we don't overload the output.
 	if (FLAGS_cesium_export_log) {
 	  ExportLog(pid);
 	}
+	// TODO(sean): Horrible. Fix this sleep.
 	sleep(FLAGS_cesium_wait_interval);
       }
       
@@ -537,7 +629,7 @@ namespace slib {
 	const string name = (*iter).first;
 	const VariableType type = (*iter).second;
 
-	if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+	if (type == slib::cesium::PARTIAL_VARIABLE_ROWS || type == slib::cesium::PARTIAL_VARIABLE_COLS) {
 	  if (_instance->partial_output_indices[name].size() > 0) {
 	    LOG(INFO) << "***********************************************";
 	    LOG(INFO) << "Saving chunk for partial variable: " << name;
@@ -573,6 +665,10 @@ namespace slib {
       // an "instance" will effectively create a new one.
       _instance.reset(NULL);
 
+      LOG(INFO) << "***********************************************";
+      LOG(INFO) << "Exiting Main Computation Loop [" << mutable_job.command << "]";
+      LOG(INFO) << "***********************************************";
+
       return true;
     }
     
@@ -588,8 +684,8 @@ namespace slib {
       map<string, MatlabMatrix> cached_variables;
 
       if (FLAGS_v >= 1) {
-	for (map<string, Function>::const_iterator iter = _available_commands.begin();
-	     iter != _available_commands.end();
+	for (map<string, Function>::const_iterator iter = GetAvailableCommands().begin();
+	     iter != GetAvailableCommands().end();
 	     iter++) {
 	  VLOG(1) << "Available Command: " << (*iter).first;
 	}
@@ -601,6 +697,11 @@ namespace slib {
 	  LOG(INFO) << "Node " << _rank << " finishing";
 	  JobNode::SendStringToNode(job.command, MPI_ROOT_NODE);
 	  break;
+	}
+
+	if (job.command == CESIUM_IDENTIFY_HOSTNAME_JOB_STRING) {
+	  JobNode::SendStringToNode(_hostname, MPI_ROOT_NODE);
+	  continue;
 	}
 
 	LOG(INFO) << "Received new job: " << job.command;
@@ -623,12 +724,13 @@ namespace slib {
 	JobOutput output;
 	output.command = job.command;
 	// Determine the function.
-	if (_available_commands.find(job.command) == _available_commands.end()) {
+	if (GetAvailableCommands().find(job.command) == GetAvailableCommands().end()) {
 	  LOG(ERROR) << "Attempted to execute unknown command: " << job.command;
 	} else {
-	  const Function& function = _available_commands[job.command];
+	  const Function& function = GetAvailableCommands()[job.command];
 	  
-	  if (FLAGS_cesium_all_indices_at_once) {
+	  if (job.variables.find(CESIUM_CONFIG_ALL_INDICES_FIELD) != job.variables.end()) {
+	    VLOG(1) << "Running all indices at once";
 	    (*function)(job, &output);
 	    google::FlushLogFiles(google::GLOG_INFO);
 	  } else {
@@ -771,7 +873,7 @@ namespace slib {
 	}
 	_instance->node_indices.erase(node);
 	
-	LOG(INFO) << "Node " << node << " output indices: " << output_indices_list << "]";
+	LOG(INFO) << "Node " << node << " output indices: " << output_indices_list << " ]";
 	for (map<string, MatlabMatrix>::const_iterator it = output.variables.begin(); 
 	     it != output.variables.end(); 
 	     it++) {
@@ -796,7 +898,7 @@ namespace slib {
 				       const string& name, const VariableType& type) {
       const Pair<int> dimensions = matrix.GetDimensions();
 
-      if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+      if (type == slib::cesium::PARTIAL_VARIABLE_ROWS || type == slib::cesium::PARTIAL_VARIABLE_COLS) {
 	// Save current outputs and output indices.
 	_instance->final_outputs[name].Merge(matrix);
 	_instance->partial_output_indices[name].insert(_instance->partial_output_indices[name].end(), 
@@ -817,7 +919,7 @@ namespace slib {
 	  _instance->partial_output_unique_int++;
 	}
 	return true;
-      } else if (type == slib::mpi::DSWORK_COLUMN) {
+      } else if (type == slib::cesium::DSWORK_COLUMN) {
 	if (_instance->processors_completed_one.size() == 0) {
 	  const string directory = FLAGS_cesium_working_directory + "/" + name;
 	  System::ExecuteSystemCommand("rm -rf " + directory);
@@ -883,11 +985,11 @@ namespace slib {
 	
       // If it's a partial variable, wait to load it when the job
       // starts so we don't have to keep the whole thing in memory.
-      if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
+      if (type == slib::cesium::FEATURE_STRIPPED_ROW_VARIABLE) {
 	const string feature_filename = StringUtils::Replace(".mat", filename, ".features.bin");
 	_instance->partial_variables[variable_name] = make_pair(input, fopen(feature_filename.c_str(),"rb"));
 	_instance->input_variable_types[variable_name] = type;
-      } else if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+      } else if (type == slib::cesium::PARTIAL_VARIABLE_ROWS || type == slib::cesium::PARTIAL_VARIABLE_COLS) {
 	_instance->partial_variables[variable_name] = make_pair(input, (FILE*) NULL);
 	_instance->input_variable_types[variable_name] = type;
       }
@@ -903,12 +1005,12 @@ namespace slib {
 				 const VariableType& type) {
       InitializeInstance();
 
-      if (type == slib::mpi::PARTIAL_VARIABLE_ROWS || type == slib::mpi::PARTIAL_VARIABLE_COLS) {
+      if (type == slib::cesium::PARTIAL_VARIABLE_ROWS || type == slib::cesium::PARTIAL_VARIABLE_COLS) {
 	_instance->partial_variables[variable_name] = make_pair(input, (FILE*) NULL);
 	_instance->input_variable_types[variable_name] = type;
-      } else if (type == slib::mpi::COMPLETE_VARIABLE) {
+      } else if (type == slib::cesium::COMPLETE_VARIABLE) {
 	LOG(INFO) << "You don't need to set the type for complete variables (" << variable_name << ")";
-      } else if (type == slib::mpi::FEATURE_STRIPPED_ROW_VARIABLE) {
+      } else if (type == slib::cesium::FEATURE_STRIPPED_ROW_VARIABLE) {
 	LOG(WARNING) << "Use the method LoadInputVariable* for variable type FEATURE_STRIPPED_ROW_VARIABLE "
 		     << "(" << variable_name << ")";
       } else if (!(type >> MPIJOB_CACHED_VARIABLE_BITMASK)) {
@@ -921,5 +1023,5 @@ namespace slib {
       }
     }
     
-  }  // namespace mpi
+  }  // namespace cesium
 }  // namespace slib

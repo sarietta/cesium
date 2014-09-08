@@ -7,14 +7,20 @@ set (slib_VERSION_MINOR 12)
 # Standard configuration parameters
 find_program(INTEL_CC "icc")
 if(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-deprecated-register")
 else(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
   set(CMAKE_CXX_COMPILER "icc")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w1 -wd2196 -wd2536 -wd780 -mkl")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w1 -wd2196 -wd2536 -wd780 -mkl -Qoption,cpp,--rvalue_ctor_is_not_copy_ctor")
 endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++0x")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -std=c++0x")
+option(DEBUG_SYMBOLS "DEBUG_SYMBOLS" OFF)
+
+if(DEBUG_SYMBOLS)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -std=c++0x")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++0x")
+endif()
+
 add_definitions(-DSKIP_OPENCV)
 
 include_directories(./thirdparty/CImg)
@@ -22,9 +28,12 @@ include_directories(./code)
 
 set(CMAKE_MODULE_PATH ./cmake)
 
+set(MODULES util string image interpolation svm cesium matrix kmeans)
+
 # Required libraries
 
 ## Boost
+# SLIB_REQUIRED Boost pkg libboost-all-dev
 find_package(Boost COMPONENTS program_options REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 
@@ -38,6 +47,7 @@ else ()
 endif ()
 
 ## Eigen3
+# SLIB_REQUIRED Eigen3 bundle thirdparty/eigen
 if(DEFINED ENV{EIGEN3_INCLUDE_DIR})
   include_directories($ENV{EIGEN3_INCLUDE_DIR})
 else(DEFINED ENV{EIGEN3_INCLUDE_DIR})
@@ -50,13 +60,16 @@ else(DEFINED ENV{EIGEN3_INCLUDE_DIR})
 endif(DEFINED ENV{EIGEN3_INCLUDE_DIR})
 
 ## MATLAB
-if(DEFINED ENV{MATLAB_INCLUDE_DIR})
-else(DEFINED ENV{MATLAB_INCLUDE_DIR})
-  message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR to the include directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/include/.")
-endif(DEFINED ENV{MATLAB_INCLUDE_DIR})
-include_directories($ENV{MATLAB_INCLUDE_DIR})
+# SLIB_REQUIRED MATLAB bundle thirdparty/matlab
+if(DEFINED ENV{MATLAB_INCLUDE_DIR} AND EXISTS "$ENV{MATLAB_INCLUDE_DIR}/mat.h")
+  include_directories($ENV{MATLAB_INCLUDE_DIR})
+else()
+  add_definitions(-DDISABLE_MATLAB)
+  message(WARNING "\nMATLAB installation not found. It will be disabled.\n\nIf you have MATLAB installed, please set the environment variable MATLAB_INCLUDE_DIR to the include directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/include/.")
+endif()
 
 ## Google Flags
+# SLIB_REQUIRED GoogleFlags bundle thirdparty/gflags
 if(DEFINED ENV{GFLAGS_INCLUDE_DIR})
   include_directories($ENV{GFLAGS_INCLUDE_DIR})
 else(DEFINED ENV{GFLAGS_INCLUDE_DIR})
@@ -69,6 +82,7 @@ else(DEFINED ENV{GFLAGS_INCLUDE_DIR})
 endif(DEFINED ENV{GFLAGS_INCLUDE_DIR})
 
 ## Google Logging
+# SLIB_REQUIRED GoogleLogging bundle thirdparty/glog
 if(DEFINED ENV{GLOG_INCLUDE_DIR})
   include_directories($ENV{GLOG_INCLUDE_DIR})
 else(DEFINED ENV{GLOG_INCLUDE_DIR})
@@ -90,19 +104,45 @@ else ()
 endif()
 
 ## BLAS
-#if(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
-#  find_package(BLAS REQUIRED)
-#  include_directories(${BLAS_INCLUDE_DIRS})
-#endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
+find_package(BLAS)
+if(BLAS_FOUND)
+  include_directories(${BLAS_INCLUDE_DIR})
+
+  if (NOT ${BLAS_INFO} MATCHES "mkl")
+    add_definitions(-DDISABLE_MKL_BLAS)
+
+    if(NOT EXISTS "${BLAS_INCLUDE_DIR}/cblas.h")
+      message(WARNING "\nCould not find CBLAS library. Fast eigenvector decomposition will be disabled.")
+      add_definitions(-DDISABLE_EIGS)
+    endif()
+  endif()
+else()
+    message(WARNING "\nCould not find CBLAS library. Fast eigenvector decomposition will be disabled.")
+    add_definitions(-DDISABLE_EIGS)
+endif()
 
 ## MPI
-find_package(MPI QUIET)
+# SLIB_REQUIRED MPI bundle thirdparty/mpich
+# SLIB_CHECK MPI "mpicc -v 2>&1 | grep -o 1.4.1p1"
+find_package(MPI REQUIRED CXX)
 include_directories(${MPI_CXX_INCLUDE_PATH})
+add_definitions(${MPI_CXX_COMPILE_FLAGS})
+add_definitions(-DMPICH_SKIP_MPICXX)
+add_definitions(-DOMPI_SKIP_MPICXX)
 
-set(MODULES util drawing string image gl interpolation svm cesium matrix kmeans)
+# CUDA (This is mainly for Caffe so we disable Caffe if we can't find it)
+find_package(CUDA QUIET)
+if (CUDA_FOUND)
+  include_directories(${CUDA_INCLUDE_DIRS})
+else ()
+  message(WARNING "\nCould not find CUDA library. Caffe features will be disabled.")
+  add_definitions(-DSKIP_CAFFE_FEATURE_COMPUTER)
+endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ./lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./lib)
+
+option(BUILD_SHARED "BUILD_SHARED" OFF)
 
 # Compile each module
 set(TEST_FILES)
@@ -122,10 +162,22 @@ foreach(MODULE ${MODULES})
     endif(${FILE} MATCHES "test")
   endforeach(FILE)
 
-  add_library(${MODULE} STATIC ${FILES})
+  if(BUILD_SHARED)
+    add_library(${MODULE} SHARED ${FILES})
+  else()
+    add_library(${MODULE} STATIC ${FILES})
+  endif()
+  
   set_target_properties(${MODULE} PROPERTIES LINKER_LANGUAGE CXX)
-
+  
 endforeach(MODULE) 
+
+option(SKIP_TESTS "SKIP_TESTS" OFF)
+
+if(NOT SKIP_TESTS)
+
+######################################################################################
+######################################################################################
 
 # Build all the tests
 if(DEFINED ENV{MATLAB_LIB_DIR})
@@ -159,14 +211,6 @@ add_definitions(${MPI_CXX_COMPILE_FLAGS})
 add_definitions(-DMPICH_SKIP_MPICXX)
 add_definitions(-DOMPI_SKIP_MPICXX)
 
-find_package(ARPACK)
-if(ARPACK_FOUND)
-  list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
-else()
-  message(WARNING "\nCouldn't find an installation of ARPACK on this machine. Compilation is still possible, but fast eigen decomposition routines for large/sparse matrices will not be possible.")
-  add_definitions(-DOSKIP_ARPACK)
-endif()
-
 ## Google Flags
 if(DEFINED ENV{GFLAGS_INCLUDE_DIR} AND DEFINED ENV{GFLAGS_LIB_DIR})
   include_directories($ENV{GFLAGS_INCLUDE_DIR})
@@ -194,9 +238,13 @@ else()
 endif()
 
 ## FFTW3
-find_package(FFTW3 REQUIRED)
-include_directories(${FFTW3_INCLUDE_DIRS})
-link_directories (${FFTW3_LIB_DIRS})
+find_package(FFTW3)
+if (FFTW3_FOUND)
+  include_directories(${FFTW3_INCLUDE_DIRS})
+  link_directories (${FFTW3_LIB_DIRS})
+
+  list (APPEND TEST_LIBRARIES fftw3f)
+endif()
 
 ## Boost
 if(DEFINED ENV{BOOST_INCLUDE_DIR})
@@ -245,9 +293,13 @@ else()
   message(FATAL_ERROR "\nPlease set the environment variable MATLAB_INCLUDE_DIR and MATLAB_LIB_DIR to the include/lib directory of your MATLAB installation. This is typically something like /usr/local/MATLAB/R2011b/extern/{include,lib/glxna64}")
 endif()
 
-list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_matrix slib_interpolation -Wl,-end-group)
+ # Caffe
+if (CUDA_FOUND)
+  list (APPEND TEST_LIBRARIES caffe PyramidStitcher)
+  link_directories(${CUDA_TOOLKIT_ROOT_DIR}/lib64)
+endif()
 
-list (APPEND TEST_LIBRARIES gfortran glog gflags fftw3f jpeg stdc++)
+list (APPEND TEST_LIBRARIES gfortran glog gflags jpeg stdc++)
 
 add_library(slib_svm STATIC IMPORTED)
 set_property(TARGET slib_svm PROPERTY
@@ -274,6 +326,17 @@ add_library(slib_interpolation STATIC IMPORTED)
 set_property(TARGET slib_interpolation PROPERTY
   IMPORTED_LOCATION lib/libinterpolation.a)
 
+list (APPEND TEST_LIBRARIES -Wl,-start-group slib_svm slib_cesium slib_util slib_string slib_image slib_kmeans slib_interpolation slib_matrix -Wl,-end-group)
+
+## ARPACK
+find_package(ARPACK)
+if(ARPACK_FOUND)
+  list (APPEND TEST_LIBRARIES ${ARPACK_LIB})
+else()
+  message(WARNING "\nCouldn't find an installation of ARPACK on this machine. Compilation is still possible, but fast eigen decomposition routines for large/sparse matrices will not be possible.")
+  add_definitions(-DOSKIP_ARPACK)
+endif()
+
 file(MAKE_DIRECTORY "tests")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tests")
 set(TEST_BINARIES)
@@ -293,3 +356,5 @@ foreach(TEST_FILE ${TEST_FILES})
 endforeach()
 
 add_custom_target(tests DEPENDS ${TEST_BINARIES})
+
+endif()
