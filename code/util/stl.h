@@ -231,6 +231,23 @@ namespace slib {
       return V;
     }
 
+    // Just a convenience method for appending one vector to another.
+    template <typename T>
+    void Append(const vector<T>& to_add, vector<T>* target) {
+      target->insert(target->end(), to_add.begin(), to_add.end());
+    }
+
+    // Convenience methods for max/min.
+    template <typename T>
+    const T& Max(const vector<T>& V) {
+      return *std::max_element(V.begin(), V.end());
+    }
+
+    template <typename T>
+    const T& Min(const vector<T>& V) {
+      return *std::min_element(V.begin(), V.end());
+    }
+
   }  // namespace util
 }  // namespace slib
 

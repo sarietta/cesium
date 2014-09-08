@@ -178,6 +178,12 @@ namespace slib {
       _shared = false;
     }
 
+    void MatlabMatrix::Assign(const FloatMatrix& other) {
+      _type = MATLAB_MATRIX;
+      _shared = false;
+      SetContents(other);
+    }
+
     MatlabMatrix& MatlabMatrix::Merge(const MatlabMatrix& other) {
       if (_type == MATLAB_NO_TYPE && _matrix == NULL) {
 	Initialize(other._type, other.GetDimensions());
