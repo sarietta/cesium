@@ -1,7 +1,5 @@
 ![](assets/logo.100.png) 
 
-# Cesium
-
 Cesium (roughly speaking) is a distributed visual processing framework. More informally, it's a set of C++ classes that make it relatively easy to run visual processing operations on a set of images in a distributed environment. Actually, the "operations" can be anything you want, but the library includes some nice classes / functions that make it particularly amenable to those types of operations.
 
 ### Installation
