@@ -6,6 +6,11 @@
 
 echo "Installing Google Flags"
 
+if [[ $OSTYPE == *darwin* ]]; then
+    export CFLAGS="-stdlib=libstdc++";
+    export CXXFLAGS="-stdlib=libstdc++";
+fi
+
 cd ../gflags
 tar -xzf gflags-2.0.tar.gz
 cwd=`pwd`
