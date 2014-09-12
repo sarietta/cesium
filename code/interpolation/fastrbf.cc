@@ -49,8 +49,6 @@ namespace slib {
 	    const int jj = Omega1[j];
 	    dist2ell[j - m] = Phi((*ell), jj);
 	  }
-
-	  VLOG(2) << "dist2ell: " << slib::util::PrintVector(dist2ell);
 	  
 	  const vector<int> PermIndx = slib::util::StableSort(&dist2ell);
 	  for (int i = 0; i < power; ++i) {
@@ -109,7 +107,6 @@ namespace slib {
 	}
       }
 
-      VLOG(2) << "Lset:\n" << (*Lset);
       OmegaOut->swap(Omega1);
     }
     
@@ -247,13 +244,17 @@ namespace slib {
       
       float err = std::max(fabs(res.maxCoeff()), fabs(res.minCoeff()));
       int k = 0;
+
+      VLOG(1) << "** Iteration: " << k;
+      VLOG(1) << "Error: " << err;
+      VLOG(1) << "Residuals: " << res.head(std::min(10, (int) res.size())).transpose() << " ...";
+      VLOG(1) << "Alpha: " << alpha;
       
       vector<float> errs;
       FloatVector d;
       while (err > FLAGS_slib_interpolation_fastrbf_tolerance 
 	     && k < FLAGS_slib_interpolation_fastrbf_max_iterations) {
 	++k;
-	VLOG(1) << "k: " << k << ", error: " << err;
 	errs.push_back(err);
 	
 	FloatVector tau = FloatVector::Zero(N);
@@ -265,7 +266,6 @@ namespace slib {
 	  IntVector Lset = Lsets.block(ell, 0, 1, pow).transpose();
 	  const FloatVector tau1 = ComputeTau(zeta, Lset, res, pow);
 	  tau += tau1;
-	  VLOG(2) << "Tau: " << tau.transpose();
 	}
 	
 	if (k == 1) {
@@ -285,6 +285,11 @@ namespace slib {
 	alpha += newconst;
 	res = res.array() - newconst;
 	lambdas += (gamma * delta);
+
+	VLOG(1) << "** Iteration: " << k;
+	VLOG(1) << "Error: " << err;
+	VLOG(1) << "Residuals: " << res.head(std::min(10, (int) res.size())).transpose() << " ...";
+	VLOG(1) << "Alpha: " << alpha;
       }
 
       _w = lambdas;
