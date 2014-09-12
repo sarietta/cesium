@@ -192,7 +192,7 @@ namespace slib {
 							       const Pair<int32>& patch_size,
 							       const vector<int32>& levels) const {
       // Image should have pixels in [0,1]
-      if (original_image.max() > 1.0f) {
+      if (fabs(original_image.max() - 1.0f) > FLT_EPSILON) {
 	LOG(ERROR) << "Image pixels must lie in the domain [0,1] (Max: " << original_image.max() << ")";
 	return FeaturePyramid(0);
       }
