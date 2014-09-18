@@ -133,6 +133,7 @@ add_definitions(-DOMPI_SKIP_MPICXX)
 # CUDA (This is mainly for Caffe so we disable Caffe if we can't find it)
 find_package(CUDA QUIET)
 if (CUDA_FOUND)
+  add_definitions(-DCUDA_ENABLED)
   include_directories(${CUDA_INCLUDE_DIRS})
 else ()
   message(WARNING "\nCould not find CUDA library. Caffe features will be disabled.")
@@ -171,6 +172,27 @@ foreach(MODULE ${MODULES})
   set_target_properties(${MODULE} PROPERTIES LINKER_LANGUAGE CXX)
   
 endforeach(MODULE) 
+
+# Special compilation for CUDA-enabled fast rbf routines.
+if (CUDA_FOUND)
+  set(CMAKE_CXX_FLAGS_SAVE ${CMAKE_CXX_FLAGS})
+  set(CMAKE_CXX_FLAGS "")
+  set(CUDA_NVCC_FLAGS -gencode arch=compute_10,code=sm_10;--disable-warnings)
+  
+  list(APPEND LIBRARIES ${CUDA_CUBLAS_LIBRARIES})
+  string (REGEX REPLACE "cublas" "cudart" CUDA_CUDART_LIBRARIES ${CUDA_CUBLAS_LIBRARIES})
+  list(APPEND LIBRARIES ${CUDA_CUDART_LIBRARIES})
+  string (REGEX REPLACE "cublas" "curand" CUDA_CURAND_LIBRARIES ${CUDA_CUBLAS_LIBRARIES})
+  list(APPEND LIBRARIES ${CUDA_CURAND_LIBRARIES})
+  
+  file(GLOB FILES 
+    "./code/interpolation/*.cu"
+    )
+  cuda_add_library(fastinterpolation ${FILES})
+  set_target_properties(fastinterpolation PROPERTIES LINKER_LANGUAGE CXX)
+
+  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_SAVE})
+endif()
 
 option(SKIP_TESTS "SKIP_TESTS" OFF)
 
@@ -348,6 +370,14 @@ foreach(TEST_FILE ${TEST_FILES})
   # built with special care
   if(${BINARY} STREQUAL "test_matlab_function")
   elseif(${BINARY} STREQUAL "test_eigs" AND (NOT ARPACK_FOUND))
+  elseif(${BINARY} STREQUAL "test_rbf" AND (CUDA_FOUND))
+    add_library(slib_fastinterpolation STATIC IMPORTED)
+    set_property(TARGET slib_fastinterpolation PROPERTY
+      IMPORTED_LOCATION lib/libfastinterpolation.a)
+
+    cuda_add_executable(${BINARY} EXCLUDE_FROM_ALL ${TEST_FILE} ${LINKED_SOURCES})
+    target_link_libraries (${BINARY} ${TEST_LIBRARIES} slib_fastinterpolation)
+    list(APPEND TEST_BINARIES ${BINARY})
   else()
     add_executable(${BINARY} EXCLUDE_FROM_ALL ${TEST_FILE} ${LINKED_SOURCES})
     target_link_libraries (${BINARY} ${TEST_LIBRARIES})

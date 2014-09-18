@@ -1,5 +1,9 @@
 #include "fastrbf.h"
 
+#ifdef CUDA_ENABLED
+#include "fastrbf.cu.h"
+#endif
+
 #include <common/scoped_ptr.h>
 #include <Eigen/Dense>
 #include <float.h>
@@ -333,6 +337,13 @@ namespace slib {
 
       return (sum + _alpha);
     }
+
+#ifdef CUDA_ENABLED
+    FloatVector FastMultiQuadraticRBF::InterpolatePoints(const FloatMatrix& points) {
+      ASSERT_EQ(points.cols(), _dimensions);
+      return CUDAInterpolatePoints(_points, _w, _alpha, _epsilon2, points);
+    }
+#endif
 
     bool FastMultiQuadraticRBF::SaveToFile(const string& filename) {
       FILE* fid = fopen(filename.c_str(), "wb");

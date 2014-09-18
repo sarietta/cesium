@@ -26,12 +26,18 @@ namespace slib {
 
       void ComputeWeights(const Eigen::VectorXf& values, const bool& normalized = false);
       float Interpolate(const Eigen::VectorXf& point);
-
+#ifdef CUDA_ENABLED
+      Eigen::VectorXf InterpolatePoints(const FloatMatrix& points);
+#endif
       bool SaveToFile(const std::string& filename);
       bool LoadFromFile(const std::string& filename);
 
       slib::util::MatlabMatrix ConvertToMatlabMatrix() const;
       void LoadFromMatlabMatrix(const slib::util::MatlabMatrix& matrix);
+
+      inline float GetAlpha() const {
+	return _alpha;
+      }
     private:
       float _epsilon;
       float _epsilon2;
