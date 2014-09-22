@@ -31,6 +31,8 @@ DEFINE_bool(use_gaussian, true, "");
 DEFINE_bool(use_thinplate, false, "");
 DEFINE_bool(use_fast_rbf, false, "");
 
+DEFINE_bool(test_old, true, "");
+
 DEFINE_bool(display_enabled, true, "");
 DEFINE_string(output_file, "", "If non-empty, interpolated output saved here.");
 
@@ -118,7 +120,9 @@ int main(int argc, char** argv) {
 
   rbf->EnableConditionTest();
   rbf->SetPoints(points);
+  Timer::Start();
   rbf->ComputeWeights(values);
+  LOG(INFO) << "Elapsed time to compute RBFs: " << Timer::Stop();
 
   if (FLAGS_save_information) {
     rbf->SaveToFile("/tmp/rbf.dat");
@@ -133,13 +137,15 @@ int main(int argc, char** argv) {
   FloatImage interpolated_and_original_points(width, height, 1, 3, 255.0f);
   FloatImage interpolated_points(width, height, 1, 3, 255.0f);
 
-  Timer::Start();
   FloatImage interpolated_values(width, height);
-  cimg_forXY(interpolated_values, x, y) {
-    const Vector2f point(x + xmin, y + ymin);
-    interpolated_values(x, y) = rbf->Interpolate(point);
+  if (FLAGS_test_old) {
+    Timer::Start();
+    cimg_forXY(interpolated_values, x, y) {
+      const Vector2f point(x + xmin, y + ymin);
+      interpolated_values(x, y) = rbf->Interpolate(point);
+    }
+    LOG(INFO) << "Elapsed time to interpolate: " << Timer::Stop();
   }
-  LOG(INFO) << "Elapsed time to interpolate: " << Timer::Stop();
 
   Timer::Start();
   FloatImage interpolated_values_new(width, height);
@@ -156,7 +162,11 @@ int main(int argc, char** argv) {
   }
   LOG(INFO) << "Elapsed time to interpolate (new): " << Timer::Stop();
 
-  (interpolated_values, interpolated_values_new).display();
+  if (FLAGS_test_old) {
+    (interpolated_values, interpolated_values_new).display();
+  } else {
+    interpolated_values = interpolated_values_new;
+  }
 
   cimg_forXYC(interpolated_points, x, y, c) {
     Vector2f point(x + xmin, y + ymin);

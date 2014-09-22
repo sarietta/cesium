@@ -5,6 +5,7 @@
 
 #include <common/types.h>
 #include <gflags/gflags.h>
+#undef Success
 #include <Eigen/Dense>
 #include <string>
 

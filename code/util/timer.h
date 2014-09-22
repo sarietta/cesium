@@ -19,6 +19,12 @@ namespace slib {
       static void Start() {
 	Timer::_start_ticks.push(clock());
       }
+
+      static void StartIf(const bool& test) {
+	if (test) {
+	  Timer::_start_ticks.push(clock());
+	}
+      }
       // This returns a handle to a Timer object that can be passed to
       // an ostream.
       static const Timer& Stop() {

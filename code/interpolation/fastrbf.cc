@@ -22,6 +22,8 @@
 #define IntMatrix Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
 #define IntVector Eigen::VectorXi
 
+#define SYMMETRIC_LOOKUP(matrix, row, col) (row < col ? matrix(col, row) : matrix(row, col))
+
 using slib::util::MatlabMatrix;
 using slib::util::Timer;
 using std::vector;
@@ -51,7 +53,7 @@ namespace slib {
 	  vector<float> dist2ell(N - m);
 	  for (int j = m; j < N; ++j) {
 	    const int jj = Omega1[j];
-	    dist2ell[j - m] = Phi((*ell), jj);
+	    dist2ell[j - m] = SYMMETRIC_LOOKUP(Phi, *ell, jj);
 	  }
 	  
 	  const vector<int> PermIndx = slib::util::StableSort(&dist2ell);
@@ -68,7 +70,7 @@ namespace slib {
 	    const int jbeta = (*Lset)(beta);
 	    for (int gamma = beta + 1; gamma < power; ++gamma) {
 	      const int jgamma = (*Lset)(gamma);
-	      const float dist2betagamma = Phi(jbeta, jgamma);
+	      const float dist2betagamma = SYMMETRIC_LOOKUP(Phi, jbeta, jgamma);
 	      const float mindistnew = std::min(mindist, dist2betagamma);
 	      
 	      if (mindistnew != mindist) {
@@ -80,8 +82,8 @@ namespace slib {
 	  }
 	  
 	  if (mindist < mindist2) {
-	    const float dist2gammaell = Phi(mingamma, *ell);
-	    const float dist2betaell = Phi(minbeta, *ell);
+	    const float dist2gammaell = SYMMETRIC_LOOKUP(Phi, mingamma, *ell);
+	    const float dist2betaell = SYMMETRIC_LOOKUP(Phi, minbeta, *ell);
 	    if (dist2gammaell < dist2betaell) {
 	      const int t = minbeta;
 	      minbeta = mingamma;
@@ -143,9 +145,13 @@ namespace slib {
       return SysMx.colPivHouseholderQr().solve(rhs);
     }
     
-    FloatVector ComputeTau(const FloatVector& zeta, const IntVector& Lset, const FloatVector& res, const int& pow) {
+    void ComputeTau(const FloatVector& zeta, const IntVector& Lset, const FloatVector& res, const int& pow,
+		    FloatVector* tau) {
       const int N = res.size();
-      FloatVector tau = FloatVector::Zero(N);
+      if (tau->size() == 0) {
+	tau->resize(N);
+	tau->fill(0.0f);
+      }
       float sum = 0.0f;
       
       for (int i = 0; i < pow; ++i) {
@@ -157,10 +163,8 @@ namespace slib {
       
       for (int j = 0; j < pow; ++j) {
 	const int j_ = Lset(j);
-	tau(j_) = myu * zeta(j);
+	(*tau)(j_) += myu * zeta(j);
       }
-      
-      return tau;
     }
     
     FloatMatrix ComputeDelta(const FloatVector& tau, const FloatVector& delta, const FloatVector& d) {
@@ -182,6 +186,8 @@ namespace slib {
     }
     
     void FastMultiQuadraticRBF::ComputeWeights(const FloatVector& values, const bool& normalized) {
+      slib::util::Random::InitializeIfNecessary();
+
       if (FLAGS_v > 0) {
 	Timer::Start();
       }
@@ -201,6 +207,8 @@ namespace slib {
       
       const FloatMatrix rset = _points.transpose();
       
+      VLOG(1) << "Setting up matrices";
+      Timer::StartIf(FLAGS_v > 0);
       for (int i = 0; i < N; ++i) {
 	const FloatVector ri = rset.col(i);
 	for (int j = 0; j < i; ++j) {
@@ -210,12 +218,12 @@ namespace slib {
 	  SysMx(j, i) = sqrt(r * r + c * c);
 	}
       }
-      
+#if 0      
       {
 	const FloatMatrix t = Phi + Phi.transpose();
 	Phi = t;
       }
-      
+#endif 
       SysMx.block(N, 0, 1, N) = FloatMatrix::Constant(1, N, 1.0f);
       {
 	const FloatMatrix t = SysMx + SysMx.transpose();
@@ -225,12 +233,16 @@ namespace slib {
       for (int i = 0; i < N; ++i) {
 	SysMx(i, i) = fabs(c);
       }
+
+      VLOG(1) << "Elapsed time: " << Timer::Stop();
       
       vector<int> Omega = slib::util::Random::PermutationIndices(0, N - 1);
       
       int ell;
       vector<int> ells(N - 1);
       int pow;
+      VLOG(1) << "Initializing Krylov matrices";
+      Timer::StartIf(FLAGS_v > 0);
       for (int m = 0; m < N - 1; ++m) {
 	IntVector Lset;
 	SetupLSet(Omega, Phi, power, m, &Lset, &Omega, &ell);
@@ -241,6 +253,7 @@ namespace slib {
 	const FloatVector zeta = ComputeZeta(c, Lset, rset);
 	zetas.block(ell, 0, 1, pow) = zeta.head(pow).transpose();
       }
+      VLOG(1) << "Elapsed time: " << Timer::Stop();
       
       FloatVector lambdas = FloatVector::Zero(N);
       float alpha = 0.5f * (values.minCoeff() + values.maxCoeff());
@@ -261,15 +274,14 @@ namespace slib {
 	++k;
 	errs.push_back(err);
 	
-	FloatVector tau = FloatVector::Zero(N);
+	FloatVector tau;
 	
 	for (int m = 0; m < N - 1; ++m) {
 	  const int ell = ells[m];
 	  const int pow = Lsetspow(ell);
 	  const FloatVector zeta = zetas.block(ell, 0, 1, pow).transpose();
 	  IntVector Lset = Lsets.block(ell, 0, 1, pow).transpose();
-	  const FloatVector tau1 = ComputeTau(zeta, Lset, res, pow);
-	  tau += tau1;
+	  ComputeTau(zeta, Lset, res, pow, &tau);
 	}
 	
 	if (k == 1) {
