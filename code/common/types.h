@@ -139,6 +139,11 @@ namespace slib {
       lat = atof(latlon.c_str());
       lon = atof(strstr(latlon.c_str(), ",") + 1);
     }
+
+    friend std::ostream& operator<<(std::ostream& out, const LatLon& location) {
+      out << "(" << location.lat << ", " << location.lon << ")";
+      return out;
+    }
   };
   
   // Should be a specialization of Pair.
