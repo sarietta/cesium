@@ -228,6 +228,7 @@ namespace slib {
     
     void Cesium::Finish() {
       if (_rank != MPI_ROOT_NODE) {
+	MPI_Finalize();
 	return;
       }
 
