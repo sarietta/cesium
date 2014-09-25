@@ -45,7 +45,13 @@ namespace slib {
       // which is implicitly set via the constructor's zoom parameter.
       Point2D ConvertLocationToMapPoint(const LatLon& location);
 
-    private:
+
+      Pair<int> GetMapSize();
+    private:      
+      int _zoom;
+      LatLon _southwest;
+      LatLon _northeast;
+
       int _num_tiles;
       double _map_min_x;
       double _map_min_y;

@@ -134,9 +134,10 @@ namespace slib {
 
     /** GoogleMapsConverter Implementation **/
     
-    GoogleMapsConverter::GoogleMapsConverter(const int& zoom, const LatLon& southwest, const LatLon& northeast) {
-      const LatLonBounds map_bounds = GoogleMaps::GetMapBounds(southwest, northeast, zoom);
-      _num_tiles = 1 << zoom;
+    GoogleMapsConverter::GoogleMapsConverter(const int& zoom, const LatLon& southwest, const LatLon& northeast) 
+      : _zoom(zoom), _southwest(southwest), _northeast(northeast) {
+      const LatLonBounds map_bounds = GoogleMaps::GetMapBounds(southwest, northeast, _zoom);
+      _num_tiles = 1 << _zoom;
       const Point2D min_point = GoogleMaps::ConvertFromLatLonToPoint(LatLon(map_bounds.northeast.lat,
 									    map_bounds.southwest.lon));
       _map_min_x = min_point.x * _num_tiles;
@@ -152,6 +153,16 @@ namespace slib {
       point.y = point.y * _num_tiles - _map_min_y;
 
       return point;
+    }
+
+    Pair<int> GoogleMapsConverter::GetMapSize() {
+      const Point2D southwest_tile = GoogleMaps::ConvertFromLatLonToTile(_southwest, _zoom);
+      const Point2D northeast_tile = GoogleMaps::ConvertFromLatLonToTile(_northeast, _zoom);
+
+      const int32 tileSize = static_cast<int32>(GoogleMaps::GetTileSize());
+      const int32 ytiles = southwest_tile.y - northeast_tile.y + 1;
+      const int32 xtiles = northeast_tile.x - southwest_tile.x + 1;
+      return Pair<int>(xtiles * tileSize, ytiles * tileSize);
     }
 
     /** GoogleMapsConverter Implementation **/

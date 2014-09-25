@@ -14,6 +14,7 @@ else(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 endif(INTEL_CC MATCHES INTEL_CC-NOTFOUND)
 
 option(DEBUG_SYMBOLS "DEBUG_SYMBOLS" OFF)
+option(DEBUG_SYMBOLS "FASTRBF" OFF)
 
 if(DEBUG_SYMBOLS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -debug inline-debug-info -std=c++0x")
@@ -174,7 +175,7 @@ foreach(MODULE ${MODULES})
 endforeach(MODULE) 
 
 # Special compilation for CUDA-enabled fast rbf routines.
-if (CUDA_FOUND)
+if (CUDA_FOUND AND FASTRBF)
   set(CMAKE_CXX_FLAGS_SAVE ${CMAKE_CXX_FLAGS})
   set(CMAKE_CXX_FLAGS "")
   set(CUDA_NVCC_FLAGS -gencode arch=compute_10,code=sm_10;--disable-warnings)
@@ -370,7 +371,7 @@ foreach(TEST_FILE ${TEST_FILES})
   # built with special care
   if(${BINARY} STREQUAL "test_matlab_function")
   elseif(${BINARY} STREQUAL "test_eigs" AND (NOT ARPACK_FOUND))
-  elseif(${BINARY} STREQUAL "test_rbf" AND (CUDA_FOUND))
+  elseif(${BINARY} STREQUAL "test_rbf" AND CUDA_FOUND AND FASTRBF)
     add_library(slib_fastinterpolation STATIC IMPORTED)
     set_property(TARGET slib_fastinterpolation PROPERTY
       IMPORTED_LOCATION lib/libfastinterpolation.a)
