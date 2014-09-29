@@ -13,6 +13,9 @@ namespace slib {
       // command executed correctly NOT whether the result of that
       // execution was a "success".
       static bool ExecuteSystemCommand(const std::string& cmd, std::string* result = NULL);
+
+      // Returns the empty string if the variable is not found (equiv to bash).
+      static std::string GetEnvironmentVariable(const std::string& name);
     };
 
   }  // namespace util
