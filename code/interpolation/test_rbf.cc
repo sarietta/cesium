@@ -1,13 +1,18 @@
+#define EIGEN_USE_MKL_ALL
+
 #include <CImg.h>
-#include "../common/types.h"
+#include "common/types.h"
 #undef Success
 #include <Eigen/Dense>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include "fastrbf.h"
 #include "rbf.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "../util/colormap.h"
+#include "util/colormap.h"
+#include "util/matlab.h"
+#include "util/timer.h"
 
 using namespace cimg_library;
 using namespace Eigen;
@@ -21,14 +26,20 @@ DEFINE_double(xmax, 2.0, "");
 DEFINE_double(ymin, -2.0, "");
 DEFINE_double(ymax, 2.0, "");
 
-DEFINE_bool(use_alt, true, "");
+DEFINE_bool(use_alt, false, "");
 DEFINE_bool(use_gaussian, true, "");
 DEFINE_bool(use_thinplate, false, "");
+DEFINE_bool(use_fast_rbf, false, "");
 
 DEFINE_bool(display_enabled, true, "");
 DEFINE_string(output_file, "", "If non-empty, interpolated output saved here.");
 
+DEFINE_bool(save_information, false, "");
+
+using slib::interpolation::FastMultiQuadraticRBF;
 using slib::interpolation::RadialBasisFunction;
+using slib::util::MatlabMatrix;
+using slib::util::Timer;
 
 int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -86,6 +97,8 @@ int main(int argc, char** argv) {
       rbf = new RadialBasisFunction(slib::interpolation::MultiQuadricAlt);
     }
 #endif
+  } else if (FLAGS_use_fast_rbf) {
+    rbf = new FastMultiQuadraticRBF(FLAGS_radius, 10);
   } else {
     if (FLAGS_use_gaussian) {
       rbf = new RadialBasisFunction(slib::interpolation::GaussianRBF(FLAGS_radius));
@@ -96,9 +109,20 @@ int main(int argc, char** argv) {
     }
   }
 
+  if (FLAGS_save_information) {
+    MatlabMatrix P(points);
+    P.SaveToFile("/tmp/points.mat");
+    MatlabMatrix V(values);
+    V.SaveToFile("/tmp/values.mat");
+  }
+
   rbf->EnableConditionTest();
   rbf->SetPoints(points);
   rbf->ComputeWeights(values);
+
+  if (FLAGS_save_information) {
+    rbf->SaveToFile("/tmp/rbf.dat");
+  }
 
   const int width = static_cast<int>(xrange);
   const int height = static_cast<int>(yrange);
@@ -108,9 +132,35 @@ int main(int argc, char** argv) {
   CImgDisplay display;
   FloatImage interpolated_and_original_points(width, height, 1, 3, 255.0f);
   FloatImage interpolated_points(width, height, 1, 3, 255.0f);
+
+  Timer::Start();
+  FloatImage interpolated_values(width, height);
+  cimg_forXY(interpolated_values, x, y) {
+    const Vector2f point(x + xmin, y + ymin);
+    interpolated_values(x, y) = rbf->Interpolate(point);
+  }
+  LOG(INFO) << "Elapsed time to interpolate: " << Timer::Stop();
+
+  Timer::Start();
+  FloatImage interpolated_values_new(width, height);
+  FloatMatrix interpolate_positions(width * height, 2);
+  cimg_forXY(interpolated_values_new, x, y) {
+    const Vector2f point(x + xmin, y + ymin);
+    interpolate_positions.row(x + y * width) = point;
+  }
+
+  const VectorXf interpolated = rbf->InterpolatePoints(interpolate_positions);
+
+  cimg_forXY(interpolated_values_new, x, y) {
+    interpolated_values_new(x, y) = interpolated(x + y * width);
+  }
+  LOG(INFO) << "Elapsed time to interpolate (new): " << Timer::Stop();
+
+  (interpolated_values, interpolated_values_new).display();
+
   cimg_forXYC(interpolated_points, x, y, c) {
     Vector2f point(x + xmin, y + ymin);
-    const float value = rbf->Interpolate(point);
+    const float value = interpolated_values(x, y);
     const float v = (value - min_value) / (max_value - min_value);
 
     slib::util::ColorMap::jet(v, color);

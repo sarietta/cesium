@@ -203,7 +203,7 @@ namespace slib {
       int flag;
       MPI_Initialized(&flag);
       if (!flag) {
-	LOG(INFO) << "Initializing MPI";
+	VLOG(1) << "Initializing MPI";
 	MPI_Init(NULL, NULL);
       }
       MPI_Comm_rank(MPI_COMM_WORLD, &_rank);
@@ -228,6 +228,7 @@ namespace slib {
     
     void Cesium::Finish() {
       if (_rank != MPI_ROOT_NODE) {
+	MPI_Finalize();
 	return;
       }
 
@@ -704,7 +705,7 @@ namespace slib {
 	  continue;
 	}
 
-	LOG(INFO) << "Received new job: " << job.command;
+	VLOG(1) << "Received new job: " << job.command;
 
 	// Update or retreive from the cache as necessary.
 	if (job.HasInput(CESIUM_CACHED_VARIABLES_FIELD)) {
@@ -739,7 +740,7 @@ namespace slib {
 	      job.indices.clear();
 	      job.indices.push_back(job_indices[i]);
 
-	      LOG(INFO) << "Running job at index: " << job_indices[i];
+	      VLOG(1) << "Running job at index: " << job_indices[i];
 	      (*function)(job, &output);
 	      google::FlushLogFiles(google::GLOG_INFO);
 	    }
@@ -750,7 +751,7 @@ namespace slib {
 	JobNode::SendCompletionMessage(MPI_ROOT_NODE);
 	VLOG(1) << "Waiting for completion response";
 	JobNode::WaitForCompletionResponse(MPI_ROOT_NODE);
-	LOG(INFO) << "Send job output to root";
+	VLOG(1) << "Send job output to root";
 	JobNode::SendJobDataToNode(output, MPI_ROOT_NODE);
       }
     }

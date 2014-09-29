@@ -12,6 +12,12 @@ typedef float(*RadialBasisFunction_FunctionPtr)(const float& epsilon, const floa
 typedef void(*RadialBasisFunction_AltFunctionPtr)(int n, double* r, double r0, double* v);
 
 namespace slib {
+  namespace util {
+    class MatlabMatrix;
+  }
+}
+
+namespace slib {
   namespace interpolation {
 
     class RadialBasisFunction {
@@ -45,15 +51,18 @@ namespace slib {
 
       void EnableConditionTest();
 
-      void SetPoints(const Eigen::MatrixXf& points);
-      void ComputeWeights(const Eigen::VectorXf& values, const bool& normalized = false);
-      float Interpolate(const Eigen::VectorXf& point);
+      virtual void SetPoints(const Eigen::MatrixXf& points);
+      virtual void ComputeWeights(const Eigen::VectorXf& values, const bool& normalized = false);
+      virtual float Interpolate(const Eigen::VectorXf& point);
+      virtual Eigen::VectorXf InterpolatePoints(const FloatMatrix& points);
 
       void ComputeWeightsAlt(const Eigen::VectorXf& values, const bool& normalized = false);
       float InterpolateAlt(const Eigen::VectorXf& point);
 
-      bool SaveToFile(const std::string& filename);
-      bool LoadFromFile(const std::string& filename);
+      virtual bool SaveToFile(const std::string& filename);
+      virtual bool LoadFromFile(const std::string& filename);
+
+      virtual slib::util::MatlabMatrix ConvertToMatlabMatrix() const;
 
       inline const Eigen::VectorXf GetPoint(const int32& idx) const {
 	return _points.row(idx);
@@ -75,7 +84,9 @@ namespace slib {
 	return _dimensions;
       }
 
-    private:
+    protected:
+      RadialBasisFunction();
+
       int32 _dimensions;
       int32 _N;
       Function _rbf;

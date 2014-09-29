@@ -1,21 +1,24 @@
 #include "rbf.h"
 
-#include <common/scoped_ptr.h>
+#include "common/scoped_ptr.h"
 #include <Eigen/Dense>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <interpolation/rbf_interp_nd.h>
+#include "rbf_interp_nd.h"
 #include <stdio.h>
 #include <string>
-#include <util/assert.h>
+#include "util/assert.h"
+#include "util/matlab.h"
 
 DEFINE_double(rbf_interpolation_radius, 0.01, "The 'radius' of the radial basis function interpolator.");
 
 using namespace Eigen;
+using slib::util::MatlabMatrix;
 using std::string;
 
 namespace slib {
   namespace interpolation {
+    RadialBasisFunction::RadialBasisFunction() : _rbf(), _alt_rbf(), _condition_test(false) {}
 
     RadialBasisFunction::RadialBasisFunction(const Function& rbf) 
       : _rbf(rbf), _alt_rbf(), _condition_test(false) {}
@@ -134,6 +137,14 @@ namespace slib {
       }
     }
 
+    VectorXf RadialBasisFunction::InterpolatePoints(const FloatMatrix& points) {
+      VectorXf values(points.rows());
+      for (int i = 0; i < points.rows(); ++i) {
+	values(i) = Interpolate((VectorXf) points.row(i));
+      }
+      return values;
+    }
+
     float RadialBasisFunction::Interpolate(const VectorXf& point) {
       if (!_rbf.valid && _alt_rbf.valid) {
 	return InterpolateAlt(point);
@@ -233,6 +244,11 @@ namespace slib {
       fclose(fid);
       
       return true;
+    }
+
+    MatlabMatrix RadialBasisFunction::ConvertToMatlabMatrix() const {
+      LOG(ERROR) << "Not Implemented";
+      return MatlabMatrix();
     }
 
   }  // namespace interpolation
