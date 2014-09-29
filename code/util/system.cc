@@ -2,6 +2,7 @@
 
 #include <glog/logging.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string>
 
 using std::string;
@@ -36,6 +37,17 @@ namespace slib {
 	}
 	
 	return true;
+      }
+    }
+
+    string System::GetEnvironmentVariable(const string& name) {
+      // According to the documentation for getenv, the returned
+      // should not be modified (i.e. not deleted).
+      char* environment_variable = getenv(name.c_str());
+      if (environment_variable == NULL) {
+	return "";
+      } else {
+	return string(environment_variable);
       }
     }
     
