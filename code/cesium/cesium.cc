@@ -53,6 +53,7 @@ namespace slib {
 
     scoped_ptr<Cesium> Cesium::_singleton;
     map<int, bool> Cesium::_dead_processors;
+    bool Cesium::_started = false;
     
     Cesium::Cesium() 
       : _rank(-1)
@@ -73,6 +74,11 @@ namespace slib {
       }
 
       return _singleton.get();
+    }
+
+    void Cesium::Abort(const int& exit_code) {
+      MPI_Abort(MPI_COMM_WORLD, exit_code);
+      exit(exit_code);
     }
     
     void Cesium::RegisterCommand(const string& command, const Function& function) {
@@ -216,6 +222,8 @@ namespace slib {
       }
       LOG(INFO) << "Joining the job as processor: " << _rank << " (" << _hostname << ")";
       
+      Cesium::_started = true;
+
       if (_rank == MPI_ROOT_NODE) {	
 	// Create directories as needed.
 	System::ExecuteSystemCommand("mkdir -p " + FLAGS_cesium_temporary_directory);

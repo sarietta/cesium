@@ -121,6 +121,12 @@ namespace slib {
 	return available_commands;
       }
       
+      // Try to avoid calling this function unless you really want the
+      // entire system to abort. It is a direct passthrough to the
+      // MPI_Abort call, which will terminate all processes associated
+      // with the program running Cesium.
+      void Abort(const int& exit_code = 10);
+      
       // This MUST be called before any other operations. It starts up
       // the framework across the available nodes (automatically
       // gleaned from MPI settings). On non-master nodes, this method
@@ -130,11 +136,13 @@ namespace slib {
       //
       // IMPORTANT NOTE: You can call this function WITHOUT first
       // calling MPI_Init, but doing so will not guarantee how
-      // arguments get passed to your program. This is not a problem
-      // if you're using a GoogleFlags or some other library that
-      // doesn't depend on knowing the exact position of command-line
-      // arguments, but if you are then you should really call
-      // MPI_Init as the very first operation in your program.
+      // command-line arguments get passed to your program. This is
+      // not a problem if you're using GoogleFlags or some other
+      // library for command-line argument parsing that doesn't depend
+      // on knowing the exact position of command-line arguments. If
+      // you are using something that requires that arguments passed
+      // to main() be in a particular order, then you should really
+      // call MPI_Init as the very first operation in your program.
       CesiumNodeType Start();
 
       // You can set the working directory this way or by modifying
@@ -226,6 +234,10 @@ namespace slib {
 	return _size - 1;
       }
 
+      static inline bool HasStarted() {
+	return Cesium::_started;
+      }
+
       bool ExecuteJob(const JobDescription& job, JobOutput* output);
 #if 0
       void ExecuteKernel(const Kernel& kernel, const JobDescription& job, JobOutput* output);
@@ -298,8 +310,8 @@ namespace slib {
       int _stripped_feature_dimensions;
 
       static scoped_ptr<Cesium> _singleton;
-
       static std::map<int, bool> _dead_processors;
+      static bool _started;
 
       friend class TestCesiumCommunication;
     };  // class Cesium
