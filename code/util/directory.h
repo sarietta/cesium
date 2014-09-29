@@ -20,6 +20,8 @@ namespace util {
 
     static bool Exists(const std::string& path);
     static bool Create(const std::string& path);
+    // Returns true if the directory already exists.
+    static bool CreateIfNotExists(const std::string& path);
 
     static std::string GenerateTemporaryFilename(const std::string& root = "./");
   };

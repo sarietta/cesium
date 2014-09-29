@@ -6,6 +6,7 @@
 #include <string>
 #include <string/stringutils.h>
 #include <svm/detector.h>
+#include <util/directory.h>
 #include <util/matlab.h>
 #include <util/system.h>
 #include <util/timer.h>
@@ -39,6 +40,7 @@ DEFINE_int32(cesium_debug_mode_process_single_index, -1,
 
 using slib::StringUtils;
 using slib::svm::Detector;
+using slib::util::Directory;
 using slib::util::MatlabMatrix;
 using slib::util::System;
 using slib::util::Timer;
@@ -225,8 +227,7 @@ namespace slib {
       Cesium::_started = true;
 
       if (_rank == MPI_ROOT_NODE) {	
-	// Create directories as needed.
-	System::ExecuteSystemCommand("mkdir -p " + FLAGS_cesium_temporary_directory);
+	Directory::CreateIfNotExists(FLAGS_cesium_temporary_directory);
 	return CesiumMasterNode;
       } else {
 	ComputeNodeLoop();
@@ -644,7 +645,7 @@ namespace slib {
 	    LOG(INFO) << "Saving chunk for partial variable: " << name;
 	    LOG(INFO) << "***********************************************";
 
-	    System::ExecuteSystemCommand("mkdir -p " + FLAGS_cesium_temporary_directory + "/" + name);
+	    Directory::CreateIfNotExists(FLAGS_cesium_temporary_directory + "/" + name);
 	    SaveTemporaryOutput(StringUtils::StringPrintf("%s/%d", name.c_str(), 
 							  _instance->partial_output_unique_int), 
 				_instance->final_outputs[name]);
@@ -919,7 +920,7 @@ namespace slib {
 	  LOG(INFO) << "Saving chunk for partial variable: " << name;
 	  LOG(INFO) << "***********************************************";
 
-	  System::ExecuteSystemCommand("mkdir -p " + FLAGS_cesium_temporary_directory + "/" + name);
+	  Directory::CreateIfNotExists(FLAGS_cesium_temporary_directory + "/" + name);
 	  SaveTemporaryOutput(StringUtils::StringPrintf("%s/%d", name.c_str(), _instance->partial_output_unique_int),
 			      _instance->final_outputs[name]);
 
@@ -929,11 +930,7 @@ namespace slib {
 	}
 	return true;
       } else if (type == slib::cesium::DSWORK_COLUMN) {
-	if (_instance->processors_completed_one.size() == 0) {
-	  const string directory = FLAGS_cesium_working_directory + "/" + name;
-	  System::ExecuteSystemCommand("rm -rf " + directory);
-	  System::ExecuteSystemCommand("mkdir -p " + directory);
-	}
+	Directory::CreateIfNotExists(FLAGS_cesium_working_directory + "/" + name);
 
 	for (int col = 0; col < (int) output.indices.size(); col++) {
 	  MatlabMatrix column(slib::util::MATLAB_STRUCT, Pair<int>(1, 1));

@@ -107,6 +107,14 @@ namespace slib {
       return (stat(path.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode));
     }
 
+    bool Directory::CreateIfNotExists(const string& path) {
+      if (!Directory::Exists(path)) {
+	return Directory::Create(path);
+      } else {
+	return true;
+      }
+    }
+
     bool Directory::Create(const string& path) {
       System::ExecuteSystemCommand("mkdir -p " + path);
       return true;
