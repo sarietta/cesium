@@ -115,6 +115,7 @@ namespace slib {
       }
     }
 
+    // TODO(sean): This should not use system commands.
     bool Directory::Create(const string& path) {
       System::ExecuteSystemCommand("mkdir -p " + path);
       return true;
