@@ -33,6 +33,25 @@ namespace slib {
 
     DEFINE_double(slib_interpolation_fastrbf_tolerance, 1e-4, "The error tolerance threshold.");
     DEFINE_int32(slib_interpolation_fastrbf_max_iterations, 1000, "The maximum number of iterations to perform.");
+
+    FastMultiQuadraticRBF::FastMultiQuadraticRBF() : 
+      _epsilon(0.0f), _epsilon2(0.0f), _power(0.0f), _alpha(0.0f) {}
+    
+    FastMultiQuadraticRBF::FastMultiQuadraticRBF(const float& epsilon, const int& power) : 
+      _epsilon(epsilon), _power(power), _alpha(0.0f) {
+      _epsilon2 = _epsilon * _epsilon;
+    }
+
+    void FastMultiQuadraticRBF::SetParameters(const float& epsilon, const int& power) {
+      if (_w.size() != 0) {
+	LOG(ERROR) << "Attempted to set RBF parameters after they've been computed. "
+	  "Move this call ahead of ComputeWeights()";
+	return;
+      }
+      _epsilon = epsilon;
+      _power = power;
+      _epsilon2 = _epsilon * _epsilon;
+    }
     
     void SetupLSet(const vector<int>& Omega, const FloatMatrix& Phi, const int& power, const int& m,
 		   IntVector* Lset, vector<int>* OmegaOut, int* ell) {
@@ -175,14 +194,6 @@ namespace slib {
     FloatVector ComputeD(const FloatMatrix& SysMx, const FloatVector& delta) {
       const int N = delta.size();
       return (SysMx.block(0, 0, N, N) * delta);
-    }
-
-    FastMultiQuadraticRBF::FastMultiQuadraticRBF() : 
-      _epsilon(0.0f), _epsilon2(0.0f), _power(0.0f), _alpha(0.0f) {}
-    
-    FastMultiQuadraticRBF::FastMultiQuadraticRBF(const float& epsilon, const int& power) : 
-      _epsilon(epsilon), _power(power), _alpha(0.0f) {
-      _epsilon2 = _epsilon * _epsilon;
     }
     
     void FastMultiQuadraticRBF::ComputeWeights(const FloatVector& values, const bool& normalized) {

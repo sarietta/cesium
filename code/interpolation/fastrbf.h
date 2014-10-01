@@ -24,6 +24,7 @@ namespace slib {
     public:
       FastMultiQuadraticRBF();
       explicit FastMultiQuadraticRBF(const float& epsilon, const int& power);
+      void SetParameters(const float& epsilon, const int& power);
 
       void ComputeWeights(const Eigen::VectorXf& values, const bool& normalized = false);
       float Interpolate(const Eigen::VectorXf& point);
