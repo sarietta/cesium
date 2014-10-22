@@ -30,6 +30,9 @@ DEFINE_bool(use_alt, false, "");
 DEFINE_bool(use_gaussian, true, "");
 DEFINE_bool(use_thinplate, false, "");
 DEFINE_bool(use_fast_rbf, false, "");
+DEFINE_bool(use_inverse_multi, false, "");
+
+DEFINE_int32(power, 10, "");
 
 DEFINE_bool(test_old, true, "");
 
@@ -100,12 +103,14 @@ int main(int argc, char** argv) {
     }
 #endif
   } else if (FLAGS_use_fast_rbf) {
-    rbf = new FastMultiQuadraticRBF(FLAGS_radius, 10);
+    rbf = new FastMultiQuadraticRBF(FLAGS_radius, FLAGS_power);
   } else {
     if (FLAGS_use_gaussian) {
       rbf = new RadialBasisFunction(slib::interpolation::GaussianRBF(FLAGS_radius));
     } else if (FLAGS_use_thinplate) {
       rbf = new RadialBasisFunction(slib::interpolation::ThinPlateRBF(FLAGS_radius));
+    } else if (FLAGS_use_inverse_multi) {
+      rbf = new RadialBasisFunction(slib::interpolation::InverseMultiQuadric(FLAGS_radius));
     } else {
       rbf = new RadialBasisFunction(slib::interpolation::MultiQuadric(FLAGS_radius));
     }

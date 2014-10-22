@@ -31,7 +31,11 @@ namespace slib {
 	  const float d0 = points[2 * i + 0] - x;
 	  const float d1 = points[2 * i + 1] - y;
 	  const float d = d0 * d0 + d1 * d1;
+#if 0
 	  sum += w[i] * sqrt(d + epsilon2);
+#else
+	  sum += w[i] / sqrt(d * epsilon2 + 1.0f);
+#endif
 	}
 	
 	interpolated[index] = sum + alpha;

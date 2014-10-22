@@ -1,5 +1,9 @@
 #include "rbf.h"
 
+#ifdef CUDA_ENABLED
+#include "rbf.cu.h"
+#endif
+
 #include "common/scoped_ptr.h"
 #include <Eigen/Dense>
 #include <gflags/gflags.h>
@@ -138,11 +142,16 @@ namespace slib {
     }
 
     VectorXf RadialBasisFunction::InterpolatePoints(const FloatMatrix& points) {
+#ifdef CUDA_ENABLED
+      ASSERT_EQ(points.cols(), _dimensions);
+      return CUDAInterpolatePoints(_points, _w, _rbf, points);
+#else
       VectorXf values(points.rows());
       for (int i = 0; i < points.rows(); ++i) {
 	values(i) = Interpolate((VectorXf) points.row(i));
       }
       return values;
+#endif
     }
 
     float RadialBasisFunction::Interpolate(const VectorXf& point) {

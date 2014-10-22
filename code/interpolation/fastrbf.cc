@@ -144,7 +144,11 @@ namespace slib {
 	for (int j = i + 1; j < nq; ++j) {
 	  const int j_ = Lset(j);
 	  const FloatVector rj = rset.col(j_);
+#if 0
 	  SysMx(i, j) = sqrt((ri - rj).dot(ri - rj) + c * c);
+#else
+	  SysMx(i, j) = 1.0f / sqrt((ri - rj).dot(ri - rj) * c * c + 1.0f);
+#endif
 	}
       }
       
@@ -155,7 +159,11 @@ namespace slib {
       }
       
       for (int i = 0; i < nq; ++i) {
+#if 0
 	SysMx(i, i) = fabs(c);
+#else
+	SysMx(i, i) = 1.0f;
+#endif
       }
       
       FloatVector rhs = FloatVector::Zero(nq + 1);
@@ -164,23 +172,19 @@ namespace slib {
       return SysMx.colPivHouseholderQr().solve(rhs);
     }
     
-    void ComputeTau(const FloatVector& zeta, const IntVector& Lset, const FloatVector& res, const int& pow,
+    void ComputeTau(const FloatVector& zeta, const IntVector& Lset, const FloatVector& res, const int& length,
 		    FloatVector* tau) {
-      const int N = res.size();
-      if (tau->size() == 0) {
-	tau->resize(N);
-	tau->fill(0.0f);
-      }
       float sum = 0.0f;
       
-      for (int i = 0; i < pow; ++i) {
+      for (int i = 0; i < length; ++i) {
 	const int i_ = Lset(i);
 	sum += zeta(i) * res(i_);
       }
       
-      const float myu = sum / zeta(0, 0);
+      //ASSERT_TRUE(zeta(0,0) != 0.0f);
+      const float myu = zeta(0, 0) == 0.0f ? sum : sum / zeta(0, 0);
       
-      for (int j = 0; j < pow; ++j) {
+      for (int j = 0; j < length; ++j) {
 	const int j_ = Lset(j);
 	(*tau)(j_) += myu * zeta(j);
       }
@@ -226,7 +230,11 @@ namespace slib {
 	  const FloatVector rj = rset.col(j);
 	  const float r = sqrt((ri - rj).dot(ri - rj));
 	  Phi(j, i) = r;
+#if 0
 	  SysMx(j, i) = sqrt(r * r + c * c);
+#else
+	  SysMx(j, i) = 1.0f / sqrt(r * r * c * c + 1.0f);
+#endif
 	}
       }
 #if 0      
@@ -242,7 +250,11 @@ namespace slib {
       }
       
       for (int i = 0; i < N; ++i) {
+#if 0
 	SysMx(i, i) = fabs(c);
+#else
+	SysMx(i, i) = 1.0f;
+#endif
       }
 
       VLOG(1) << "Elapsed time: " << Timer::Stop();
@@ -251,14 +263,13 @@ namespace slib {
       
       int ell;
       vector<int> ells(N - 1);
-      int pow;
       VLOG(1) << "Initializing Krylov matrices";
       Timer::StartIf(FLAGS_v > 0);
       for (int m = 0; m < N - 1; ++m) {
 	IntVector Lset;
 	SetupLSet(Omega, Phi, power, m, &Lset, &Omega, &ell);
 	ells[m] = ell;
-	pow = Lset.size();
+	const int pow = Lset.size();
 	Lsetspow(ell) = pow;
 	Lsets.block(ell, 0, 1, pow) = Lset.head(pow).transpose();
 	const FloatVector zeta = ComputeZeta(c, Lset, rset);
@@ -285,14 +296,15 @@ namespace slib {
 	++k;
 	errs.push_back(err);
 	
-	FloatVector tau;
+	FloatVector tau = FloatVector::Zero(N);	
 	
 	for (int m = 0; m < N - 1; ++m) {
 	  const int ell = ells[m];
-	  const int pow = Lsetspow(ell);
-	  const FloatVector zeta = zetas.block(ell, 0, 1, pow).transpose();
-	  IntVector Lset = Lsets.block(ell, 0, 1, pow).transpose();
-	  ComputeTau(zeta, Lset, res, pow, &tau);
+	  const int length = Lsetspow(ell);
+	  const FloatVector zeta = zetas.block(ell, 0, 1, length).transpose();
+	  IntVector Lset = Lsets.block(ell, 0, 1, length).transpose();
+	  VLOG(3) << m << ": " << length << ", " << ell;
+	  ComputeTau(zeta, Lset, res, length, &tau);
 	}
 	
 	if (k == 1) {
