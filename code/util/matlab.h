@@ -345,12 +345,12 @@ namespace slib {
 	return os;
       }
 
-      // Casting operator to std::vector type. This is a bit dangerous
-      // to use as the type of the underlying MatlabMatrix is not
-      // known at compile time, so static casting can still miss
-      // potential runtime errors.
+      // "Casting" operator to std::vector type. This is a bit
+      // dangerous to use as the type of the underlying MatlabMatrix
+      // is not known at compile time, so static casting can still
+      // miss potential runtime errors.
       template <typename T>
-      operator std::vector<T>() {
+      std::vector<T> ToVector() const {
 	std::vector<T> result(size());
 
 	if (_type == MATLAB_CELL_ARRAY) {
