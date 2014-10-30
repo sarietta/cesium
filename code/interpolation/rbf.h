@@ -31,7 +31,7 @@ namespace slib {
 	Function(const float& epsilon_, RadialBasisFunction_FunctionPtr function_ptr) 
 	  : epsilon(epsilon_), function(function_ptr) {}
 
-	inline float evaluate(const float& r) {
+	inline float evaluate(const float& r) const {
 	  return (*function)(epsilon, r);
 	}
       };
@@ -57,7 +57,7 @@ namespace slib {
       virtual Eigen::VectorXf InterpolatePoints(const FloatMatrix& points) const;
 
       void ComputeWeightsAlt(const Eigen::VectorXf& values, const bool& normalized = false);
-      float InterpolateAlt(const Eigen::VectorXf& point);
+      float InterpolateAlt(const Eigen::VectorXf& point) const;
 
       virtual bool SaveToFile(const std::string& filename);
       virtual bool LoadFromFile(const std::string& filename);
