@@ -40,7 +40,7 @@ namespace slib {
       _dimensions = _points.cols();      
     }
 
-    void RadialBasisFunction::ComputeWeightsAlt(const VectorXf& values, const bool& normalized) const {
+    void RadialBasisFunction::ComputeWeightsAlt(const VectorXf& values, const bool& normalized) {
       ASSERT_EQ(values.size(), _N);
       ASSERT_EQ(_alt_rbf.valid, true);
 
@@ -67,7 +67,7 @@ namespace slib {
       }
     }
 
-    float RadialBasisFunction::InterpolateAlt(const VectorXf& point) {
+    float RadialBasisFunction::InterpolateAlt(const VectorXf& point) const {
       ASSERT_EQ(point.size(), _dimensions);
 
       const int M = _dimensions;
