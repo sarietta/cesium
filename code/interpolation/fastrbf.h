@@ -29,7 +29,7 @@ namespace slib {
       void ComputeWeights(const Eigen::VectorXf& values, const bool& normalized = false);
       float Interpolate(const Eigen::VectorXf& point);
 #ifdef CUDA_ENABLED
-      Eigen::VectorXf InterpolatePoints(const FloatMatrix& points);
+      Eigen::VectorXf InterpolatePoints(const FloatMatrix& points) const;
 #endif
       bool SaveToFile(const std::string& filename);
       bool LoadFromFile(const std::string& filename);

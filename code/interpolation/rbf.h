@@ -54,7 +54,7 @@ namespace slib {
       virtual void SetPoints(const Eigen::MatrixXf& points);
       virtual void ComputeWeights(const Eigen::VectorXf& values, const bool& normalized = false);
       virtual float Interpolate(const Eigen::VectorXf& point);
-      virtual Eigen::VectorXf InterpolatePoints(const FloatMatrix& points);
+      virtual Eigen::VectorXf InterpolatePoints(const FloatMatrix& points) const;
 
       void ComputeWeightsAlt(const Eigen::VectorXf& values, const bool& normalized = false);
       float InterpolateAlt(const Eigen::VectorXf& point);

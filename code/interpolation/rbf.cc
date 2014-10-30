@@ -141,7 +141,7 @@ namespace slib {
       }
     }
 
-    VectorXf RadialBasisFunction::InterpolatePoints(const FloatMatrix& points) {
+    VectorXf RadialBasisFunction::InterpolatePoints(const FloatMatrix& points) const {
 #ifdef CUDA_ENABLED
       ASSERT_EQ(points.cols(), _dimensions);
       return CUDAInterpolatePoints(_points, _w, _rbf, points);
