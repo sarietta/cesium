@@ -22,7 +22,8 @@ namespace slib {
     const Point2D GoogleMaps::_pixelOrigin(_tileSize / 2.0, _tileSize / 2.0);
     const double GoogleMaps::_pixelsPerLonDegree = _tileSize / 360.0;
     const double GoogleMaps::_pixelsPerLonRadian = _tileSize / (2.0 * M_PI);
-    
+
+    FloatImage GoogleMaps::_water_image;
     
     LatLonBounds GoogleMaps::GetMapBounds(const LatLon& southwest, const LatLon& northeast, const int32& zoom) {
       Point2D southwest_tile = GoogleMaps::ConvertFromLatLonToTile(southwest, zoom);
@@ -130,6 +131,28 @@ namespace slib {
       
       return map;
     }
+
+    bool GoogleMaps::IsWater(const Pair<int>& point, const float& tolerance) {
+      if (_water_image.width() == 0) {
+	LOG(ERROR) << "You must set the water image via SetWaterImage";
+	return false;
+      }
+
+      const int x = point.x;
+      const int y = point.y;
+
+      const float dr = (_water_image(x, y, 0) / 255.0f - 1.0f);
+      const float dg = (_water_image(x, y, 1) / 255.0f - 1.0f);
+      const float db = (_water_image(x, y, 2) / 255.0f - 1.0f);
+      const float d = (dr * dr + dg * dg + db * db);
+
+      if (d > tolerance) {
+	return true;
+      } else {
+	return false;
+      }
+    }
+
     /** GoogleMaps Implementation **/
 
     /** GoogleMapsConverter Implementation **/
@@ -147,7 +170,7 @@ namespace slib {
     // Converts a latitude/longitude position to an (x,y) position
     // in the map. This is obviously dependent on the map size,
     // which is implicitly set via the constructor's zoom parameter.
-    Point2D GoogleMapsConverter::ConvertLocationToMapPoint(const LatLon& location) {
+    Point2D GoogleMapsConverter::ConvertLocationToMapPoint(const LatLon& location) const {
       Point2D point = GoogleMaps::ConvertFromLatLonToPoint(location);
       point.x = point.x * _num_tiles - _map_min_x;
       point.y = point.y * _num_tiles - _map_min_y;
@@ -155,7 +178,15 @@ namespace slib {
       return point;
     }
 
-    Pair<int> GoogleMapsConverter::GetMapSize() {
+    LatLon GoogleMapsConverter::ConvertMapPointToLocation(const Point2D& point) const {
+      Point2D xformed = point;
+      xformed.x = (xformed.x + _map_min_x) / ((double) _num_tiles);
+      xformed.y = (xformed.y + _map_min_y) / ((double) _num_tiles);
+
+      return GoogleMaps::ConvertFromPointToLatLon(xformed);
+    }
+
+    Pair<int> GoogleMapsConverter::GetMapSize() const {
       const Point2D southwest_tile = GoogleMaps::ConvertFromLatLonToTile(_southwest, _zoom);
       const Point2D northeast_tile = GoogleMaps::ConvertFromLatLonToTile(_northeast, _zoom);
 
