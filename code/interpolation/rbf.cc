@@ -154,7 +154,7 @@ namespace slib {
 #endif
     }
 
-    float RadialBasisFunction::Interpolate(const VectorXf& point) {
+    float RadialBasisFunction::Interpolate(const VectorXf& point) const {
       if (!_rbf.valid && _alt_rbf.valid) {
 	return InterpolateAlt(point);
       }
