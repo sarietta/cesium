@@ -40,6 +40,9 @@ namespace slib {
       inline float GetAlpha() const {
 	return _alpha;
       }
+
+      void Copy(const FastMultiQuadraticRBF& other);
+
     private:
       float _epsilon;
       float _epsilon2;

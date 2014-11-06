@@ -41,6 +41,24 @@ namespace slib {
       _epsilon(epsilon), _power(power), _alpha(0.0f) {
       _epsilon2 = _epsilon * _epsilon;
     }
+
+    void FastMultiQuadraticRBF::Copy(const FastMultiQuadraticRBF& other) {
+      _dimensions = other._dimensions;
+      _N = other._N;
+      _rbf = other._rbf;
+      _alt_rbf = other._alt_rbf;
+      _normalized = other._normalized;
+
+      _condition_test = other._condition_test;
+
+      _w = other._w;
+      _points = other._points;
+
+      _epsilon = other._epsilon;
+      _epsilon2 = other._epsilon2;
+      _power = other._power;
+      _alpha = other._alpha;
+    }
     
     void FastMultiQuadraticRBF::SetParameters(const float& epsilon, const int& power) {
       if (_w.size() != 0) {
