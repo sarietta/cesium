@@ -22,6 +22,9 @@ typedef int64_t int64;
 typedef uint64_t uint64;
 #endif
 
+namespace cimg_library {
+  template <typename T> class CImg;
+}
 #define FloatImage cimg_library::CImg<float>
 #define DoubleImage cimg_library::CImg<double> 
 #define UInt8Image cimg_library::CImg<uint8>
